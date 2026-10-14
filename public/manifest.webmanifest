@@ -1,0 +1,11 @@
+{
+  "name": "نُزُل — Nuzul PMS",
+  "short_name": "نُزُل",
+  "start_url": "/",
+  "display": "standalone",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#f6f4ef",
+  "theme_color": "#0d6b5f",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

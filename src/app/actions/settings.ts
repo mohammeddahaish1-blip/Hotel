@@ -1,0 +1,147 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { getCtx } from "@/lib/auth";
+import { getDict } from "@/lib/i18n/server";
+import { errorMessage } from "@/lib/errors";
+import { toBaisa } from "@/lib/format";
+import type { ActionResult } from "@/components/ActionForm";
+
+const s = (fd: FormData, k: string) => {
+  const v = fd.get(k);
+  return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
+};
+
+async function run(fn: (ctx: Awaited<ReturnType<typeof getCtx>>) => PromiseLike<{ error: unknown }>): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const { error } = await fn(ctx);
+  if (error) return { error: errorMessage(t, error as { message: string }) };
+  revalidatePath("/settings");
+  return { ok: t.saved };
+}
+
+export async function updateProperty(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase
+      .from("properties")
+      .update({
+        name_ar: s(fd, "name_ar") ?? c.property.name_ar,
+        name_en: s(fd, "name_en"),
+        address: s(fd, "address"),
+        phone: s(fd, "phone"),
+        whatsapp: s(fd, "whatsapp"),
+        email: s(fd, "email"),
+        license_no: s(fd, "license_no"),
+        vat_no: s(fd, "vat_no"),
+        municipality: s(fd, "municipality") ?? "muscat",
+        doc_retention_days: Number(s(fd, "doc_retention_days") ?? 365),
+      })
+      .eq("id", c.property.id),
+  );
+}
+
+export async function updateTenantPolicy(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase.from("tenants").update({ max_reception_discount_bp: Math.round(Number(s(fd, "discount_pct") ?? 10) * 100) }).eq("id", c.tenantId),
+  );
+}
+
+export async function addUnitType(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase.from("unit_types").insert({
+      tenant_id: c.tenantId,
+      property_id: c.property.id,
+      name_ar: s(fd, "name_ar") ?? "",
+      name_en: s(fd, "name_en"),
+      kind: s(fd, "kind") ?? "room",
+      capacity: Number(s(fd, "capacity") ?? 2),
+      nightly_rate: toBaisa(s(fd, "nightly")),
+      monthly_rate: toBaisa(s(fd, "monthly")),
+    }),
+  );
+}
+
+export async function updateUnitType(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase
+      .from("unit_types")
+      .update({ nightly_rate: toBaisa(s(fd, "nightly")), monthly_rate: toBaisa(s(fd, "monthly")), capacity: Number(s(fd, "capacity") ?? 2) })
+      .eq("id", s(fd, "id")!),
+  );
+}
+
+export async function addFloor(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase.from("floors").insert({ tenant_id: c.tenantId, property_id: c.property.id, name: s(fd, "name") ?? "", sort: Number(s(fd, "sort") ?? 0) }),
+  );
+}
+
+export async function bulkUnits(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase.rpc("bulk_create_units", {
+      p_property: c.property.id,
+      p_unit_type: s(fd, "unit_type")!,
+      p_floor: s(fd, "floor"),
+      p_spec: s(fd, "spec") ?? "",
+    }),
+  );
+}
+
+export async function setUnitService(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase.from("units").update({ status: fd.get("out") === "1" ? "out_of_service" : "available" }).eq("id", s(fd, "id")!),
+  );
+}
+
+export async function addRatePlan(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase.from("rate_plans").insert({
+      tenant_id: c.tenantId,
+      unit_type_id: s(fd, "unit_type")!,
+      name: s(fd, "name") ?? "",
+      period: `[${s(fd, "from")},${s(fd, "to")}]`,
+      nightly_rate: s(fd, "nightly") ? toBaisa(s(fd, "nightly")) : null,
+      monthly_rate: s(fd, "monthly") ? toBaisa(s(fd, "monthly")) : null,
+      priority: 10,
+    }),
+  );
+}
+
+export async function deleteRatePlan(_: ActionResult, fd: FormData) {
+  return run((c) => c.supabase.from("rate_plans").delete().eq("id", s(fd, "id")!));
+}
+
+export async function updateTax(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase
+      .from("tax_rules")
+      .update({
+        rate_bp: Math.round(Number(s(fd, "rate") ?? 0) * 100),
+        basis: s(fd, "basis") ?? "base",
+        active: fd.get("active") === "on",
+      })
+      .eq("id", s(fd, "id")!),
+  );
+}
+
+export async function inviteUser(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase.from("invitations").insert({
+      tenant_id: c.tenantId,
+      email: (s(fd, "email") ?? "").toLowerCase(),
+      role: s(fd, "role") ?? "reception",
+      full_name: s(fd, "full_name") ?? "",
+    }),
+  );
+}
+
+export async function updateMember(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase
+      .from("memberships")
+      .update({ role: s(fd, "role")!, active: fd.get("active") === "on" })
+      .eq("tenant_id", c.tenantId)
+      .eq("user_id", s(fd, "user_id")!),
+  );
+}
