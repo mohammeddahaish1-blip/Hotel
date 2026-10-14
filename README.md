@@ -69,3 +69,16 @@ role restrictions and audit-log immutability.
 
 Owner/manager invites an email + role in **Settings**. The employee signs up with that email; on first
 sign-in the invitation is attached automatically (`accept_invitations()`).
+
+## Deployment
+
+- **Supabase:** project `hotel` (`isijnklsskwbdbmmertk`) — all migrations in `supabase/migrations` are applied.
+- **Vercel:** project `nuzul-hotel` exists with the two `NEXT_PUBLIC_SUPABASE_*` env vars. Connect the GitHub
+  repo in Vercel → Project → Settings → Git so pushes deploy automatically.
+- **Supabase Auth settings:** set *Site URL* to the Vercel production URL and add `https://<your-domain>/auth/callback`
+  to *Redirect URLs*, so sign-up confirmation emails land back in the app. TOTP MFA must stay enabled (default).
+
+## Not yet built (next steps)
+
+Automatic purge of expired ID images (needs a service-role job), daily owner report delivery (FR-52 auto-send),
+direct ROP/MHT API, Fawtara provider, Thawani links, WhatsApp Business API, channel manager, offline mode.
