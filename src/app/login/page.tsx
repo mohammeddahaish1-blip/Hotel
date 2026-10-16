@@ -1,33 +1,45 @@
 import { getDict } from "@/lib/i18n/server";
 import { LoginForm } from "./LoginForm";
 import { LangToggle } from "@/components/LangToggle";
+import { HotelIllustration } from "@/components/HotelIllustration";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { t, lang } = await getDict();
   const sp = await searchParams;
   return (
-    <main className="grid min-h-screen lg:grid-cols-2">
-      <section className="hidden flex-col justify-between bg-brand p-10 text-brand-ink lg:flex">
-        <div className="text-2xl font-bold">{t.appName}</div>
-        <div>
-          <p className="text-3xl font-bold leading-snug">{t.tagline}</p>
-          <ul className="mt-6 space-y-2 text-sm opacity-90">
-            <li>• {lang === "ar" ? "منع الحجز المزدوج على مستوى قاعدة البيانات" : "Double bookings prevented at the database level"}</li>
-            <li>• {lang === "ar" ? "مسح الهوية وتصدير سجل النزلاء للشرطة" : "ID scanning and police guest-register export"}</li>
-            <li>• {lang === "ar" ? "رسم السياحة والبلدية وضريبة القيمة المضافة تلقائياً" : "Tourism levy, municipality fee and VAT built in"}</li>
-            <li>• {lang === "ar" ? "عقود شهرية وتحصيل ومتأخرات" : "Monthly contracts, collections and arrears"}</li>
-          </ul>
-        </div>
-        <div className="text-xs opacity-70">© {new Date().getFullYear()} {t.appName}</div>
-      </section>
-      <section className="flex flex-col items-center justify-center p-6">
-        <div className="mb-6 flex w-full max-w-sm items-center justify-between">
-          <div className="text-xl font-bold text-brand lg:hidden">{t.appName}</div>
-          <LangToggle label={t.language} />
-        </div>
-        {sp.reason === "idle" ? (
-          <div className="mb-4 w-full max-w-sm rounded-xl bg-warn-soft px-3 py-2 text-sm text-warn">{t.idle_logout}</div>
-        ) : null}
+    <main className="flex min-h-screen items-center justify-center bg-[#e6efed] p-3 sm:p-8 dark:bg-bg">
+      <div className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] border-[6px] border-[#1c2321] bg-white shadow-[0_30px_80px_rgba(13,107,95,0.25)] md:grid-cols-2">
+        {/* Branding panel */}
+        <section className="relative hidden flex-col justify-between bg-white p-10 text-[#1c2321] md:flex">
+          <div>
+            <div className="brand-word text-6xl text-brand">{t.appName}</div>
+            <div className="mt-1 text-sm text-[#66706c]">
+              {lang === "ar" ? "لإدارة الفنادق والشقق الفندقية" : "Hotels & serviced apartments"}
+            </div>
+            <p className="mt-6 text-center text-xs text-[#66706c]">{lang === "ar" ? `«${t.tagline}»` : `“${t.tagline}”`}</p>
+          </div>
+          <HotelIllustration className="mx-auto my-6 w-full max-w-sm" />
+          <div className="flex items-center justify-between text-xs text-[#66706c]">
+            <span className="mx-auto block h-1 w-10 rounded-full bg-[#d9d4c8]" />
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-[#66706c]">
+            <span>© {new Date().getFullYear()} <span className="brand-word text-sm">{t.appName}</span></span>
+            <span>{lang === "ar" ? "صُنع في عُمان" : "Made in Oman"}</span>
+          </div>
+        </section>
+
+        {/* Form panel */}
+        <section className="relative flex min-h-[560px] flex-col items-center justify-center overflow-hidden bg-brand px-6 py-10 text-white sm:px-12">
+          <span className="pointer-events-none absolute -end-24 -top-24 h-64 w-64 rounded-full bg-white/10" />
+          <span className="pointer-events-none absolute -bottom-28 -start-20 h-72 w-72 rounded-full bg-white/10" />
+          <span className="pointer-events-none absolute end-10 top-10 h-3 w-3 rounded-full bg-[#f4c76b]" />
+          <div className="absolute start-5 top-5 z-10">
+            <LangToggle label={t.language} />
+          </div>
+          <div className="brand-word relative mb-2 text-5xl md:hidden">{t.appName}</div>
+          {sp.reason === "idle" ? (
+            <div className="relative mb-4 w-full max-w-xs rounded-2xl bg-white/15 px-3 py-2 text-center text-sm">{t.idle_logout}</div>
+          ) : null}
         <LoginForm
           t={{
             login_title: t.login_title,
@@ -51,7 +63,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           }}
           notice={typeof sp.notice === "string" ? sp.notice : undefined}
         />
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

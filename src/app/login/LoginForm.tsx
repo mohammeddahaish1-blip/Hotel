@@ -74,15 +74,16 @@ export function LoginForm({ t, notice }: { t: T; notice?: string }) {
   const button = mode === "login" ? t.login_btn : mode === "signup" ? t.signup_btn : t.reset_btn;
 
   return (
-    <form onSubmit={onSubmit} className="card w-full max-w-sm space-y-4 p-6">
-      <h1 className="h1">{title}</h1>
-      <label className="block">
-        <span className="label">{t.email}</span>
-        <input name="email" type="email" required autoComplete="email" dir="ltr" className="input" />
+    <form onSubmit={onSubmit} className="relative w-full max-w-xs space-y-4 text-center">
+      <h1 className="text-3xl font-bold">{title}</h1>
+      <div className="mx-auto h-1 w-16 rounded-full bg-white/90" />
+      <label className="block pt-4">
+        <span className="mb-2 block text-xs text-white/80">{t.email}</span>
+        <input name="email" type="email" required autoComplete="email" dir="ltr" placeholder="name@hotel.om" className="pill-input" />
       </label>
       {mode !== "reset" ? (
         <label className="block">
-          <span className="label">{t.password}</span>
+          <span className="mb-2 block text-xs text-white/80">{t.password}</span>
           <input
             name="password"
             type={showPassword ? "text" : "password"}
@@ -90,25 +91,32 @@ export function LoginForm({ t, notice }: { t: T; notice?: string }) {
             minLength={8}
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             dir="ltr"
-            className="input"
+            placeholder="••••••••"
+            className="pill-input"
           />
-          <span className="mt-1 flex items-center gap-2 text-xs text-muted">
-            <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} />
+          <span className="mt-2 flex items-center justify-center gap-2 text-xs text-white/80">
+            <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} className="accent-white" />
             {t.show_password}
           </span>
         </label>
       ) : null}
-      {error ? <div role="alert" className="rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div> : null}
-      {info ? <div className="rounded-xl bg-ok-soft px-3 py-2 text-sm text-ok">{info}</div> : null}
-      <button className="btn-primary w-full" disabled={pending}>
-        {pending ? "…" : button}
-      </button>
+      {error ? <div role="alert" className="rounded-2xl bg-white px-3 py-2 text-sm text-danger">{error}</div> : null}
+      {info ? <div className="rounded-2xl bg-white/15 px-3 py-2 text-sm text-white">{info}</div> : null}
+      <div className="pt-2">
+        <button className="pill-button" disabled={pending}>
+          {pending ? "…" : button}
+        </button>
+      </div>
       {mode === "login" ? (
-        <button type="button" className="w-full text-center text-sm text-muted" onClick={() => switchMode("reset")}>
+        <button type="button" className="block w-full text-xs text-white/75 hover:text-white" onClick={() => switchMode("reset")}>
           {t.forgot_password}
         </button>
       ) : null}
-      <button type="button" className="w-full text-center text-sm text-brand" onClick={() => switchMode(mode === "signup" ? "login" : mode === "reset" ? "login" : "signup")}>
+      <button
+        type="button"
+        className="block w-full text-sm font-semibold text-white hover:underline"
+        onClick={() => switchMode(mode === "signup" ? "login" : mode === "reset" ? "login" : "signup")}
+      >
         {mode === "login" ? t.no_account : t.have_account}
       </button>
     </form>

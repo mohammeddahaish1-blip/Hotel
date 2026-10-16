@@ -99,6 +99,42 @@ body {
   .num { font-variant-numeric: tabular-nums; }
 }
 
+/* «نُزُل» wordmark in classic Naskh */
+.brand-word {
+  font-family: var(--font-brand), "Traditional Arabic", "Times New Roman", serif;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Login: white pill fields and outline pill button on the teal panel */
+.pill-input {
+  width: 100%;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background: #ffffff;
+  color: #1c2321;
+  padding: 0.8rem 1.25rem;
+  font-size: 0.95rem;
+  text-align: center;
+  outline: none;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  transition: border-color 0.15s;
+}
+.pill-input:focus { border-color: rgba(255, 255, 255, 0.85); }
+.pill-input::placeholder { color: #9aa5a1; }
+.pill-button {
+  width: 100%;
+  border-radius: 9999px;
+  border: 2px solid #ffffff;
+  background: transparent;
+  color: #ffffff;
+  padding: 0.75rem 1.25rem;
+  font-weight: 700;
+  transition: background 0.15s, color 0.15s;
+}
+.pill-button:hover:not(:disabled) { background: #ffffff; color: var(--brand); }
+.pill-button:disabled { opacity: 0.6; }
+
 @media print {
   .no-print { display: none !important; }
   body { background: white; }

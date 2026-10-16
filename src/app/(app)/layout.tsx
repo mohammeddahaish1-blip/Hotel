@@ -22,7 +22,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <div className="min-h-screen lg:flex">
       <IdleLogout minutes={ctx.role === "reception" || ctx.role === "housekeeping" ? 15 : 30} />
       <aside className="no-print hidden w-60 shrink-0 flex-col border-e border-line bg-surface p-4 lg:flex">
-        <div className="mb-1 text-xl font-bold text-brand">{t.appName}</div>
+        <div className="brand-word mb-1 text-4xl text-brand">{t.appName}</div>
         <PropertySwitcher current={ctx.property.id} properties={ctx.properties.map((p) => ({ id: p.id, name: p.name_ar }))} fallback={propertyName} />
         <nav className="mt-4 flex-1">
           <NavLinks links={links} variant="side" />
@@ -40,7 +40,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <header className="no-print sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between px-4 py-2">
             <div>
-              <div className="font-bold text-brand">{t.appName}</div>
+              <div className="brand-word text-2xl text-brand">{t.appName}</div>
               <div className="text-xs text-muted">{propertyName} · {roleLabel}</div>
             </div>
             <div className="flex gap-2">

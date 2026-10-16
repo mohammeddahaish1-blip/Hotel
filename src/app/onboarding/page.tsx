@@ -12,7 +12,7 @@ export default async function OnboardingPage() {
   const { t } = await getDict();
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center p-6">
-      <div className="mb-2 text-xl font-bold text-brand">{t.appName}</div>
+      <div className="brand-word mb-2 text-4xl text-brand">{t.appName}</div>
       <p className="mb-6 text-sm text-muted">{t.no_access}</p>
       <ActionForm action={createTenant} className="card space-y-4 p-6">
         <h1 className="h1">{t.onb_title}</h1>
