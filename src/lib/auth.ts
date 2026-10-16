@@ -60,10 +60,8 @@ export const getCtx = cache(async (): Promise<Ctx> => {
   const membership = memberships.find((m) => m.tenant_id === property.tenant_id) ?? memberships[0];
   const role = membership.role as Role;
 
-  // NFR-02: 2FA is mandatory for owners and managers
-  if (role === "owner" || role === "manager") {
-    if (claims.aal !== "aal2") redirect("/mfa");
-  }
+  // NFR-02 (2FA for owners/managers) is switched off at the owner's request.
+  // To re-enable: if ((role === "owner" || role === "manager") && claims.aal !== "aal2") redirect("/mfa");
 
   return {
     supabase,

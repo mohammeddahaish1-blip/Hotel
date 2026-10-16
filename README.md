@@ -39,7 +39,7 @@ reports, ROP / Ministry compliance exports, roles and an append-only audit log.
 | CR-03–06 | ✅ | tourism 4%, municipality 5%, VAT 5%, service charge (0–8%, off by default) — all editable per tenant |
 | CR-07 | 🟡 | invoice snapshot is UBL-mappable; Fawtara provider integration is P1 |
 | CR-08 / NFR-04 | ✅ | consent, private bucket, 5-minute signed URLs, per-document retention date; expired images purged daily by the `purge-guest-documents` Edge Function (pg_cron 01:15 Muscat) |
-| NFR-02 | ✅ | TOTP 2FA enforced for owner/manager; idle sign-out (15 min reception/housekeeping, 30 min others) |
+| NFR-02 | 🟡 | 2FA switched off by request (TOTP page `/mfa` kept; one line in `src/lib/auth.ts` re-enables it); idle sign-out (15 min reception/housekeeping, 30 min others) |
 
 ## Run locally
 
