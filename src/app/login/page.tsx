@@ -39,6 +39,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             have_account: t.have_account,
             no_account: t.no_account,
             check_email: t.check_email,
+            already_registered: t.already_registered,
+            forgot_password: t.forgot_password,
+            reset_title: t.reset_title,
+            reset_btn: t.reset_btn,
+            reset_sent: t.reset_sent,
+            invalid_login: t.invalid_login,
+            email_not_confirmed: t.email_not_confirmed,
           }}
         />
       </section>
