@@ -9,7 +9,10 @@ export async function GET(request: NextRequest) {
   const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
   if (code) {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    // Typical cause: the email link was opened on another device/browser (no PKCE verifier).
+    // The email is still confirmed by Supabase, so ask the user to sign in with their password.
+    if (error) return NextResponse.redirect(`${origin}/login?notice=link`);
   }
   return NextResponse.redirect(`${origin}${target}`);
 }

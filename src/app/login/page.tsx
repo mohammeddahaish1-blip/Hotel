@@ -46,7 +46,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             reset_sent: t.reset_sent,
             invalid_login: t.invalid_login,
             email_not_confirmed: t.email_not_confirmed,
+            show_password: t.show_password,
+            link_other_device: t.link_other_device,
           }}
+          notice={typeof sp.notice === "string" ? sp.notice : undefined}
         />
       </section>
     </main>

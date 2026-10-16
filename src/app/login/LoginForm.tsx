@@ -7,18 +7,19 @@ import { createClient } from "@/lib/supabase/client";
 type T = Record<
   | "login_title" | "signup_title" | "email" | "password" | "login_btn" | "signup_btn" | "have_account" | "no_account"
   | "check_email" | "already_registered" | "forgot_password" | "reset_title" | "reset_btn" | "reset_sent"
-  | "invalid_login" | "email_not_confirmed",
+  | "invalid_login" | "email_not_confirmed" | "show_password" | "link_other_device",
   string
 >;
 
 type Mode = "login" | "signup" | "reset";
 
-export function LoginForm({ t }: { t: T }) {
+export function LoginForm({ t, notice }: { t: T; notice?: string }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(notice === "link" ? t.link_other_device : null);
   const [pending, setPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const switchMode = (m: Mode) => {
     setMode(m);
@@ -84,13 +85,17 @@ export function LoginForm({ t }: { t: T }) {
           <span className="label">{t.password}</span>
           <input
             name="password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             required
             minLength={8}
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             dir="ltr"
             className="input"
           />
+          <span className="mt-1 flex items-center gap-2 text-xs text-muted">
+            <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} />
+            {t.show_password}
+          </span>
         </label>
       ) : null}
       {error ? <div role="alert" className="rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div> : null}
