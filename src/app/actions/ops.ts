@@ -175,6 +175,38 @@ export async function addExpense(_: ActionResult, fd: FormData) {
   );
 }
 
+export async function updateExpense(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const { data, error } = await ctx.supabase
+    .from("expenses")
+    .update({
+      category: s(fd, "category") ?? "other",
+      description: s(fd, "description") ?? "",
+      amount: toBaisa(s(fd, "amount")),
+      expense_date: s(fd, "date") ?? undefined,
+    })
+    .eq("id", s(fd, "id")!)
+    .select("id");
+  if (error) return { error: errorMessage(t, error) };
+  // RLS hides rows the user may not change: no row updated means no permission
+  if (!data?.length) return { error: t.err_FORBIDDEN };
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  return { ok: t.saved };
+}
+
+export async function deleteExpense(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const { data, error } = await ctx.supabase.from("expenses").delete().eq("id", s(fd, "id")!).select("id");
+  if (error) return { error: errorMessage(t, error) };
+  if (!data?.length) return { error: t.err_FORBIDDEN };
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  return { ok: t.saved };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function postDueRent(_: ActionResult, __: FormData) {
   return run((c) => c.supabase.rpc("post_due_billing", { p_tenant: c.tenantId }), ["/finance"]);

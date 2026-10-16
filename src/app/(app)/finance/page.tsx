@@ -5,7 +5,7 @@ import type { DictKey } from "@/lib/i18n/dict";
 import { dateTime, gregorian, omr, todayIn, whatsappLink } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { Badge, Empty, Field, PageHeader, Section } from "@/components/ui";
-import { addExpense, closeShift, openShift, postDueRent } from "@/app/actions/ops";
+import { addExpense, closeShift, deleteExpense, openShift, postDueRent, updateExpense } from "@/app/actions/ops";
 
 const CATEGORIES = ["utilities", "salaries", "maintenance", "supplies", "laundry", "marketing", "rent", "commission", "government", "other"];
 
@@ -18,6 +18,7 @@ export default async function FinancePage() {
   const today = todayIn(ctx.property.timezone);
   const monthStart = `${today.slice(0, 8)}01`;
   const seesMoney = ["owner", "manager", "accountant"].includes(ctx.role);
+  const canEditExpenses = seesMoney;
 
   const [{ data: myShift }, { data: shifts }, { data: expenses }, { data: aging }] = await Promise.all([
     db.from("cash_shifts").select("*").eq("property_id", ctx.property.id).eq("opened_by", ctx.userId).is("closed_at", null).maybeSingle(),
@@ -152,10 +153,31 @@ export default async function FinancePage() {
                     <tbody>
                       {(expenses ?? []).map((e) => (
                         <tr key={e.id}>
-                          <td>{gregorian(e.expense_date, lang)}</td>
-                          <td>{t[`ec_${e.category}` as DictKey]}</td>
-                          <td>{e.description}</td>
-                          <td className="num">{omr(e.amount, lang)}</td>
+                          <td className="align-top">{gregorian(e.expense_date, lang)}</td>
+                          <td className="align-top">{t[`ec_${e.category}` as DictKey]}</td>
+                          <td className="align-top">
+                            {e.description}
+                            {canEditExpenses ? (
+                              <details className="mt-1">
+                                <summary className="cursor-pointer text-xs text-brand">{t.edit}</summary>
+                                <ActionForm action={updateExpense} className="mt-2 grid gap-2 sm:grid-cols-2">
+                                  <input type="hidden" name="id" value={e.id} />
+                                  <select name="category" defaultValue={e.category} className="input">
+                                    {CATEGORIES.map((c) => <option key={c} value={c}>{t[`ec_${c}` as DictKey]}</option>)}
+                                  </select>
+                                  <input name="description" defaultValue={e.description} required className="input" />
+                                  <input name="amount" defaultValue={(e.amount / 1000).toFixed(3)} required inputMode="decimal" className="input" />
+                                  <input type="date" name="date" defaultValue={e.expense_date} className="input" />
+                                  <SubmitButton className="btn-primary btn-sm">{t.save}</SubmitButton>
+                                </ActionForm>
+                                <ActionForm action={deleteExpense} className="mt-2">
+                                  <input type="hidden" name="id" value={e.id} />
+                                  <SubmitButton className="btn-danger btn-sm" confirm={`${t.delete}: ${e.description}?`}>{t.delete}</SubmitButton>
+                                </ActionForm>
+                              </details>
+                            ) : null}
+                          </td>
+                          <td className="num align-top">{omr(e.amount, lang)}</td>
                         </tr>
                       ))}
                     </tbody>
