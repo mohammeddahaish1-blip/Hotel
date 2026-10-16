@@ -74,8 +74,8 @@ sign-in the invitation is attached automatically (`accept_invitations()`).
 ## Deployment
 
 - **Supabase:** project `hotel` (`isijnklsskwbdbmmertk`) — all migrations in `supabase/migrations` are applied.
-- **Vercel:** project `nuzul-hotel` exists with the two `NEXT_PUBLIC_SUPABASE_*` env vars. Connect the GitHub
-  repo in Vercel → Project → Settings → Git so pushes deploy automatically.
+- **Vercel:** project `nuzul-hotel` (https://nuzul-hotel.vercel.app) is connected to this GitHub repo; every push to
+  `claude/blissful-einstein-kbkcp6` (the repo's default branch) deploys to production automatically.
 - **Supabase Auth settings:** set *Site URL* to the Vercel production URL and add `https://<your-domain>/auth/callback`
   to *Redirect URLs*, so sign-up confirmation emails land back in the app. TOTP MFA must stay enabled (default).
 
