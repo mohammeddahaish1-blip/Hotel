@@ -38,7 +38,7 @@ reports, ROP / Ministry compliance exports, roles and an append-only audit log.
 | CR-01/02 | ✅ structured export | ROP guest register CSV + ministry statistics; every export logged in `compliance_submissions` |
 | CR-03–06 | ✅ | tourism 4%, municipality 5%, VAT 5%, service charge (0–8%, off by default) — all editable per tenant |
 | CR-07 | 🟡 | invoice snapshot is UBL-mappable; Fawtara provider integration is P1 |
-| CR-08 | 🟡 | consent, private encrypted bucket, 5-minute signed URLs, retention date per document; automatic purge job still to add |
+| CR-08 / NFR-04 | ✅ | consent, private bucket, 5-minute signed URLs, per-document retention date; expired images purged daily by the `purge-guest-documents` Edge Function (pg_cron 01:15 Muscat) |
 | NFR-02 | ✅ | TOTP 2FA enforced for owner/manager; idle sign-out (15 min reception/housekeeping, 30 min others) |
 
 ## Run locally
@@ -59,6 +59,7 @@ psql -d hotel -f supabase/tests/00_supabase_stub.sql
 for f in supabase/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -d hotel -f "$f"; done
 psql -d hotel -f supabase/tests/01_core_flows.sql   # → ALL TESTS PASSED
 psql -d hotel -f supabase/tests/02_invitations.sql
+psql -d hotel -f supabase/tests/03_unit_guard.sql     # → UNIT GUARD OK
 ```
 
 `01_core_flows.sql` proves tenant isolation (NFR-01), the conflict constraint, discount approval,
@@ -80,5 +81,5 @@ sign-in the invitation is attached automatically (`accept_invitations()`).
 
 ## Not yet built (next steps)
 
-Automatic purge of expired ID images (needs a service-role job), daily owner report delivery (FR-52 auto-send),
+Daily owner report delivery (FR-52 auto-send),
 direct ROP/MHT API, Fawtara provider, Thawani links, WhatsApp Business API, channel manager, offline mode.
