@@ -34,6 +34,7 @@ reports, ROP / Ministry compliance exports, roles and an append-only audit log.
 | FR-30–35 | ✅ | bilingual invoice + credit notes, configurable tax engine, multi-method/partial payments, expenses, cash shift with variance per employee, aging 0-30/31-60/61-90/90+ with WhatsApp reminders |
 | FR-40 | ✅ | mobile cleaning list, arrivals first; "Ready" makes the unit available |
 | FR-43 | ✅ (early P1) | blocking maintenance tickets remove a unit from availability |
+| FR-53+ | ✅ | owner grants/revokes sections per employee (Settings → Manage permissions); enforced by `private.has_role` in the database, not only hidden in the UI |
 | FR-50–55 | ✅ | owner dashboard, occupancy/ADR/RevPAR, CSV exports, six roles, audit log, wa.me sharing |
 | CR-01/02 | ✅ structured export | ROP guest register CSV + ministry statistics; every export logged in `compliance_submissions` |
 | CR-03–06 | ✅ | tourism 4%, municipality 5%, VAT 5%, service charge (0–8%, off by default) — all editable per tenant |
@@ -60,6 +61,7 @@ for f in supabase/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -d hotel -f "$f";
 psql -d hotel -f supabase/tests/01_core_flows.sql   # → ALL TESTS PASSED
 psql -d hotel -f supabase/tests/02_invitations.sql
 psql -d hotel -f supabase/tests/03_unit_guard.sql     # → UNIT GUARD OK
+psql -d hotel -f supabase/tests/04_permissions.sql    # → PERMISSIONS OK
 ```
 
 `01_core_flows.sql` proves tenant isolation (NFR-01), the conflict constraint, discount approval,

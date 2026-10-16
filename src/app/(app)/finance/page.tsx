@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireArea } from "@/lib/auth";
+import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { dateTime, gregorian, omr, todayIn, whatsappLink } from "@/lib/format";
@@ -17,7 +17,7 @@ export default async function FinancePage() {
   const db = ctx.supabase;
   const today = todayIn(ctx.property.timezone);
   const monthStart = `${today.slice(0, 8)}01`;
-  const seesMoney = ["owner", "manager", "accountant"].includes(ctx.role);
+  const seesMoney = hasRole(ctx, ["manager", "accountant"]);
   const canEditExpenses = seesMoney;
 
   const [{ data: myShift }, { data: shifts }, { data: expenses }, { data: aging }] = await Promise.all([
@@ -121,7 +121,7 @@ export default async function FinancePage() {
         </div>
       </div>
 
-      {seesMoney || ctx.role === "reception" ? (
+      {hasRole(ctx, ["manager", "accountant", "reception"]) ? (
         <div className="mt-4 grid gap-4 lg:grid-cols-3">
           <Section title={t.expense_add}>
             <ActionForm action={addExpense} resetOnSuccess className="space-y-2">

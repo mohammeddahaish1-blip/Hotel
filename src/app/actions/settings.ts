@@ -145,3 +145,28 @@ export async function updateMember(_: ActionResult, fd: FormData) {
       .eq("user_id", s(fd, "user_id")!),
   );
 }
+
+const VALID_AREAS = new Set([
+  "dashboard", "board", "calendar", "reservations", "guests", "housekeeping",
+  "maintenance", "finance", "reports", "compliance", "settings", "audit",
+]);
+
+/** Owner grants/revokes sections for one employee (null = role defaults). */
+export async function setPermissions(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  if (ctx.role !== "owner") return { error: t.perm_owner_only };
+  const areas = fd.getAll("areas").map(String).filter((a) => VALID_AREAS.has(a));
+  const permissions = fd.get("use_defaults") === "on" ? null : areas;
+  const { data, error } = await ctx.supabase
+    .from("memberships")
+    .update({ permissions })
+    .eq("tenant_id", ctx.tenantId)
+    .eq("user_id", s(fd, "user_id")!)
+    .neq("role", "owner")
+    .select("user_id");
+  if (error) return { error: errorMessage(t, error) };
+  if (!data?.length) return { error: t.err_FORBIDDEN };
+  revalidatePath("/settings/permissions");
+  return { ok: t.saved };
+}

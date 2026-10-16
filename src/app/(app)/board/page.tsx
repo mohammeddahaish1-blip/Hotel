@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireArea, can } from "@/lib/auth";
+import { requireArea, can, hasRole } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { gregorian } from "@/lib/format";
@@ -27,7 +27,7 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
   const rows = (data as Row[]).filter((r) => !filter || r.status === filter);
   const floors = [...new Set(rows.map((r) => r.floor_name ?? "—"))];
   const statuses = ["available", "reserved", "occupied", "dirty", "maintenance", "out_of_service"];
-  const canBook = can(ctx.role, "reservations") && ctx.role !== "accountant";
+  const canBook = can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"]);
 
   return (
     <>

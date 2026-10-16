@@ -1,4 +1,4 @@
-import { requireArea } from "@/lib/auth";
+import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { todayIn } from "@/lib/format";
@@ -68,7 +68,7 @@ export default async function HousekeepingPage() {
         </div>
       )}
 
-      {ctx.role !== "housekeeping" ? (
+      {hasRole(ctx, ["manager", "reception"]) ? (
         <div className="mt-6">
           <Section title={t.hk_add}>
             <ActionForm action={addHkTask} resetOnSuccess className="grid gap-2 sm:grid-cols-5">

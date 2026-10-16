@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   let name = `${kind}-${from}-${to}.csv`;
 
   if (kind === "police") {
-    if (!can(ctx.role, "compliance")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    if (!can(ctx, "compliance")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
     const { data, error } = await db.rpc("police_register", { p_property: p, p_from: from, p_to: to });
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     const rows = (data ?? []) as Record<string, unknown>[];
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     });
     name = `ROP-guest-register-${from}-${to}.csv`;
   } else if (kind === "ministry") {
-    if (!can(ctx.role, "compliance")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    if (!can(ctx, "compliance")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
     const { data, error } = await db.rpc("ministry_statistics", { p_property: p, p_from: from, p_to: to });
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     const st = data as { by_nationality: { nationality: string; guests: number; nights: number }[]; occupancy: Record<string, number>; invoiced_revenue: number; employees: number };
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     });
     name = `MHT-statistics-${from}-${to}.csv`;
   } else if (kind === "occupancy") {
-    if (!can(ctx.role, "reports")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    if (!can(ctx, "reports")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
     const { data } = await db.rpc("occupancy_report", { p_property: p, p_from: from, p_to: to });
     body = csv(
       ((data ?? []) as Record<string, number | string>[]).map((r) => ({
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
     );
   } else if (kind === "accounting") {
     // FR-37 (first step): monthly invoice ledger for the accountant
-    if (!can(ctx.role, "reports")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    if (!can(ctx, "reports")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
     const { data } = await db.from("invoices").select("series, number, issued_at, subtotal, tax_total, total, snapshot").eq("property_id", p)
       .gte("issued_at", `${from}T00:00:00`).lte("issued_at", `${to}T23:59:59`).order("number");
     body = csv(

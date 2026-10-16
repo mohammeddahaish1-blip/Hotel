@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
@@ -191,7 +192,10 @@ export default async function SettingsPage() {
           </div>
         </Section>
 
-        <Section title={t.set_staff}>
+        <Section
+          title={t.set_staff}
+          actions={isOwner ? <Link href="/settings/permissions" className="btn-primary btn-sm">{t.perm_manage}</Link> : null}
+        >
           <div className="space-y-2">
             {(members ?? []).map((m) => (
               <ActionForm key={m.user_id} action={updateMember} className="grid grid-cols-12 items-center gap-2 text-sm">

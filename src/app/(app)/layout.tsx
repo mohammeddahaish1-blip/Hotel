@@ -1,4 +1,4 @@
-import { getCtx, can, ROLE_ACCESS } from "@/lib/auth";
+import { getCtx, can, AREAS } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { NavLinks } from "@/components/NavLinks";
@@ -7,12 +7,11 @@ import { SignOut } from "@/components/SignOut";
 import { IdleLogout } from "@/components/IdleLogout";
 import { PropertySwitcher } from "@/components/PropertySwitcher";
 
-const AREAS = Object.keys(ROLE_ACCESS) as (keyof typeof ROLE_ACCESS)[];
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await getCtx();
   const { t, lang } = await getDict();
-  const links = AREAS.filter((a) => can(ctx.role, a)).map((a) => ({
+  const links = AREAS.filter((a) => can(ctx, a)).map((a) => ({
     href: `/${a}`,
     label: t[`nav_${a}` as DictKey],
   }));

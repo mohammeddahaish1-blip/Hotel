@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireArea } from "@/lib/auth";
+import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { dateTime, gregorian, hijri, nights, omr, parseRange, todayIn, whatsappLink } from "@/lib/format";
@@ -36,7 +36,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
   const unit = r.units as unknown as { id: string; number: string; unit_types: { name_ar: string } };
   const stay = parseRange(r.stay as string);
   const today = todayIn(ctx.property.timezone);
-  const canOperate = ["owner", "manager", "reception"].includes(ctx.role);
+  const canOperate = hasRole(ctx, ["manager", "reception"]);
 
   const { data: folio } = await db.from("folios").select("id, status").eq("reservation_id", id).maybeSingle();
   const [{ data: summary }, { data: charges }, { data: payments }, { data: invoices }, { data: contract }, { data: units }] = await Promise.all([
@@ -217,7 +217,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
                           <td>{p.reference ?? ""}</td>
                           <td className="num">{omr(p.amount, lang)}</td>
                           <td>
-                            {!p.voided_at && ["owner", "manager", "accountant"].includes(ctx.role) ? (
+                            {!p.voided_at && hasRole(ctx, ["manager", "accountant"]) ? (
                               <ActionForm action={voidPayment}>
                                 <input type="hidden" name="id" value={p.id} />
                                 <input type="hidden" name="res" value={id} />

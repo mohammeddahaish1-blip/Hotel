@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireArea } from "@/lib/auth";
+import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { dictionaries } from "@/lib/i18n/dict";
 import { dateTime, gregorian, omr, whatsappLink } from "@/lib/format";
@@ -34,7 +34,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
   const L = (k: keyof typeof ar) => (both ? `${ar[k]} / ${en[k]}` : inv.language === "en" ? en[k] : ar[k]);
   const docLang = inv.language === "en" ? "en" : "ar";
   const number = `${inv.series}-${String(inv.number).padStart(6, "0")}`;
-  const canCredit = ["owner", "manager", "accountant"].includes(ctx.role);
+  const canCredit = hasRole(ctx, ["manager", "accountant"]);
   const shareText =
     docLang === "en"
       ? `Tax invoice ${number} from ${s.seller.name_en ?? s.seller.name_ar}\nTotal: ${omr(inv.total, "en")}`
