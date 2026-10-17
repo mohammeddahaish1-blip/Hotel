@@ -30,7 +30,8 @@ export function LoginForm({ t, notice }: { t: T; notice?: string }) {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const email = String(fd.get("email")).trim();
+    // Phones/iPads often capitalise the first letter: emails are case-insensitive
+    const email = String(fd.get("email")).trim().toLowerCase();
     const password = String(fd.get("password") ?? "");
     const supabase = createClient();
     const callback = `${window.location.origin}/auth/callback`;
@@ -79,7 +80,7 @@ export function LoginForm({ t, notice }: { t: T; notice?: string }) {
       <div className="mx-auto h-1 w-16 rounded-full bg-white/90" />
       <label className="block pt-4">
         <span className="mb-2 block text-xs text-white/80">{t.email}</span>
-        <input name="email" type="email" required autoComplete="email" dir="ltr" placeholder="name@hotel.om" className="pill-input" />
+        <input name="email" type="email" required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} dir="ltr" placeholder="name@hotel.om" className="pill-input" />
       </label>
       {mode !== "reset" ? (
         <label className="block">
@@ -90,6 +91,9 @@ export function LoginForm({ t, notice }: { t: T; notice?: string }) {
             required
             minLength={8}
             autoComplete={mode === "login" ? "current-password" : "new-password"}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             dir="ltr"
             placeholder="••••••••"
             className="pill-input"
