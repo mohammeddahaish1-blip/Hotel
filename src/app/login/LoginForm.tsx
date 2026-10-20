@@ -75,16 +75,16 @@ export function LoginForm({ t, notice }: { t: T; notice?: string }) {
   const button = mode === "login" ? t.login_btn : mode === "signup" ? t.signup_btn : t.reset_btn;
 
   return (
-    <form onSubmit={onSubmit} className="relative w-full max-w-xs space-y-4 text-center">
-      <h1 className="text-3xl font-bold">{title}</h1>
+    <form onSubmit={onSubmit} className="relative w-full max-w-sm space-y-4 text-center">
+      <h1 className="text-4xl font-bold lg:text-5xl">{title}</h1>
       <div className="mx-auto h-1 w-16 rounded-full bg-white/90" />
       <label className="block pt-4">
-        <span className="mb-2 block text-xs text-white/80">{t.email}</span>
+        <span className="mb-2 block text-sm text-white/85">{t.email}</span>
         <input name="email" type="email" required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} dir="ltr" placeholder="name@hotel.om" className="pill-input" />
       </label>
       {mode !== "reset" ? (
         <label className="block">
-          <span className="mb-2 block text-xs text-white/80">{t.password}</span>
+          <span className="mb-2 block text-sm text-white/85">{t.password}</span>
           <input
             name="password"
             type={showPassword ? "text" : "password"}

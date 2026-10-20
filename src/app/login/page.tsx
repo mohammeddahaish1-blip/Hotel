@@ -7,29 +7,22 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { t, lang } = await getDict();
   const sp = await searchParams;
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#e6efed] p-3 sm:p-8 dark:bg-bg">
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] border-[6px] border-[#1c2321] bg-white shadow-[0_30px_80px_rgba(13,107,95,0.25)] md:grid-cols-2">
+    <main className="grid min-h-screen bg-white md:grid-cols-2">
         {/* Branding panel */}
-        <section className="relative hidden flex-col justify-between bg-white p-10 text-[#1c2321] md:flex">
+        <section className="relative hidden flex-col bg-white p-10 text-[#1c2321] md:flex lg:p-14">
           <div>
-            <div className="brand-word text-6xl text-brand">{t.appName}</div>
-            <div className="mt-1 text-sm text-[#66706c]">
+            <div className="brand-word text-7xl text-brand lg:text-8xl">{t.appName}</div>
+            <div className="mt-2 text-lg text-[#66706c]">
               {lang === "ar" ? "لإدارة الفنادق والشقق الفندقية" : "Hotels & serviced apartments"}
             </div>
-            <p className="mt-6 text-center text-xs text-[#66706c]">{lang === "ar" ? `«${t.tagline}»` : `“${t.tagline}”`}</p>
           </div>
-          <HotelIllustration className="mx-auto my-6 w-full max-w-sm" />
-          <div className="flex items-center justify-between text-xs text-[#66706c]">
-            <span className="mx-auto block h-1 w-10 rounded-full bg-[#d9d4c8]" />
-          </div>
-          <div className="flex items-center justify-between text-[11px] text-[#66706c]">
-            <span>© {new Date().getFullYear()} <span className="brand-word text-sm">{t.appName}</span></span>
-            <span>{lang === "ar" ? "صُنع في عُمان" : "Made in Oman"}</span>
+          <div className="flex flex-1 items-end justify-center pb-6">
+            <HotelIllustration className="w-full max-w-xl" />
           </div>
         </section>
 
         {/* Form panel */}
-        <section className="relative flex min-h-[560px] flex-col items-center justify-center overflow-hidden bg-brand px-6 py-10 text-white sm:px-12">
+        <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-brand px-6 py-10 text-white sm:px-12">
           <span className="pointer-events-none absolute -end-24 -top-24 h-64 w-64 rounded-full bg-white/10" />
           <span className="pointer-events-none absolute -bottom-28 -start-20 h-72 w-72 rounded-full bg-white/10" />
           <span className="pointer-events-none absolute end-10 top-10 h-3 w-3 rounded-full bg-[#f4c76b]" />
@@ -64,7 +57,6 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           notice={typeof sp.notice === "string" ? sp.notice : undefined}
         />
         </section>
-      </div>
     </main>
   );
 }
