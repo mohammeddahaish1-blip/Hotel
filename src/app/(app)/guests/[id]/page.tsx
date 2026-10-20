@@ -4,7 +4,7 @@ import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { gregorian, dateTime, omr, parseRange } from "@/lib/format";
-import { Badge, Empty, PageHeader, Section, RES_STATUS_TONE } from "@/components/ui";
+import { Badge, Empty, PageHeader, Section, RES_STATUS_TONE, RES_STATUS_EMOJI } from "@/components/ui";
 import { GuestForm } from "@/components/GuestForm";
 
 export default async function GuestPage({ params }: PageProps<"/guests/[id]">) {
@@ -47,7 +47,7 @@ export default async function GuestPage({ params }: PageProps<"/guests/[id]">) {
                     <li key={s.id} className="py-2 text-sm">
                       <Link href={`/reservations/${s.id}`} className="flex items-center justify-between gap-2">
                         <span>{s.code} · {t.unit} {unit}</span>
-                        <Badge tone={RES_STATUS_TONE[s.status]}>{t[`rs_${s.status}` as DictKey]}</Badge>
+                        <Badge tone={RES_STATUS_TONE[s.status]}><span aria-hidden>{RES_STATUS_EMOJI[s.status]}</span> {t[`rs_${s.status}` as DictKey]}</Badge>
                       </Link>
                       <div className="text-xs text-muted">{gregorian(r.from, lang)} → {gregorian(r.to, lang)} · {omr(s.room_total - s.discount_amount, lang)}</div>
                     </li>

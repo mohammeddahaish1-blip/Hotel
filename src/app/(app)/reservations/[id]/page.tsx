@@ -5,7 +5,7 @@ import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { dateTime, gregorian, hijri, nights, omr, parseRange, todayIn, whatsappLink } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge, Empty, Field, PageHeader, Section, RES_STATUS_TONE } from "@/components/ui";
+import { Badge, Empty, Field, PageHeader, Section, RES_STATUS_TONE, RES_STATUS_EMOJI } from "@/components/ui";
 import {
   addCharge, addPayment, cancelReservation, changeReservation, checkIn, checkOut, issueInvoice, voidCharge, voidPayment,
 } from "@/app/actions/ops";
@@ -65,7 +65,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
         title={`${t.res_details} ${r.code}`}
         sub={
           <span className="flex flex-wrap items-center gap-2">
-            <Badge tone={RES_STATUS_TONE[r.status]}>{t[`rs_${r.status}` as DictKey]}</Badge>
+            <Badge tone={RES_STATUS_TONE[r.status]}><span aria-hidden>{RES_STATUS_EMOJI[r.status]}</span> {t[`rs_${r.status}` as DictKey]}</Badge>
             <span>{t[`kind_${r.kind}` as DictKey]} · {t[`src_${r.source}` as DictKey]}</span>
           </span>
         }

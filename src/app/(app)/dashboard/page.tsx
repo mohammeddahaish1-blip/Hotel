@@ -3,7 +3,7 @@ import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { omr, pct, gregorian, hijri } from "@/lib/format";
-import { Badge, Empty, PageHeader, Section, Stat, UNIT_STATUS_TONE, RES_STATUS_TONE } from "@/components/ui";
+import { Badge, Empty, PageHeader, Section, Stat, UNIT_STATUS_TONE, UNIT_STATUS_EMOJI, RES_STATUS_TONE, RES_STATUS_EMOJI } from "@/components/ui";
 import { loadAlerts } from "@/lib/alerts";
 
 type Dash = {
@@ -75,7 +75,7 @@ export default async function DashboardPage() {
           {statuses.map((s) => (
             <Link key={s} href={`/board?status=${s}`} className="rounded-xl bg-surface-2 p-3 text-center">
               <div className="num text-2xl font-bold">{d.by_status[s] ?? 0}</div>
-              <Badge tone={UNIT_STATUS_TONE[s]}>{t[`st_${s}` as DictKey]}</Badge>
+              <Badge tone={UNIT_STATUS_TONE[s]}><span aria-hidden>{UNIT_STATUS_EMOJI[s]}</span> {t[`st_${s}` as DictKey]}</Badge>
             </Link>
           ))}
         </div>
@@ -117,7 +117,7 @@ function MovementList({ items, t, empty }: { items: Dash["arrivals"]; t: Record<
             <span>
               <span className="font-semibold">{a.unit}</span> · {a.guest}
             </span>
-            <Badge tone={RES_STATUS_TONE[a.status]}>{t[`rs_${a.status}`]}</Badge>
+            <Badge tone={RES_STATUS_TONE[a.status]}><span aria-hidden>{RES_STATUS_EMOJI[a.status]}</span> {t[`rs_${a.status}`]}</Badge>
           </Link>
         </li>
       ))}

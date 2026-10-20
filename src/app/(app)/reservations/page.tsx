@@ -3,7 +3,7 @@ import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { gregorian, omr, parseRange } from "@/lib/format";
-import { Badge, Empty, PageHeader, RES_STATUS_TONE } from "@/components/ui";
+import { Badge, Empty, PageHeader, RES_STATUS_TONE, RES_STATUS_EMOJI } from "@/components/ui";
 
 type Row = {
   id: string; code: string; stay: string; status: string; kind: string; source: string;
@@ -70,7 +70,7 @@ export default async function ReservationsPage({ searchParams }: PageProps<"/res
                     <td>{gregorian(st.to, lang)}</td>
                     <td>{t[`src_${r.source}` as DictKey]}{r.kind === "contract" ? ` · ${t.kind_contract}` : ""}</td>
                     <td className="num">{omr(r.room_total - r.discount_amount, lang)}</td>
-                    <td><Badge tone={RES_STATUS_TONE[r.status]}>{t[`rs_${r.status}` as DictKey]}</Badge></td>
+                    <td><Badge tone={RES_STATUS_TONE[r.status]}><span aria-hidden>{RES_STATUS_EMOJI[r.status]}</span> {t[`rs_${r.status}` as DictKey]}</Badge></td>
                   </tr>
                 );
               })}

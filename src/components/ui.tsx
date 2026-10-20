@@ -28,6 +28,25 @@ export const UNIT_STATUS_TONE: Record<string, Tone> = {
   out_of_service: "gray",
 };
 
+/** Visual cue shown before a unit status label (🔧 maintenance, 🧹 dirty …). */
+export const UNIT_STATUS_EMOJI: Record<string, string> = {
+  available: "✅",
+  reserved: "📅",
+  occupied: "🛏️",
+  dirty: "🧹",
+  maintenance: "🔧",
+  out_of_service: "⛔",
+};
+
+export const RES_STATUS_EMOJI: Record<string, string> = {
+  tentative: "⏳",
+  confirmed: "📌",
+  checked_in: "🔑",
+  checked_out: "👋",
+  cancelled: "❌",
+  no_show: "🚫",
+};
+
 export const RES_STATUS_TONE: Record<string, Tone> = {
   tentative: "gray",
   confirmed: "info",

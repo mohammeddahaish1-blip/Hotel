@@ -2,8 +2,9 @@ import Link from "next/link";
 import { requireArea, can, hasRole } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
-import { gregorian } from "@/lib/format";
-import { Badge, Empty, PageHeader, UNIT_STATUS_TONE } from "@/components/ui";
+import { gregorian, todayIn } from "@/lib/format";
+import { Badge, Empty, PageHeader, UNIT_STATUS_EMOJI, UNIT_STATUS_TONE } from "@/components/ui";
+import { BoardQuickBook } from "@/components/BoardQuickBook";
 
 type Row = {
   unit_id: string;
@@ -28,6 +29,7 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
   const floors = [...new Set(rows.map((r) => r.floor_name ?? "—"))];
   const statuses = ["available", "reserved", "occupied", "dirty", "maintenance", "out_of_service"];
   const canBook = can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"]);
+  const today = todayIn(ctx.property.timezone);
 
   return (
     <>
@@ -39,7 +41,7 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
         <Link href="/board" className={`btn-sm ${!filter ? "btn-primary" : "btn-ghost"}`}>{t.units}</Link>
         {statuses.map((s) => (
           <Link key={s} href={`/board?status=${s}`} className={`btn-sm ${filter === s ? "btn-primary" : "btn-ghost"}`}>
-            {t[`st_${s}` as DictKey]}
+            <span aria-hidden>{UNIT_STATUS_EMOJI[s]}</span> {t[`st_${s}` as DictKey]}
           </Link>
         ))}
       </div>
@@ -53,11 +55,14 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
               {rows
                 .filter((r) => (r.floor_name ?? "—") === f)
                 .map((r) => {
+                  const bookable = canBook && r.status === "available" && !r.reservation_id;
                   const body = (
                     <div className="card h-full p-3">
                       <div className="flex items-center justify-between">
                         <span className="num text-lg font-bold">{r.number}</span>
-                        <Badge tone={UNIT_STATUS_TONE[r.status]}>{t[`st_${r.status}` as DictKey]}</Badge>
+                        <Badge tone={UNIT_STATUS_TONE[r.status]}>
+                          <span aria-hidden>{UNIT_STATUS_EMOJI[r.status]}</span> {t[`st_${r.status}` as DictKey]}
+                        </Badge>
                       </div>
                       <div className="mt-1 truncate text-xs text-muted">{r.type_name}</div>
                       {r.guest_name ? <div className="mt-2 truncate text-sm">{r.guest_name}</div> : null}
@@ -66,8 +71,16 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
                       ) : r.next_arrival ? (
                         <div className="text-xs text-muted">{t.res_upcoming}: {gregorian(r.next_arrival, lang)}</div>
                       ) : null}
+                      {bookable ? <div className="mt-2 text-xs font-semibold text-brand">⚡ {t.qb_title}</div> : null}
                     </div>
                   );
+                  if (bookable) {
+                    return (
+                      <BoardQuickBook key={r.unit_id} unitId={r.unit_id} unitNumber={r.number} today={today} t={t} lang={lang}>
+                        {body}
+                      </BoardQuickBook>
+                    );
+                  }
                   return r.reservation_id && canBook ? (
                     <Link key={r.unit_id} href={`/reservations/${r.reservation_id}`}>{body}</Link>
                   ) : (

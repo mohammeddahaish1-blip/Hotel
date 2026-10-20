@@ -3,7 +3,7 @@ import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { gregorian, omr, parseRange, plainOmr } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge, Field, PageHeader, Section, UNIT_STATUS_TONE } from "@/components/ui";
+import { Badge, Field, PageHeader, Section, UNIT_STATUS_EMOJI, UNIT_STATUS_TONE } from "@/components/ui";
 import {
   addFloor, addRatePlan, addUnitType, bulkUnits, deleteRatePlan, inviteUser, setUnitService, updateMember,
   updateProperty, updateTax, updateTenantPolicy, updateUnitType,
@@ -184,7 +184,7 @@ export default async function SettingsPage() {
                   className="rounded-lg border border-line px-2 py-1 text-xs"
                 >
                   <span className="num font-semibold">{u.number}</span>{" "}
-                  {u.status === "out_of_service" ? <Badge tone={UNIT_STATUS_TONE[u.status]}>{t.st_out_of_service}</Badge> : null}
+                  {u.status === "out_of_service" ? <Badge tone={UNIT_STATUS_TONE[u.status]}><span aria-hidden>{UNIT_STATUS_EMOJI.out_of_service}</span> {t.st_out_of_service}</Badge> : null}
                 </button>
               </ActionForm>
             ))}
