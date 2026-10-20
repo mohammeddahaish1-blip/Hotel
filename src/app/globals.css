@@ -22,6 +22,9 @@
   --violet: #6b3fa0;
   --violet-soft: #f1eafa;
   --gray-soft: #eceae4;
+  /* chart marks: brand teal, saturated enough to not read gray (validated) */
+  --chart: #0a8a78;
+  --grid: #ebe7dd;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -47,6 +50,8 @@
     --violet: #b897e6;
     --violet-soft: #2c2140;
     --gray-soft: #262f2e;
+    --chart: #34a593;
+    --grid: #26302f;
   }
 }
 
@@ -72,6 +77,8 @@
   --color-violet: var(--violet);
   --color-violet-soft: var(--violet-soft);
   --color-gray-soft: var(--gray-soft);
+  --color-chart: var(--chart);
+  --color-grid: var(--grid);
   --font-sans: var(--font-arabic), system-ui, sans-serif;
 }
 

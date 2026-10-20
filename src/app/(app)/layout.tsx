@@ -1,4 +1,4 @@
-import { getCtx, can, AREAS } from "@/lib/auth";
+import { getCtx, can, hasRole, AREAS } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { GroupTabs, NavLinks, type NavGroup } from "@/components/NavLinks";
@@ -21,6 +21,16 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     { key: "ops", label: t.nav_grp_ops, tabs: [...tab("housekeeping"), ...tab("maintenance")] },
     { key: "finance", label: t.nav_finance, tabs: tab("finance") },
     { key: "reports", label: t.nav_grp_reports, tabs: [...tab("reports"), ...tab("compliance")] },
+    {
+      key: "analytics",
+      label: t.nav_grp_analytics,
+      tabs: can(ctx, "reports")
+        ? [
+            { href: "/analytics", label: t.an_charts },
+            ...(hasRole(ctx, ["manager"]) ? [{ href: "/analytics/staff", label: t.an_staff }] : []),
+          ]
+        : [],
+    },
     {
       key: "settings",
       label: t.nav_settings,
