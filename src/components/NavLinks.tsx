@@ -3,22 +3,40 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function NavLinks({ links, variant }: { links: { href: string; label: string }[]; variant: "side" | "top" }) {
+export type NavTab = { href: string; label: string };
+export type NavGroup = { key: string; label: string; tabs: NavTab[]; also?: string[] };
+
+const matches = (path: string, href: string) => path === href || path.startsWith(`${href}/`);
+
+/** The tab whose href is the most specific match for the path (/settings vs /settings/permissions) */
+function bestTab(path: string, tabs: NavTab[]) {
+  return tabs.filter((t) => matches(path, t.href)).sort((a, b) => b.href.length - a.href.length)[0];
+}
+
+function activeGroup(path: string, groups: NavGroup[]) {
+  let best: { key: string; len: number } | null = null;
+  for (const g of groups) {
+    for (const href of [...g.tabs.map((t) => t.href), ...(g.also ?? [])]) {
+      if (matches(path, href) && (!best || href.length > best.len)) best = { key: g.key, len: href.length };
+    }
+  }
+  return best?.key;
+}
+
+/** Main menu: one entry per group, linking to the group's first allowed tab. */
+export function NavLinks({ groups, variant }: { groups: NavGroup[]; variant: "side" | "top" }) {
   const path = usePathname();
-  // Highlight only the most specific matching link (/settings vs /settings/permissions)
-  const matches = links.filter((l) => path === l.href || path.startsWith(`${l.href}/`));
-  const best = matches.sort((a, b) => b.href.length - a.href.length)[0]?.href;
-  const active = (href: string) => href === best;
+  const current = activeGroup(path, groups);
   if (variant === "top") {
     return (
       <div className="flex gap-1 overflow-x-auto px-3 pb-2">
-        {links.map((l) => (
+        {groups.map((g) => (
           <Link
-            key={l.href}
-            href={l.href}
-            className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ${active(l.href) ? "bg-brand text-brand-ink" : "text-muted"}`}
+            key={g.key}
+            href={g.tabs[0].href}
+            className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ${g.key === current ? "bg-brand text-brand-ink" : "text-muted"}`}
           >
-            {l.label}
+            {g.label}
           </Link>
         ))}
       </div>
@@ -26,16 +44,40 @@ export function NavLinks({ links, variant }: { links: { href: string; label: str
   }
   return (
     <ul className="space-y-0.5">
-      {links.map((l) => (
-        <li key={l.href}>
+      {groups.map((g) => (
+        <li key={g.key}>
           <Link
-            href={l.href}
-            className={`block rounded-lg px-3 py-2 text-sm ${active(l.href) ? "bg-brand-soft font-semibold text-brand" : "text-ink hover:bg-surface-2"}`}
+            href={g.tabs[0].href}
+            className={`block rounded-lg px-3 py-2 text-sm ${g.key === current ? "bg-brand-soft font-semibold text-brand" : "text-ink hover:bg-surface-2"}`}
           >
-            {l.label}
+            {g.label}
           </Link>
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Tabs at the top of a merged section (only when the user can see more than one of its parts). */
+export function GroupTabs({ groups }: { groups: NavGroup[] }) {
+  const path = usePathname();
+  const key = activeGroup(path, groups);
+  const group = groups.find((g) => g.key === key);
+  if (!group || group.tabs.length < 2) return null;
+  const active = bestTab(path, group.tabs)?.href;
+  return (
+    <div className="no-print mb-5 flex gap-1 overflow-x-auto border-b border-line">
+      {group.tabs.map((t) => (
+        <Link
+          key={t.href}
+          href={t.href}
+          className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2 text-sm font-semibold ${
+            t.href === active ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink"
+          }`}
+        >
+          {t.label}
+        </Link>
+      ))}
+    </div>
   );
 }

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { AREAS, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
@@ -192,10 +191,7 @@ export default async function SettingsPage() {
           </div>
         </Section>
 
-        <Section
-          title={t.set_staff}
-          actions={isOwner ? <Link href="/settings/permissions" className="btn-primary btn-sm">{t.perm_manage}</Link> : null}
-        >
+        <Section title={t.set_staff}>
           <datalist id="job-titles">
             {["مدير الفندق", "مشرف الوردية", "موظف استقبال", "محاسب", "مشرف التنظيف", "عامل تنظيف", "فني صيانة", "مدير الإيرادات"].map((x) => (
               <option key={x} value={x} />
