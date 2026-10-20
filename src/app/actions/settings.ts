@@ -125,22 +125,46 @@ export async function updateTax(_: ActionResult, fd: FormData) {
   );
 }
 
-export async function inviteUser(_: ActionResult, fd: FormData) {
-  return run((c) =>
-    c.supabase.from("invitations").insert({
-      tenant_id: c.tenantId,
-      email: (s(fd, "email") ?? "").toLowerCase(),
-      role: s(fd, "role") ?? "reception",
-      full_name: s(fd, "full_name") ?? "",
-    }),
-  );
+/** Internal role used for an owner-defined employee: the most senior section they were given. */
+function baseRoleFor(areas: string[]): "manager" | "accountant" | "reception" | "housekeeping" | "maintenance" {
+  if (areas.includes("settings")) return "manager";
+  if (["finance", "reports", "audit", "dashboard"].some((a) => areas.includes(a))) return "accountant";
+  if (["reservations", "guests", "calendar", "compliance"].some((a) => areas.includes(a))) return "reception";
+  if (areas.includes("housekeeping")) return "housekeeping";
+  return "maintenance";
+}
+
+export async function inviteUser(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const jobTitle = s(fd, "job_title");
+  let row: Record<string, unknown>;
+  if (ctx.role === "owner") {
+    // Owner: free-text job title + the exact sections ticked in the form
+    const areas = fd.getAll("areas").map(String).filter((a) => VALID_AREAS.has(a));
+    if (areas.length === 0) return { error: t.invite_pick_sections };
+    row = { role: baseRoleFor(areas), permissions: areas };
+  } else {
+    row = { role: s(fd, "role") ?? "reception" };
+  }
+  const { error } = await ctx.supabase.from("invitations").insert({
+    tenant_id: ctx.tenantId,
+    email: (s(fd, "email") ?? "").toLowerCase(),
+    full_name: s(fd, "full_name") ?? "",
+    job_title: jobTitle,
+    ...row,
+  });
+  if (error) return { error: errorMessage(t, error) };
+  revalidatePath("/settings");
+  return { ok: t.saved };
 }
 
 export async function updateMember(_: ActionResult, fd: FormData) {
+  const role = s(fd, "role");
   return run((c) =>
     c.supabase
       .from("memberships")
-      .update({ role: s(fd, "role")!, active: fd.get("active") === "on" })
+      .update({ job_title: s(fd, "job_title"), active: fd.get("active") === "on", ...(role ? { role } : {}) })
       .eq("tenant_id", c.tenantId)
       .eq("user_id", s(fd, "user_id")!),
   );

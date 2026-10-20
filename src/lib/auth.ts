@@ -26,6 +26,8 @@ export type Ctx = {
   userId: string;
   email: string;
   fullName: string;
+  /** Free-text job title typed by the owner (falls back to the role name in the UI) */
+  jobTitle: string | null;
   role: Role;
   /** null = the role's default areas; otherwise exactly the areas the owner granted */
   permissions: Area[] | null;
@@ -46,7 +48,7 @@ export const getCtx = cache(async (): Promise<Ctx> => {
   if (!claims) redirect("/login");
 
   const loadMemberships = () =>
-    supabase.from("memberships").select("tenant_id, role, full_name, permissions").eq("user_id", claims.sub).eq("active", true);
+    supabase.from("memberships").select("tenant_id, role, full_name, permissions, job_title").eq("user_id", claims.sub).eq("active", true);
   let { data: memberships } = await loadMemberships();
   if (!memberships || memberships.length === 0) {
     // First sign-in of invited staff: attach pending invitations for this email
@@ -79,6 +81,7 @@ export const getCtx = cache(async (): Promise<Ctx> => {
     userId: claims.sub,
     email: (claims.email as string) ?? "",
     fullName: membership.full_name,
+    jobTitle: (membership.job_title as string | null) ?? null,
     role,
     permissions,
     areas,

@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       ? [{ href: "/settings/permissions", label: t.nav_permissions }, link]
       : [link];
   });
-  const roleLabel = t[`role_${ctx.role}` as DictKey];
+  const roleLabel = ctx.jobTitle || t[`role_${ctx.role}` as DictKey];
   const propertyName = lang === "en" && ctx.property.name_en ? ctx.property.name_en : ctx.property.name_ar;
 
   return (

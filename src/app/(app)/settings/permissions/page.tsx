@@ -6,7 +6,7 @@ import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { Badge, Empty, PageHeader } from "@/components/ui";
 import { setPermissions } from "@/app/actions/settings";
 
-type Member = { user_id: string; full_name: string; role: Role; active: boolean; permissions: string[] | null };
+type Member = { user_id: string; full_name: string; job_title: string | null; role: Role; active: boolean; permissions: string[] | null };
 
 // Owner grants or revokes sections per employee (enforced by private.has_role in the database).
 // Master–detail: names on one side, the selected employee's sections on the other.
@@ -23,7 +23,7 @@ export default async function PermissionsPage({ searchParams }: PageProps<"/sett
   }
   const { data } = await ctx.supabase
     .from("memberships")
-    .select("user_id, full_name, role, active, permissions")
+    .select("user_id, full_name, job_title, role, active, permissions")
     .eq("tenant_id", ctx.tenantId)
     .neq("role", "owner")
     .order("created_at");
@@ -62,7 +62,7 @@ export default async function PermissionsPage({ searchParams }: PageProps<"/sett
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-semibold">{nameOf(m)}</span>
                         <span className={`block text-xs ${isSel ? "opacity-80" : "text-muted"}`}>
-                          {t[`role_${m.role}` as DictKey]} · {custom ? t.perm_custom : t.perm_defaults_short}
+                          {m.job_title || t[`role_${m.role}` as DictKey]} · {custom ? t.perm_custom : t.perm_defaults_short}
                           {m.active ? "" : ` · ${t.closed}`}
                         </span>
                       </span>
@@ -86,7 +86,7 @@ export default async function PermissionsPage({ searchParams }: PageProps<"/sett
                 </span>
                 <div>
                   <div className="text-lg font-bold">{nameOf(selected)}</div>
-                  <div className="text-sm text-muted">{t[`role_${selected.role}` as DictKey]}</div>
+                  <div className="text-sm text-muted">{selected.job_title || t[`role_${selected.role}` as DictKey]}</div>
                 </div>
               </div>
               <Badge tone={Array.isArray(selected.permissions) ? "warn" : "gray"}>

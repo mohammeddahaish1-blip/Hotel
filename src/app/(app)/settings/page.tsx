@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireArea } from "@/lib/auth";
+import { AREAS, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { gregorian, omr, parseRange, plainOmr } from "@/lib/format";
@@ -196,40 +196,77 @@ export default async function SettingsPage() {
           title={t.set_staff}
           actions={isOwner ? <Link href="/settings/permissions" className="btn-primary btn-sm">{t.perm_manage}</Link> : null}
         >
-          <div className="space-y-2">
-            {(members ?? []).map((m) => (
-              <ActionForm key={m.user_id} action={updateMember} className="grid grid-cols-12 items-center gap-2 text-sm">
-                <input type="hidden" name="user_id" value={m.user_id} />
-                <span className="col-span-4 truncate">{m.full_name || m.user_id.slice(0, 8)}</span>
-                {m.user_id === ctx.userId || (!isOwner && ["owner", "manager"].includes(m.role)) ? (
-                  <span className="col-span-8 text-muted">{t[`role_${m.role}` as DictKey]}</span>
-                ) : (
-                  <>
-                    <select name="role" defaultValue={m.role} className="input col-span-4">
-                      {ROLES.filter((r) => isOwner || !["owner", "manager"].includes(r)).map((r) => <option key={r} value={r}>{t[`role_${r}` as DictKey]}</option>)}
-                    </select>
-                    <label className="col-span-2 flex items-center gap-1 text-xs"><input type="checkbox" name="active" defaultChecked={m.active} /> {t.active}</label>
-                    <div className="col-span-2"><SubmitButton className="btn-ghost btn-sm w-full">{t.save}</SubmitButton></div>
-                  </>
-                )}
-              </ActionForm>
+          <datalist id="job-titles">
+            {["مدير الفندق", "مشرف الوردية", "موظف استقبال", "محاسب", "مشرف التنظيف", "عامل تنظيف", "فني صيانة", "مدير الإيرادات"].map((x) => (
+              <option key={x} value={x} />
             ))}
+          </datalist>
+          <div className="space-y-2">
+            {(members ?? []).map((m) => {
+              const locked = m.user_id === ctx.userId || (!isOwner && ["owner", "manager"].includes(m.role));
+              const title = m.job_title || t[`role_${m.role}` as DictKey];
+              return (
+                <ActionForm key={m.user_id} action={updateMember} className="grid grid-cols-12 items-center gap-2 text-sm">
+                  <input type="hidden" name="user_id" value={m.user_id} />
+                  <span className="col-span-4 truncate font-semibold">{m.full_name || m.user_id.slice(0, 8)}</span>
+                  {locked ? (
+                    <span className="col-span-8 text-muted">{title}</span>
+                  ) : (
+                    <>
+                      <input
+                        name="job_title"
+                        list="job-titles"
+                        defaultValue={m.job_title ?? ""}
+                        placeholder={t[`role_${m.role}` as DictKey]}
+                        aria-label={t.job_title}
+                        className="input col-span-4"
+                      />
+                      <label className="col-span-2 flex items-center gap-1 text-xs"><input type="checkbox" name="active" defaultChecked={m.active} /> {t.active}</label>
+                      <div className="col-span-2"><SubmitButton className="btn-ghost btn-sm w-full">{t.save}</SubmitButton></div>
+                    </>
+                  )}
+                </ActionForm>
+              );
+            })}
           </div>
           {(invites ?? []).length ? (
             <div className="mt-3 text-xs text-muted">
-              {t.pending_invites}: {(invites ?? []).map((i) => `${i.email} (${t[`role_${i.role}` as DictKey]})`).join("، ")}
+              {t.pending_invites}: {(invites ?? []).map((i) => `${i.email} (${i.job_title || t[`role_${i.role}` as DictKey]})`).join("، ")}
             </div>
           ) : null}
-          <ActionForm action={inviteUser} resetOnSuccess className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4">
-            <Field label={t.name}><input name="full_name" required className="input" /></Field>
-            <Field label={t.email}><input name="email" type="email" required dir="ltr" className="input" /></Field>
-            <Field label={t.role}>
-              <select name="role" className="input">
-                {ROLES.filter((r) => r !== "owner" && (isOwner || r !== "manager")).map((r) => <option key={r} value={r}>{t[`role_${r}` as DictKey]}</option>)}
-              </select>
-            </Field>
-            <div className="flex items-end"><SubmitButton className="btn-primary w-full">{t.set_invite}</SubmitButton></div>
-            <p className="col-span-2 text-xs text-muted">{t.set_invite_hint}</p>
+          <ActionForm action={inviteUser} resetOnSuccess className="mt-4 space-y-3 border-t border-line pt-4">
+            <div className="h2">{t.set_invite}</div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field label={t.name}><input name="full_name" required className="input" /></Field>
+              <Field label={t.email}><input name="email" type="email" required dir="ltr" autoCapitalize="none" className="input" /></Field>
+              <Field label={t.job_title}>
+                <input name="job_title" list="job-titles" required placeholder={t.job_title_hint} className="input" />
+              </Field>
+            </div>
+            {isOwner ? (
+              <div>
+                <div className="label">{t.invite_sections}</div>
+                <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {AREAS.map((a) => (
+                    <label key={a} className="flex items-start gap-2 rounded-xl border border-line px-2.5 py-2 text-xs has-[:checked]:border-brand has-[:checked]:bg-brand-soft/50">
+                      <input type="checkbox" name="areas" value={a} defaultChecked={a === "board"} className="mt-0.5" />
+                      <span>
+                        <span className="block text-sm font-semibold">{t[`nav_${a}` as DictKey]}</span>
+                        <span className="text-muted">{t[`perm_desc_${a}` as DictKey]}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <Field label={t.role}>
+                <select name="role" className="input">
+                  {ROLES.filter((r) => !["owner", "manager"].includes(r)).map((r) => <option key={r} value={r}>{t[`role_${r}` as DictKey]}</option>)}
+                </select>
+              </Field>
+            )}
+            <SubmitButton className="btn-primary w-full sm:w-auto sm:px-10">{t.set_invite}</SubmitButton>
+            <p className="text-xs text-muted">{t.set_invite_hint}</p>
           </ActionForm>
         </Section>
       </div>
