@@ -64,6 +64,7 @@ psql -d hotel -f supabase/tests/03_unit_guard.sql     # → UNIT GUARD OK
 psql -d hotel -f supabase/tests/04_permissions.sql    # → PERMISSIONS OK
 psql -d hotel -f supabase/tests/05_job_titles.sql     # → JOB TITLES OK
 psql -d hotel -f supabase/tests/06_analytics.sql      # → ANALYTICS OK
+psql -d hotel -f supabase/tests/07_alerts_search.sql  # → ALERTS SEARCH OK
 ```
 
 `01_core_flows.sql` proves tenant isolation (NFR-01), the conflict constraint, discount approval,

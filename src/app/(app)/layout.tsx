@@ -6,6 +6,9 @@ import { LangToggle } from "@/components/LangToggle";
 import { SignOut } from "@/components/SignOut";
 import { IdleLogout } from "@/components/IdleLogout";
 import { PropertySwitcher } from "@/components/PropertySwitcher";
+import { GlobalSearch } from "@/components/GlobalSearch";
+import { AlertsBell } from "@/components/AlertsBell";
+import { loadAlerts } from "@/lib/alerts";
 
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -41,6 +44,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     },
     { key: "audit", label: t.nav_audit, tabs: tab("audit") },
   ].filter((g) => g.tabs.length > 0);
+  const alerts = await loadAlerts(ctx, t, lang);
   const roleLabel = ctx.jobTitle || t[`role_${ctx.role}` as DictKey];
   const propertyName = lang === "en" && ctx.property.name_en ? ctx.property.name_en : ctx.property.name_ar;
 
@@ -76,6 +80,16 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </div>
           <NavLinks groups={groups} variant="top" />
         </header>
+        <div className="no-print sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur max-lg:static">
+          <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 lg:px-8">
+            <GlobalSearch
+              labels={{ placeholder: t.search_ph, none: t.search_none, unit: t.sk_unit, reservation: t.sk_reservation, guest: t.sk_guest }}
+            />
+            <div className="ms-auto">
+              <AlertsBell alerts={alerts} labels={{ title: t.alerts_title, none: t.alerts_none }} />
+            </div>
+          </div>
+        </div>
         <main className="mx-auto max-w-6xl p-4 lg:p-8">
           <GroupTabs groups={groups} />
           {children}

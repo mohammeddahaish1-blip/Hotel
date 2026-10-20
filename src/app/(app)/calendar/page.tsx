@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireArea } from "@/lib/auth";
+import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { addDays, parseRange, todayIn } from "@/lib/format";
 import { PageHeader } from "@/components/ui";
@@ -42,7 +42,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
     <>
       <PageHeader
         title={t.cal_title}
-        sub={t.cal_hint}
+        sub={<>{t.cal_hint} {t.qb_hint}</>}
         actions={
           <>
             <Link className="btn-ghost btn-sm" href={`/calendar?start=${addDays(start, -7)}`}>{t.cal_prev}</Link>
@@ -59,6 +59,8 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
         units={(units ?? []).map((u) => ({ id: u.id, number: u.number, status: u.status }))}
         bars={bars}
         labels={{ moved: t.cal_moved, unit: t.unit }}
+        t={t}
+        canBook={hasRole(ctx, ["manager", "reception"])}
       />
     </>
   );

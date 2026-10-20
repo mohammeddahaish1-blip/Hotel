@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { moveReservation } from "@/app/actions/ops";
 import { addDays, nights } from "@/lib/format";
+import type { Dict } from "@/lib/i18n/dict";
+import { QuickBook, type QuickBookTarget } from "./QuickBook";
 
 export type Bar = { id: string; code: string; unitId: string; from: string; to: string; status: string; kind: string; guest: string };
 
@@ -15,13 +17,16 @@ const BAR_TONE: Record<string, string> = {
 };
 
 export function TapeChart({
-  start, days, today, lang, units, bars, labels,
+  start, days, today, lang, units, bars, labels, t, canBook,
 }: {
   start: string; days: number; today: string; lang: "ar" | "en";
   units: { id: string; number: string; status: string }[];
   bars: Bar[];
   labels: { moved: string; unit: string };
+  t: Dict;
+  canBook: boolean;
 }) {
+  const [quick, setQuick] = useState<QuickBookTarget | null>(null);
   const router = useRouter();
   const [msg, setMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
@@ -56,6 +61,7 @@ export function TapeChart({
 
   return (
     <div className={pending ? "opacity-60" : ""}>
+      {quick ? <QuickBook target={quick} today={today} t={t} lang={lang} onClose={() => setQuick(null)} /> : null}
       {msg ? (
         <div className={`mb-3 rounded-xl px-3 py-2 text-sm ${msg.tone === "ok" ? "bg-ok-soft text-ok" : "bg-danger-soft text-danger"}`}>{msg.text}</div>
       ) : null}
@@ -79,10 +85,18 @@ export function TapeChart({
                   <div
                     key={d}
                     style={{ width: cell }}
-                    className={`shrink-0 border-s border-line ${d === today ? "bg-brand-soft/40" : ""} ${drag ? "hover:bg-info-soft" : ""}`}
+                    className={`group shrink-0 border-s border-line ${d === today ? "bg-brand-soft/40" : ""} ${drag ? "hover:bg-info-soft" : ""} ${
+                      canBook && d >= today && !drag ? "cursor-pointer hover:bg-brand-soft" : ""
+                    }`}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => onDrop(u.id, d)}
-                  />
+                    onClick={() => canBook && d >= today && setQuick({ unitId: u.id, unitNumber: u.number, from: d })}
+                    title={canBook && d >= today ? `${t.qb_title} · ${u.number}` : undefined}
+                  >
+                    {canBook && d >= today ? (
+                      <span className="hidden h-full items-center justify-center text-lg font-bold text-brand group-hover:flex">+</span>
+                    ) : null}
+                  </div>
                 ))}
                 {rowBars.map((b) => {
                   const s = b.from < start ? start : b.from;

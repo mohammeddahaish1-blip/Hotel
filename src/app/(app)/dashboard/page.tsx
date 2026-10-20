@@ -4,6 +4,7 @@ import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { omr, pct, gregorian, hijri } from "@/lib/format";
 import { Badge, Empty, PageHeader, Section, Stat, UNIT_STATUS_TONE, RES_STATUS_TONE } from "@/components/ui";
+import { loadAlerts } from "@/lib/alerts";
 
 type Dash = {
   date: string;
@@ -28,6 +29,7 @@ export default async function DashboardPage() {
   const { data, error } = await ctx.supabase.rpc("owner_dashboard", { p_property: ctx.property.id });
   if (error) throw new Error(error.message);
   const d = data as Dash;
+  const alerts = await loadAlerts(ctx, t, lang);
   const statuses = ["available", "reserved", "occupied", "dirty", "maintenance", "out_of_service"];
 
   return (
@@ -37,6 +39,24 @@ export default async function DashboardPage() {
         sub={<>{gregorian(d.date, lang)} · {hijri(d.date, lang)}</>}
         actions={<Link href="/reservations/new" className="btn-primary">{t.res_new}</Link>}
       />
+      {alerts.length ? (
+        <div className="mb-4 rounded-2xl border border-warn/30 bg-warn-soft/60 p-4">
+          <div className="mb-2 text-sm font-bold text-warn">{t.alerts_title} ({alerts.length})</div>
+          <ul className="grid gap-2 md:grid-cols-2">
+            {alerts.slice(0, 6).map((a) => (
+              <li key={a.key}>
+                <Link href={a.href} className="flex gap-2.5 rounded-xl bg-surface px-3 py-2 text-sm hover:shadow">
+                  <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${a.severity === 1 ? "bg-danger" : a.severity === 2 ? "bg-warn" : "bg-info"}`} />
+                  <span className="min-w-0">
+                    <span className="block font-semibold">{a.title}</span>
+                    <span dir="auto" className="block truncate text-xs text-muted">{a.detail}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <Stat label={t.dash_occupancy} value={pct(d.occupancy_bp)} hint={`${d.in_house} / ${d.units}`} tone="brand" />
         <Stat label={t.dash_income_today} value={omr(d.income_today, lang)} />
