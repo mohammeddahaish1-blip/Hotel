@@ -5,7 +5,10 @@ import { usePathname } from "next/navigation";
 
 export function NavLinks({ links, variant }: { links: { href: string; label: string }[]; variant: "side" | "top" }) {
   const path = usePathname();
-  const active = (href: string) => path === href || path.startsWith(`${href}/`);
+  // Highlight only the most specific matching link (/settings vs /settings/permissions)
+  const matches = links.filter((l) => path === l.href || path.startsWith(`${l.href}/`));
+  const best = matches.sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  const active = (href: string) => href === best;
   if (variant === "top") {
     return (
       <div className="flex gap-1 overflow-x-auto px-3 pb-2">

@@ -11,10 +11,13 @@ import { PropertySwitcher } from "@/components/PropertySwitcher";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await getCtx();
   const { t, lang } = await getDict();
-  const links = AREAS.filter((a) => can(ctx, a)).map((a) => ({
-    href: `/${a}`,
-    label: t[`nav_${a}` as DictKey],
-  }));
+  const links = AREAS.filter((a) => can(ctx, a)).flatMap((a) => {
+    const link = { href: `/${a}`, label: t[`nav_${a}` as DictKey] };
+    // Owner-only: staff permissions, listed between Compliance and Settings
+    return a === "settings" && ctx.role === "owner"
+      ? [{ href: "/settings/permissions", label: t.nav_permissions }, link]
+      : [link];
+  });
   const roleLabel = t[`role_${ctx.role}` as DictKey];
   const propertyName = lang === "en" && ctx.property.name_en ? ctx.property.name_en : ctx.property.name_ar;
 
