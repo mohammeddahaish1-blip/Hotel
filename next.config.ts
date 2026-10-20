@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Expense receipts are uploaded through a Server Action (photos are downscaled in the browser first)
+  experimental: { serverActions: { bodySizeLimit: "4mb" } },
   // Authenticated, per-request app: classic dynamic rendering.
   turbopack: {
     rules: {

@@ -2,7 +2,7 @@ import "server-only";
 import type { Ctx } from "./auth";
 import { can } from "./auth";
 import type { Dict, DictKey } from "./i18n/dict";
-import { gregorian } from "./format";
+import { gregorian, omr } from "./format";
 import type { AlertItem } from "@/components/AlertsBell";
 
 // Isolate each part so Latin names and dates don't reorder inside Arabic text
@@ -34,6 +34,10 @@ export async function loadAlerts(ctx: Ctx, t: Dict, lang: "ar" | "en"): Promise<
         href = "/finance";
         break;
       case "shift_open_long":
+        href = "/finance";
+        break;
+      case "cash_shortage":
+        extra = r.info ? omr(Number(r.info), lang) : null;
         href = "/finance";
         break;
       case "urgent_maintenance":

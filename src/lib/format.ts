@@ -72,6 +72,17 @@ export function todayIn(tz = "Asia/Muscat"): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
 }
 
+/** Start of a local calendar day in the property's timezone, as an ISO instant. */
+export function zonedStart(day: string, tz: string): string {
+  const utc = new Date(`${day}T00:00:00Z`);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+  }).formatToParts(utc);
+  const p = (t: string) => Number(parts.find((x) => x.type === t)?.value);
+  const asLocal = Date.UTC(p("year"), p("month") - 1, p("day"), p("hour"), p("minute"));
+  return new Date(utc.getTime() - (asLocal - utc.getTime())).toISOString();
+}
+
 /** wa.me click-to-chat link (FR-55). Omani numbers default to +968. */
 export function whatsappLink(phone: string | null | undefined, text: string): string {
   let digits = (phone ?? "").replace(/\D/g, "");

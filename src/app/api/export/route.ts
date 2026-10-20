@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getCtx, can } from "@/lib/auth";
+import { getCtx, can, hasRole } from "@/lib/auth";
 import { csv, plainOmr } from "@/lib/format";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -70,6 +70,20 @@ export async function GET(req: NextRequest) {
       }),
       ["invoice", "issued_at", "buyer", "subtotal_omr", "service_omr", "tourism_omr", "municipality_omr", "vat_omr", "tax_total_omr", "total_omr"],
     );
+  } else if (kind === "expenses") {
+    if (!hasRole(ctx, ["manager", "accountant"])) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    const { data } = await db.from("expenses").select("expense_date, category, description, method, amount, created_by, attachment_path")
+      .eq("property_id", p).gte("expense_date", from).lte("expense_date", to).order("expense_date");
+    const { data: staff } = await db.from("memberships").select("user_id, full_name").eq("tenant_id", ctx.tenantId);
+    const who = new Map((staff ?? []).map((m) => [m.user_id, m.full_name]));
+    body = csv(
+      (data ?? []).map((e) => ({
+        date: e.expense_date, category: e.category, description: e.description, method: e.method,
+        amount_omr: plainOmr(e.amount), added_by: who.get(e.created_by) ?? "", receipt: e.attachment_path ? "yes" : "",
+      })),
+      ["date", "category", "description", "method", "amount_omr", "added_by", "receipt"],
+    );
+    name = `expenses-${from}-${to}.csv`;
   } else {
     return NextResponse.json({ error: "unknown kind" }, { status: 400 });
   }

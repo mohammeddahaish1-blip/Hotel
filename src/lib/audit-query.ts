@@ -1,6 +1,6 @@
 import type { getCtx } from "@/lib/auth";
 import type { Dict } from "@/lib/i18n/dict";
-import { addDays, todayIn } from "@/lib/format";
+import { addDays, todayIn, zonedStart } from "@/lib/format";
 import { AUDIT_TABLES, describeAudit, type AuditLookups, type AuditRow, type AuditView } from "@/lib/audit";
 
 type Ctx = Awaited<ReturnType<typeof getCtx>>;
@@ -44,17 +44,6 @@ export function filtersToQuery(f: AuditFilters, extra: Partial<AuditFilters> = {
   if (g.sensitive) q.set("sensitive", "1");
   if (g.limit !== 100) q.set("limit", String(g.limit));
   return q.toString();
-}
-
-/** Start of a local calendar day in the property's timezone, as an ISO instant. */
-export function zonedStart(day: string, tz: string): string {
-  const utc = new Date(`${day}T00:00:00Z`);
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
-  }).formatToParts(utc);
-  const p = (t: string) => Number(parts.find((x) => x.type === t)?.value);
-  const asLocal = Date.UTC(p("year"), p("month") - 1, p("day"), p("hour"), p("minute"));
-  return new Date(utc.getTime() - (asLocal - utc.getTime())).toISOString();
 }
 
 function range(f: AuditFilters, tz: string): { from?: string; to?: string } {

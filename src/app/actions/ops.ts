@@ -159,20 +159,40 @@ export async function closeShift(_: ActionResult, fd: FormData) {
   );
 }
 
-export async function addExpense(_: ActionResult, fd: FormData) {
-  return run(
-    (c) =>
-      c.supabase.from("expenses").insert({
-        tenant_id: c.tenantId,
-        property_id: c.property.id,
-        category: s(fd, "category") ?? "other",
-        description: s(fd, "description") ?? "",
-        amount: toBaisa(s(fd, "amount")),
-        expense_date: s(fd, "date") ?? undefined,
-        method: s(fd, "method") ?? "cash",
-      }),
-    ["/finance", "/dashboard"],
-  );
+/** Stores an optional receipt photo/PDF under <tenant>/<expense>/ and links it to the expense. */
+async function attachReceipt(ctx: Awaited<ReturnType<typeof getCtx>>, expenseId: string, fd: FormData) {
+  const file = fd.get("receipt");
+  if (!(file instanceof File) || file.size === 0) return null;
+  const ext = file.type === "application/pdf" ? "pdf" : file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `${ctx.tenantId}/${expenseId}/${crypto.randomUUID()}.${ext}`;
+  const up = await ctx.supabase.storage.from("expense-receipts").upload(path, file, { contentType: file.type || "image/jpeg" });
+  if (up.error) return up.error;
+  const { error } = await ctx.supabase.from("expenses").update({ attachment_path: path }).eq("id", expenseId);
+  return error;
+}
+
+export async function addExpense(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const { data, error } = await ctx.supabase
+    .from("expenses")
+    .insert({
+      tenant_id: ctx.tenantId,
+      property_id: ctx.property.id,
+      category: s(fd, "category") ?? "other",
+      description: s(fd, "description") ?? "",
+      amount: toBaisa(s(fd, "amount")),
+      expense_date: s(fd, "date") ?? undefined,
+      method: s(fd, "method") ?? "cash",
+    })
+    .select("id")
+    .single();
+  if (error) return { error: errorMessage(t, error) };
+  const upErr = await attachReceipt(ctx, data.id, fd);
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  if (upErr) return { error: errorMessage(t, upErr as { message: string }) };
+  return { ok: t.saved };
 }
 
 export async function updateExpense(_: ActionResult, fd: FormData): Promise<ActionResult> {
@@ -185,12 +205,15 @@ export async function updateExpense(_: ActionResult, fd: FormData): Promise<Acti
       description: s(fd, "description") ?? "",
       amount: toBaisa(s(fd, "amount")),
       expense_date: s(fd, "date") ?? undefined,
+      ...(s(fd, "method") ? { method: s(fd, "method")! } : {}),
     })
     .eq("id", s(fd, "id")!)
     .select("id");
   if (error) return { error: errorMessage(t, error) };
   // RLS hides rows the user may not change: no row updated means no permission
   if (!data?.length) return { error: t.err_FORBIDDEN };
+  const upErr = await attachReceipt(ctx, data[0].id, fd);
+  if (upErr) return { error: errorMessage(t, upErr as { message: string }) };
   revalidatePath("/finance");
   revalidatePath("/dashboard");
   return { ok: t.saved };
