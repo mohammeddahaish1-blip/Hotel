@@ -51,10 +51,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="min-h-screen lg:flex">
       <IdleLogout minutes={ctx.role === "reception" || ctx.role === "housekeeping" ? 15 : 30} />
-      <aside className="no-print hidden w-60 shrink-0 flex-col border-e border-line bg-surface p-4 lg:flex">
+      <aside className="no-print sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-e border-line bg-surface p-4 lg:flex">
         <div className="brand-word mb-1 text-4xl text-brand">{t.appName}</div>
         <PropertySwitcher current={ctx.property.id} properties={ctx.properties.map((p) => ({ id: p.id, name: p.name_ar }))} fallback={propertyName} />
-        <nav className="mt-4 flex-1">
+        <nav className="mt-4 min-h-0 flex-1 overflow-y-auto">
           <NavLinks groups={groups} variant="side" />
         </nav>
         <div className="mt-4 border-t border-line pt-3 text-xs text-muted">
@@ -83,7 +83,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <div className="no-print sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur max-lg:static">
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 lg:px-8">
             <GlobalSearch
-              labels={{ placeholder: t.search_ph, none: t.search_none, unit: t.sk_unit, reservation: t.sk_reservation, guest: t.sk_guest }}
+              labels={{ search: t.search, placeholder: t.search_ph, none: t.search_none, unit: t.sk_unit, reservation: t.sk_reservation, guest: t.sk_guest }}
             />
             <div className="ms-auto">
               <AlertsBell alerts={alerts} labels={{ title: t.alerts_title, none: t.alerts_none }} />

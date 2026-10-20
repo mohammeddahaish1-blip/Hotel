@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { globalSearch, type SearchHit } from "@/app/actions/quick";
 
-type Labels = { placeholder: string; none: string; unit: string; reservation: string; guest: string };
+type Labels = { search: string; placeholder: string; none: string; unit: string; reservation: string; guest: string };
 
 /** One search box for guests, bookings and rooms. "/" focuses it from anywhere. */
 export function GlobalSearch({ labels }: { labels: Labels }) {
@@ -76,10 +76,16 @@ export function GlobalSearch({ labels }: { labels: Labels }) {
         }}
         placeholder={labels.placeholder}
         autoComplete="off"
-        className="input py-2 pe-10"
+        className="input py-2 pe-20"
         aria-label={labels.placeholder}
       />
-      <kbd className="pointer-events-none absolute end-3 top-1/2 hidden -translate-y-1/2 rounded border border-line px-1.5 text-[10px] text-muted sm:block">/</kbd>
+      <button
+        type="button"
+        onClick={() => (hits[active] ? go(hits[active]) : (input.current?.focus(), setOpen(true)))}
+        className="absolute end-1.5 top-1/2 -translate-y-1/2 rounded-lg bg-brand px-3 py-1 text-xs font-semibold text-white hover:opacity-90"
+      >
+        {labels.search}
+      </button>
       {open && q.trim().length >= 2 ? (
         <div className="absolute inset-x-0 top-full z-30 mt-1 overflow-hidden rounded-xl border border-line bg-surface shadow-xl">
           {pending && !hits.length ? <div className="px-3 py-2 text-sm text-muted">…</div> : null}

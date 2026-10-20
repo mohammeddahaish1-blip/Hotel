@@ -127,7 +127,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
                                 <span className="font-semibold">{c.label}:</span>{" "}
                                 {c.before !== null ? (
                                   <>
-                                    <span className="text-danger line-through" dir="auto">{c.before}</span> {lang === "ar" ? "←" : "→"}{" "}
+                                    <span className="text-danger" dir="auto">{c.before}</span> {lang === "ar" ? "←" : "→"}{" "}
                                   </>
                                 ) : null}
                                 <span className="text-ok" dir="auto">{c.after}</span>
