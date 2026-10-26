@@ -28,7 +28,7 @@ export type AuditView = { summary: string; changes: AuditChange[]; href: string 
 
 export const AUDIT_TABLES = [
   "reservations", "payments", "charges", "invoices", "credit_notes", "expenses", "cash_shifts",
-  "unit_types", "rate_plans", "tax_rules", "maintenance_tickets", "compliance_submissions", "memberships", "invitations",
+  "unit_types", "rate_plans", "tax_rules", "maintenance_tickets", "compliance_submissions", "memberships", "invitations", "feedback",
 ] as const;
 
 const L = {
@@ -38,6 +38,7 @@ const L = {
       credit_notes: "الإشعارات الدائنة", expenses: "المصروفات", cash_shifts: "الصندوق",
       unit_types: "أنواع الوحدات", rate_plans: "خطط الأسعار", tax_rules: "الضرائب",
       maintenance_tickets: "الصيانة", compliance_submissions: "الامتثال", memberships: "الموظفون", invitations: "الدعوات",
+      feedback: "المقترحات والشكاوي",
     } as Record<string, string>,
     actions: { insert: "إضافة", update: "تعديل", delete: "حذف" } as Record<string, string>,
     fields: {
@@ -57,6 +58,8 @@ const L = {
       assigned_to: "المسؤول", authority: "الجهة", record_count: "عدد السجلات", submitted_at: "وقت الرفع",
       email: "البريد", role: "الدور", full_name: "الاسم", job_title: "المسمى الوظيفي", permissions: "الأقسام المسموحة",
       ui_language: "لغة الواجهة", accepted_at: "وقت القبول", discount_approved_by: "اعتمد الخصم",
+      message: "الرسالة", rating: "التقييم", guest_name: "اسم النزيل", contact: "التواصل", room: "الغرفة",
+      staff_notes: "ملاحظات الإدارة", handled_by: "عالجها", handled_at: "وقت المعالجة",
     } as Record<string, string>,
     empty: "(فارغ)", yes: "نعم", no: "لا", system: "النظام (تلقائي)", defaults: "حسب الدور",
     // summaries
@@ -87,6 +90,7 @@ const L = {
       unit_types: "نوع وحدة", rate_plans: "خطة سعر", tax_rules: "ضريبة", compliance_submissions: "سجل امتثال",
       memberships: "بيانات موظف", invitations: "دعوة", maintenance_tickets: "بلاغ صيانة", invoices: "فاتورة",
       reservations: "حجز", payments: "دفعة", charges: "رسوم", expenses: "مصروف", cash_shifts: "وردية صندوق", credit_notes: "إشعار دائن",
+      feedback: "ملاحظة نزيل",
     } as Record<string, string>,
     verb: { insert: "أضاف", update: "عدّل", delete: "حذف" } as Record<string, string>,
   },
@@ -96,6 +100,7 @@ const L = {
       credit_notes: "Credit notes", expenses: "Expenses", cash_shifts: "Cash drawer",
       unit_types: "Unit types", rate_plans: "Rate plans", tax_rules: "Taxes",
       maintenance_tickets: "Maintenance", compliance_submissions: "Compliance", memberships: "Staff", invitations: "Invitations",
+      feedback: "Suggestions & complaints",
     } as Record<string, string>,
     actions: { insert: "Added", update: "Edited", delete: "Deleted" } as Record<string, string>,
     fields: {} as Record<string, string>,
@@ -127,6 +132,7 @@ const L = {
       unit_types: "unit type", rate_plans: "rate plan", tax_rules: "tax", compliance_submissions: "compliance record",
       memberships: "staff details", invitations: "invitation", maintenance_tickets: "maintenance ticket", invoices: "invoice",
       reservations: "reservation", payments: "payment", charges: "charge", expenses: "expense", cash_shifts: "cash shift", credit_notes: "credit note",
+      feedback: "guest feedback",
     } as Record<string, string>,
     verb: { insert: "Added", update: "Edited", delete: "Deleted" } as Record<string, string>,
   },
@@ -142,9 +148,9 @@ const MONEY = new Set([
   "amount", "room_total", "discount_amount", "subtotal", "tax_total", "total", "nightly_rate", "monthly_rate",
   "opening_float", "expected_cash", "counted_cash", "difference",
 ]);
-const TIMES = new Set(["checked_in_at", "checked_out_at", "cancelled_at", "received_at", "voided_at", "issued_at", "opened_at", "closed_at", "submitted_at", "accepted_at"]);
+const TIMES = new Set(["handled_at", "checked_in_at", "checked_out_at", "cancelled_at", "received_at", "voided_at", "issued_at", "opened_at", "closed_at", "submitted_at", "accepted_at"]);
 const DATES = new Set(["service_date", "expense_date", "effective_from", "effective_to"]);
-const PEOPLE = new Set(["closed_by", "assigned_to", "discount_approved_by"]);
+const PEOPLE = new Set(["closed_by", "assigned_to", "discount_approved_by", "handled_by"]);
 
 export function tableLabel(table: string, lang: AuditLang) {
   return L[lang].tables[table] ?? table;
@@ -193,10 +199,12 @@ function formatValue(table: string, field: string, v: unknown, t: Dict, lang: Au
     if (table === "payments") return dictOr(t, `pk_${s}`, s);
     if (table === "charges") return dictOr(t, `ck_${s}`, s);
     if (table === "reservations") return dictOr(t, `kind_${s}`, s);
+    if (table === "feedback") return dictOr(t, `fb_${s}`, s);
   }
   if (field === "status") {
     if (table === "reservations") return dictOr(t, `rs_${s}`, s);
     if (table === "maintenance_tickets") return dictOr(t, `mt_${s}`, s);
+    if (table === "feedback") return dictOr(t, `fb_status_${s}`, s);
   }
   if (Array.isArray(v) || typeof v === "object") return JSON.stringify(v);
   return s;
@@ -327,6 +335,12 @@ export function describeAudit(r: AuditRow, t: Dict, lang: AuditLang, lk: AuditLo
       if (r.action !== "insert" && (changed("nightly_rate") || changed("monthly_rate") || changed("rate_bp") || changed("active"))) sensitive = true;
       href = "/settings";
       break;
+    case "feedback": {
+      const m = str("message");
+      summary = x.generic(x.verb[r.action] ?? r.action, x.what.feedback, m.length > 40 ? `${m.slice(0, 40)}…` : m);
+      href = "/feedback";
+      break;
+    }
     case "compliance_submissions":
       summary = x.generic(x.verb[r.action] ?? r.action, x.what.compliance_submissions, str("authority").toUpperCase());
       href = "/compliance";

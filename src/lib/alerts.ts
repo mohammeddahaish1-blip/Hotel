@@ -40,6 +40,10 @@ export async function loadAlerts(ctx: Ctx, t: Dict, lang: "ar" | "en"): Promise<
         extra = r.info ? omr(Number(r.info), lang) : null;
         href = "/finance";
         break;
+      case "new_complaint":
+        extra = r.info;
+        href = "/feedback";
+        break;
       case "urgent_maintenance":
         extra = r.info;
         href = "/maintenance";

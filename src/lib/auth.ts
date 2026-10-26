@@ -94,7 +94,7 @@ export const getCtx = cache(async (): Promise<Ctx> => {
 
 export const AREAS = [
   "dashboard", "board", "calendar", "reservations", "guests", "housekeeping",
-  "maintenance", "finance", "reports", "compliance", "settings", "audit",
+  "maintenance", "finance", "reports", "compliance", "settings", "audit", "feedback",
 ] as const;
 export type Area = (typeof AREAS)[number];
 
@@ -112,6 +112,7 @@ export const ROLE_ACCESS: Record<Area, Role[]> = {
   compliance: ["owner", "manager", "reception", "accountant"],
   settings: ["owner", "manager"],
   audit: ["owner", "manager", "accountant"],
+  feedback: ["owner", "manager"],
 };
 
 /** Database rights an area brings when granted individually (mirrors private.area_role) */
@@ -128,6 +129,7 @@ export const AREA_ROLE: Record<Area, Role | null> = {
   compliance: "reception",
   settings: "manager",
   audit: "accountant",
+  feedback: null,
 };
 
 export function can(ctx: Pick<Ctx, "areas">, area: Area) {

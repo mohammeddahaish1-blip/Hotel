@@ -172,7 +172,7 @@ export async function updateMember(_: ActionResult, fd: FormData) {
 
 const VALID_AREAS = new Set([
   "dashboard", "board", "calendar", "reservations", "guests", "housekeeping",
-  "maintenance", "finance", "reports", "compliance", "settings", "audit",
+  "maintenance", "finance", "reports", "compliance", "settings", "audit", "feedback",
 ]);
 
 /** Owner grants/revokes sections for one employee (null = role defaults). */
