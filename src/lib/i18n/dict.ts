@@ -334,6 +334,8 @@ const ar = {
   pr_3: "منخفضة",
   // finance
   nav_feedback: "المقترحات والشكاوي",
+  nav_import: "الاستيراد",
+  perm_desc_import: "رفع ملفات Excel وPDF واستيراد الوحدات والنزلاء والمصروفات والحجوزات",
   perm_desc_feedback: "قراءة مقترحات وشكاوي النزلاء والرد عليها",
   al_new_complaint: "شكوى نزيل جديدة",
   err_RATE_LIMIT: "وصلت رسائل كثيرة خلال وقت قصير. حاول بعد دقائق.",
@@ -886,6 +888,8 @@ const en: Dict = {
   pr_2: "Normal",
   pr_3: "Low",
   nav_feedback: "Suggestions & complaints",
+  nav_import: "Import",
+  perm_desc_import: "Upload Excel and PDF files to import units, guests, expenses and reservations",
   perm_desc_feedback: "Read and handle guests' suggestions and complaints",
   al_new_complaint: "New guest complaint",
   err_RATE_LIMIT: "Too many messages in a short time. Please try again in a few minutes.",

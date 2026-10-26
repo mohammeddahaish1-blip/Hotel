@@ -35,6 +35,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         : [],
     },
     { key: "feedback", label: t.nav_feedback, tabs: tab("feedback") },
+    { key: "import", label: t.nav_import, tabs: tab("import") },
     {
       key: "settings",
       label: t.nav_settings,
