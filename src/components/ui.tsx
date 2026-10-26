@@ -56,6 +56,15 @@ export const RES_STATUS_TONE: Record<string, Tone> = {
   no_show: "warn",
 };
 
+/** "‹ Parent" link shown above a page title, to step back up one level. */
+export function Crumb({ href, label }: { href: string; label: string }) {
+  return (
+    <a href={href} className="no-print mb-1 inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline">
+      <span aria-hidden>‹</span> {label}
+    </a>
+  );
+}
+
 export function PageHeader({ title, sub, actions }: { title: string; sub?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">

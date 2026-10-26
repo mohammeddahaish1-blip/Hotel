@@ -3,7 +3,7 @@ import { AREAS, ROLE_ACCESS, requireArea, type Role } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge, Empty, PageHeader } from "@/components/ui";
+import { Badge, Empty, PageHeader, Crumb } from "@/components/ui";
 import { setPermissions } from "@/app/actions/settings";
 
 type Member = { user_id: string; full_name: string; job_title: string | null; role: Role; active: boolean; permissions: string[] | null };
@@ -16,6 +16,7 @@ export default async function PermissionsPage({ searchParams }: PageProps<"/sett
   if (ctx.role !== "owner") {
     return (
       <>
+        <Crumb href="/settings" label={t.nav_settings} />
         <PageHeader title={t.perm_title} />
         <Empty>{t.perm_owner_only}</Empty>
       </>
@@ -36,6 +37,7 @@ export default async function PermissionsPage({ searchParams }: PageProps<"/sett
 
   return (
     <>
+      <Crumb href="/settings" label={t.nav_settings} />
       <PageHeader title={t.perm_title} sub={t.perm_intro} />
       {!members.length ? (
         <Empty>{t.perm_none_staff}</Empty>

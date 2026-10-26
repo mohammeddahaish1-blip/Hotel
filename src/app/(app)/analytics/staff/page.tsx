@@ -3,7 +3,7 @@ import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { omr, toBaisa, todayIn } from "@/lib/format";
 import { BarList, type Datum } from "@/components/charts";
-import { Badge, Empty, Field, PageHeader, Section } from "@/components/ui";
+import { Badge, Empty, Field, PageHeader, Section, Crumb } from "@/components/ui";
 
 type Row = {
   user_id: string; full_name: string; job_title: string | null; role: Role;
@@ -33,6 +33,7 @@ export default async function StaffPerformancePage({ searchParams }: PageProps<"
   if (!hasRole(ctx, ["manager"])) {
     return (
       <>
+        <Crumb href="/analytics" label={t.nav_grp_analytics} />
         <PageHeader title={t.an_staff_title} />
         <Empty>{t.err_FORBIDDEN}</Empty>
       </>
@@ -57,6 +58,7 @@ export default async function StaffPerformancePage({ searchParams }: PageProps<"
 
   return (
     <>
+      <Crumb href="/analytics" label={t.nav_grp_analytics} />
       <PageHeader title={t.an_staff_title} sub={t.an_staff_sub} />
       <form className="card mb-4 grid gap-2 sm:grid-cols-4">
         <Field label={t.from}><input type="date" name="from" defaultValue={from} className="input" /></Field>

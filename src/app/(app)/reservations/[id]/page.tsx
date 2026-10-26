@@ -5,7 +5,7 @@ import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { dateTime, gregorian, hijri, nights, omr, parseRange, todayIn, whatsappLink } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge, Empty, Field, PageHeader, Section, RES_STATUS_TONE, RES_STATUS_EMOJI } from "@/components/ui";
+import { Badge, Empty, Field, PageHeader, Section, RES_STATUS_TONE, RES_STATUS_EMOJI, Crumb } from "@/components/ui";
 import {
   addCharge, addPayment, cancelReservation, changeReservation, checkIn, checkOut, issueInvoice, voidCharge, voidPayment,
 } from "@/app/actions/ops";
@@ -61,6 +61,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
 
   return (
     <>
+      <Crumb href="/reservations" label={t.nav_reservations} />
       <PageHeader
         title={`${t.res_details} ${r.code}`}
         sub={

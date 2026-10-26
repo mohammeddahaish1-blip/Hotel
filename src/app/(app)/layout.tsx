@@ -8,6 +8,7 @@ import { IdleLogout } from "@/components/IdleLogout";
 import { PropertySwitcher } from "@/components/PropertySwitcher";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { AlertsBell } from "@/components/AlertsBell";
+import { BackButton } from "@/components/BackButton";
 import { loadAlerts } from "@/lib/alerts";
 
 
@@ -19,7 +20,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     can(ctx, area) ? [{ href: `/${area}`, label: label ?? t[`nav_${area}` as DictKey] }] : [];
   const groups: NavGroup[] = [
     { key: "dashboard", label: t.nav_dashboard, tabs: tab("dashboard") },
-    { key: "units", label: t.nav_grp_units, tabs: [...tab("board"), ...tab("calendar")] },
+    {
+      key: "units",
+      label: t.nav_grp_units,
+      tabs: [...(can(ctx, "board") ? [{ href: "/properties", label: t.nav_properties }] : []), ...tab("board"), ...tab("calendar")],
+    },
     { key: "reservations", label: t.nav_reservations, tabs: [...tab("reservations"), ...tab("guests")], also: ["/invoices"] },
     { key: "ops", label: t.nav_grp_ops, tabs: [...tab("housekeeping"), ...tab("maintenance")] },
     { key: "finance", label: t.nav_finance, tabs: tab("finance") },
@@ -84,6 +89,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </header>
         <div className="no-print sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur max-lg:static">
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 lg:px-8">
+            <BackButton label={t.back} />
             <GlobalSearch
               labels={{ search: t.search, placeholder: t.search_ph, none: t.search_none, unit: t.sk_unit, reservation: t.sk_reservation, guest: t.sk_guest }}
             />

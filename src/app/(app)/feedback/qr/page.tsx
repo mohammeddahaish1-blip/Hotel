@@ -2,6 +2,7 @@ import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { feedbackUrl, qrSvg } from "@/lib/feedback-qr";
 import { PrintButton } from "@/components/PrintButton";
+import { Crumb } from "@/components/ui";
 
 // Printable card for rooms and reception (A4/A5: one card centred on the page)
 export default async function FeedbackQrPage() {
@@ -12,6 +13,7 @@ export default async function FeedbackQrPage() {
   const svg = await qrSvg(url);
   return (
     <div className="space-y-4">
+      <Crumb href="/feedback" label={t.nav_feedback} />
       <div className="no-print flex justify-end"><PrintButton label={t.fb_qr_print} /></div>
       <div className="mx-auto max-w-sm rounded-3xl border-2 border-brand bg-white p-8 text-center text-[#0d3b35]">
         <div className="brand-word text-5xl text-brand">نُزُل</div>

@@ -47,7 +47,7 @@ export function AmountInput({ name = "amount", defaultValue, lang, preview, bigC
 }
 
 /** Receipt photo/PDF picker; large photos are scaled down in the browser before upload. */
-export function ReceiptInput({ name = "receipt", label, ready }: { name?: string; label: string; ready: string }) {
+export function ReceiptInput({ name = "receipt", label, ready, accept = "image/*,application/pdf" }: { name?: string; label: string; ready: string; accept?: string }) {
   const ref = useRef<HTMLInputElement>(null);
   const [done, setDone] = useState(false);
 
@@ -70,7 +70,7 @@ export function ReceiptInput({ name = "receipt", label, ready }: { name?: string
         ref={ref}
         type="file"
         name={name}
-        accept="image/*,application/pdf"
+        accept={accept}
         className="input mt-1 text-xs"
         onChange={async (e) => {
           setDone(false);

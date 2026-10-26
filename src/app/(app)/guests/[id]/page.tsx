@@ -4,7 +4,7 @@ import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { gregorian, dateTime, omr, parseRange } from "@/lib/format";
-import { Badge, Empty, PageHeader, Section, RES_STATUS_TONE, RES_STATUS_EMOJI } from "@/components/ui";
+import { Badge, Empty, PageHeader, Section, RES_STATUS_TONE, RES_STATUS_EMOJI, Crumb } from "@/components/ui";
 import { GuestForm } from "@/components/GuestForm";
 
 export default async function GuestPage({ params }: PageProps<"/guests/[id]">) {
@@ -25,6 +25,7 @@ export default async function GuestPage({ params }: PageProps<"/guests/[id]">) {
 
   return (
     <>
+      <Crumb href="/guests" label={t.nav_guests} />
       <PageHeader
         title={g.full_name}
         sub={<>{g.full_name_ar ? `${g.full_name_ar} · ` : ""}{lang === "ar" ? "موافقة بتاريخ" : "Consent on"} {dateTime(g.consent_at, ctx.property.timezone, lang)}</>}

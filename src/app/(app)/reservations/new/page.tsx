@@ -4,7 +4,7 @@ import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { addDays, gregorian, hijri, nights, omr, plainOmr, todayIn } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Empty, Field, PageHeader, Section } from "@/components/ui";
+import { Empty, Field, PageHeader, Section, Crumb } from "@/components/ui";
 import { createReservation } from "@/app/actions/ops";
 
 type Avail = { unit_id: string; number: string; type_name: string; floor_name: string | null; capacity: number; quote: number; monthly_rate: number };
@@ -46,6 +46,7 @@ export default async function NewReservationPage({ searchParams }: PageProps<"/r
 
   return (
     <>
+      <Crumb href="/reservations" label={t.nav_reservations} />
       <PageHeader title={t.res_new} />
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
