@@ -68,7 +68,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <div className="font-semibold text-ink">{ctx.fullName || ctx.email}</div>
           <div>{roleLabel}</div>
           <div className="mt-3 flex gap-2">
-            <LangToggle label={t.language} />
+            <LangToggle current={lang} />
             <SignOut label={t.signOut} />
           </div>
         </div>
@@ -81,7 +81,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               <div className="text-xs text-muted">{propertyName} · {roleLabel}</div>
             </div>
             <div className="flex gap-2">
-              <LangToggle label={t.language} />
+              <LangToggle current={lang} />
               <SignOut label={t.signOut} />
             </div>
           </div>

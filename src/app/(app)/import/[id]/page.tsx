@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
-import type { DictKey } from "@/lib/i18n/dict";
+import { isRtl, type DictKey } from "@/lib/i18n/dict";
 import { gregorian, omr } from "@/lib/format";
 import { counts, IMPORT_TYPES, type ImportRow, type ImportSheet, type ImportType } from "@/lib/import/detect";
 import { importLabels } from "@/lib/import/labels";
@@ -108,7 +108,7 @@ export default async function ImportReviewPage({ params }: PageProps<"/import/[i
                   <span className="text-muted">{L.columns}:</span>
                   {Object.entries(s.mapping).map(([f, col]) => (
                     <span key={f} className="rounded-full bg-surface-2 px-2 py-0.5">
-                      «{s.header[col]}» {lang === "ar" ? "←" : "→"} <b>{L.fields[f] ?? f}</b>
+                      «{s.header[col]}» {isRtl(lang) ? "←" : "→"} <b>{L.fields[f] ?? f}</b>
                     </span>
                   ))}
                 </div>

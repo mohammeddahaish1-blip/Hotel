@@ -156,5 +156,6 @@ const en: typeof ar = {
   },
 };
 
-export const importLabels = { ar, en };
+// Urdu falls back to English on the import screens (owner/manager tools)
+export const importLabels = { ar, en, ur: en };
 export type ImportLabels = typeof ar;

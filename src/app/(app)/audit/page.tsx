@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
+import { isRtl } from "@/lib/i18n/dict";
 import { dateTime } from "@/lib/format";
 import { AUDIT_TABLES, actionLabel, actorLabel, tableLabel } from "@/lib/audit";
 import { auditStats, filtersToQuery, loadAudit, parseAuditFilters } from "@/lib/audit-query";
@@ -127,7 +128,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
                                 <span className="font-semibold">{c.label}:</span>{" "}
                                 {c.before !== null ? (
                                   <>
-                                    <span className="text-danger" dir="auto">{c.before}</span> {lang === "ar" ? "←" : "→"}{" "}
+                                    <span className="text-danger" dir="auto">{c.before}</span> {isRtl(lang) ? "←" : "→"}{" "}
                                   </>
                                 ) : null}
                                 <span className="text-ok" dir="auto">{c.after}</span>

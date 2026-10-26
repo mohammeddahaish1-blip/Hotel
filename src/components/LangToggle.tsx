@@ -1,20 +1,24 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { LANGS } from "@/lib/i18n/dict";
 
-export function LangToggle({ label }: { label: string }) {
+/** Interface language: Arabic, English or Urdu (saved in a cookie). */
+export function LangToggle({ current }: { current: string }) {
   const router = useRouter();
   return (
-    <button
-      type="button"
-      className="btn-ghost btn-sm"
-      onClick={() => {
-        const next = document.documentElement.lang === "ar" ? "en" : "ar";
-        document.cookie = `lang=${next}; path=/; max-age=31536000; samesite=lax`;
+    <select
+      aria-label="Language / اللغة / زبان"
+      className="input w-auto py-1.5 text-sm"
+      defaultValue={current}
+      onChange={(e) => {
+        document.cookie = `lang=${e.target.value}; path=/; max-age=31536000; samesite=lax`;
         router.refresh();
       }}
     >
-      {label}
-    </button>
+      {LANGS.map((l) => (
+        <option key={l.code} value={l.code}>{l.label}</option>
+      ))}
+    </select>
   );
 }

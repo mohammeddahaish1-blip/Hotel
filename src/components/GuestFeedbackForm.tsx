@@ -38,9 +38,26 @@ const TEXT = {
     another: "Send another message",
     privacy: "We never share your details. Name and contact are optional.",
   },
+  ur: {
+    intro: "ہمیں آپ کی رائے جاننے کی خوشی ہوگی۔ اپنی تجویز یا شکایت لکھیں، یہ براہِ راست ہوٹل انتظامیہ تک پہنچے گی۔",
+    suggestion: "💡 تجویز",
+    complaint: "😟 شکایت",
+    rating: "اپنے قیام کی ریٹنگ دیں (اختیاری)",
+    message: "اپنا پیغام لکھیں",
+    messagePh: "آپ کو کیا اچھا لگا؟ ہم کیا بہتر کر سکتے ہیں؟",
+    room: "کمرہ نمبر (اختیاری)",
+    name: "نام (اختیاری)",
+    contact: "رابطے کے لیے فون یا ای میل (اختیاری)",
+    send: "بھیجیں",
+    sending: "بھیجا جا رہا ہے…",
+    thanks: "شکریہ! 🌷",
+    thanksBody: "آپ کا پیغام ہوٹل انتظامیہ تک پہنچ گیا ہے، ہم اس پر توجہ دیں گے۔",
+    another: "ایک اور پیغام بھیجیں",
+    privacy: "ہم آپ کی معلومات کسی سے شیئر نہیں کرتے۔ نام اور رابطہ اختیاری ہیں۔",
+  },
 };
 
-export function GuestFeedbackForm({ token, lang }: { token: string; lang: "ar" | "en" }) {
+export function GuestFeedbackForm({ token, lang }: { token: string; lang: "ar" | "en" | "ur" }) {
   const x = TEXT[lang];
   const [state, action, pending] = useActionState(submitGuestFeedback.bind(null, token), null);
   const [kind, setKind] = useState<"suggestion" | "complaint">("suggestion");

@@ -84,7 +84,7 @@ export default async function NewReservationPage({ searchParams }: PageProps<"/r
                       <div className="num text-lg font-bold">{u.number}</div>
                       <div className="truncate text-xs text-muted">{u.type_name} · {u.capacity}👤</div>
                       <div className="num mt-1 text-sm font-semibold">
-                        {kind === "contract" ? `${omr(u.monthly_rate, lang)} / ${lang === "ar" ? "شهر" : "mo"}` : omr(u.quote, lang)}
+                        {kind === "contract" ? `${omr(u.monthly_rate, lang)} / ${lang === "ar" ? "شهر" : lang === "ur" ? "ماہ" : "mo"}` : omr(u.quote, lang)}
                       </div>
                     </Link>
                   ))}

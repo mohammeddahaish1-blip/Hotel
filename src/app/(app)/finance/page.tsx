@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
-import type { DictKey } from "@/lib/i18n/dict";
+import { intlLocale, type DictKey } from "@/lib/i18n/dict";
 import { addDays, dateTime, gregorian, omr, todayIn, whatsappLink, zonedStart } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { AmountInput, ReceiptInput, RemindAll } from "@/components/FinanceInputs";
 import { BarList } from "@/components/charts";
 import { Badge, Empty, Field, PageHeader, Section, Stat } from "@/components/ui";
+import { Salaries } from "./Salaries";
 import { addExpense, closeShift, deleteExpense, openShift, postDueRent, updateExpense } from "@/app/actions/ops";
 
 const CATEGORIES = ["utilities", "salaries", "maintenance", "supplies", "laundry", "marketing", "rent", "commission", "government", "other"];
@@ -49,7 +50,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
   const prevFrom = `${addMonth(month, -1)}-01`;
   const prevTo = month === thisMonth ? addDays(prevFrom, Number(today.slice(8)) - 1) : monthEnd(addMonth(month, -1));
   const seesMoney = hasRole(ctx, ["manager", "accountant"]);
-  const monthLabel = new Intl.DateTimeFormat(lang === "ar" ? "ar-OM-u-nu-latn" : "en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${from}T00:00:00Z`));
+  const monthLabel = new Intl.DateTimeFormat(intlLocale(lang), { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${from}T00:00:00Z`));
 
   const none = Promise.resolve({ data: null });
   const [{ data: myShift }, { data: shifts }, { data: expenses }, { data: prevExpenses }, { data: aging }, { data: income }, { data: prevIncome }, { data: payments }, { data: staff }] =
@@ -298,6 +299,12 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
         </div>
       ) : null}
 
+      {hasRole(ctx, ["manager"]) ? (
+        <div className="mt-4">
+          <Salaries ctx={ctx} month={month} monthLabel={monthLabel} t={t} lang={lang} />
+        </div>
+      ) : null}
+
       {hasRole(ctx, ["manager", "accountant", "reception"]) ? (
         <div className="mt-4 grid gap-4 lg:grid-cols-3">
           <Section title={t.expense_add}>
@@ -308,7 +315,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                 </select>
               </Field>
               <Field label={t.description}><input name="description" required className="input" /></Field>
-              <Field label={`${t.amount} (${lang === "ar" ? "ر.ع" : "OMR"})`}><AmountInput {...amountProps} /></Field>
+              <Field label={`${t.amount} (${lang === "en" ? "OMR" : "ر.ع"})`}><AmountInput {...amountProps} /></Field>
               <div className="grid grid-cols-2 gap-2">
                 <Field label={t.method}>
                   <select name="method" className="input">

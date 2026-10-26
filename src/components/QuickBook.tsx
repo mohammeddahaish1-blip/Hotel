@@ -12,7 +12,7 @@ const SOURCES = ["direct", "walk_in", "phone", "whatsapp", "booking", "agoda", "
 export type QuickBookTarget = { unitId: string; unitNumber: string; from: string };
 
 /** Booking dialog opened from an empty calendar cell: dates, price, guest (existing or new), done. */
-export function QuickBook({ target, today, t, lang, onClose }: { target: QuickBookTarget; today: string; t: Dict; lang: "ar" | "en"; onClose: () => void }) {
+export function QuickBook({ target, today, t, lang, onClose }: { target: QuickBookTarget; today: string; t: Dict; lang: "ar" | "en" | "ur"; onClose: () => void }) {
   const router = useRouter();
   const [from, setFrom] = useState(target.from);
   const [to, setTo] = useState(addDays(target.from, 1));

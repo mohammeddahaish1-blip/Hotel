@@ -5,7 +5,7 @@ import { omr, toBaisa } from "@/lib/format";
 
 /** Amount field that shows the value as it will be recorded and asks before saving an unusually large one. */
 export function AmountInput({ name = "amount", defaultValue, lang, preview, bigConfirm, threshold = 5_000_000 }: {
-  name?: string; defaultValue?: string; lang: "ar" | "en"; preview: string; bigConfirm: string; threshold?: number;
+  name?: string; defaultValue?: string; lang: "ar" | "en" | "ur"; preview: string; bigConfirm: string; threshold?: number;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(defaultValue ?? "");

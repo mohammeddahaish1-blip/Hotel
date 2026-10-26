@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { moveReservation } from "@/app/actions/ops";
 import { addDays, nights } from "@/lib/format";
-import type { Dict } from "@/lib/i18n/dict";
+import { intlLocale, type Dict } from "@/lib/i18n/dict";
 import { QuickBook, type QuickBookTarget } from "./QuickBook";
 
 export type Bar = { id: string; code: string; unitId: string; from: string; to: string; status: string; kind: string; guest: string };
@@ -19,7 +19,7 @@ const BAR_TONE: Record<string, string> = {
 export function TapeChart({
   start, days, today, lang, units, bars, labels, t, canBook,
 }: {
-  start: string; days: number; today: string; lang: "ar" | "en";
+  start: string; days: number; today: string; lang: "ar" | "en" | "ur";
   units: { id: string; number: string; status: string }[];
   bars: Bar[];
   labels: { moved: string; unit: string };
@@ -55,7 +55,7 @@ export function TapeChart({
   }
 
   const dayLabel = (d: string) =>
-    new Intl.DateTimeFormat(lang === "ar" ? "ar-OM-u-nu-latn" : "en-GB", { weekday: "short", day: "numeric" }).format(new Date(`${d}T00:00:00`));
+    new Intl.DateTimeFormat(intlLocale(lang), { weekday: "short", day: "numeric" }).format(new Date(`${d}T00:00:00`));
   const hijriDay = (d: string) =>
     new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "short" }).format(new Date(`${d}T00:00:00`));
 

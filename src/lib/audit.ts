@@ -137,7 +137,9 @@ const L = {
     verb: { insert: "Added", update: "Edited", delete: "Deleted" } as Record<string, string>,
   },
 };
-export type AuditLang = keyof typeof L;
+export type AuditLang = keyof typeof L | "ur";
+// Urdu users (front-line staff) rarely open the audit log: English wording is used for them.
+const LL = (lang: AuditLang) => L[lang === "ur" ? "en" : lang];
 
 // Technical columns nobody needs to read
 const HIDDEN = new Set([
@@ -153,17 +155,17 @@ const DATES = new Set(["service_date", "expense_date", "effective_from", "effect
 const PEOPLE = new Set(["closed_by", "assigned_to", "discount_approved_by", "handled_by"]);
 
 export function tableLabel(table: string, lang: AuditLang) {
-  return L[lang].tables[table] ?? table;
+  return LL(lang).tables[table] ?? table;
 }
 export function actionLabel(action: string, lang: AuditLang) {
-  return L[lang].actions[action] ?? action;
+  return LL(lang).actions[action] ?? action;
 }
 export function actorLabel(actor: string | null, lk: Pick<AuditLookups, "staff">, lang: AuditLang) {
-  return actor ? lk.staff.get(actor) ?? actor.slice(0, 8) : L[lang].system;
+  return actor ? lk.staff.get(actor) ?? actor.slice(0, 8) : LL(lang).system;
 }
 
 function fieldLabel(f: string, t: Dict, lang: AuditLang) {
-  if (lang === "en") return f.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+  if (lang !== "ar") return f.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
   return L.ar.fields[f] ?? (t[f as DictKey] as string | undefined) ?? f;
 }
 
@@ -174,7 +176,7 @@ function dictOr(t: Dict, key: string, fallback: string) {
 
 /** One stored value → what a person would write ("28.500 ر.ع", "تحويل بنكي", "🔑 مقيم"). */
 function formatValue(table: string, field: string, v: unknown, t: Dict, lang: AuditLang, lk: AuditLookups): string {
-  const x = L[lang];
+  const x = LL(lang);
   if (v === null || v === undefined || v === "") return x.empty;
   if (typeof v === "boolean") return v ? x.yes : x.no;
   const s = String(v);
@@ -214,7 +216,7 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
 
 /** Turns a raw audit row into a sentence, a readable diff, a link and a "sensitive" flag. */
 export function describeAudit(r: AuditRow, t: Dict, lang: AuditLang, lk: AuditLookups): AuditView {
-  const x = L[lang];
+  const x = LL(lang);
   const before = r.old_data ?? {};
   const after = r.new_data ?? {};
   const data = r.action === "delete" ? before : after;

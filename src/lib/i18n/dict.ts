@@ -1,3 +1,5 @@
+import { ur } from "./ur";
+
 // UI dictionary — Arabic first (NFR-10). Keys are shared by both languages.
 const ar = {
   appName: "نُزُل",
@@ -360,6 +362,18 @@ const ar = {
   fb_handled_by: "عالجها",
   fb_empty: "لا توجد مقترحات أو شكاوي بعد. جرّب الباركود بنفسك.",
   nav_properties: "العقارات",
+  sal_title: "رواتب الموظفين",
+  sal_total: "إجمالي الرواتب",
+  sal_paid: "المصروف",
+  sal_remaining: "المتبقي",
+  sal_salary: "الراتب",
+  sal_not_set: "حدّد الراتب",
+  sal_unpaid: "لم يُصرف",
+  sal_paid_on: "صُرف",
+  sal_pay: "صرف الراتب",
+  sal_undo: "تراجع",
+  sal_undo_confirm: "إلغاء صرف هذا الراتب وحذف قيده من المصروفات؟",
+  sal_hint: "عند الصرف يُسجَّل مصروف «رواتب» بدون اسم الموظف؛ تفاصيل من قبض كم يراها المالك والمدير والموظف نفسه فقط.",
   staff_phone: "رقم الهاتف",
   staff_civil_id: "الرقم المدني",
   staff_salary: "الراتب الشهري (ر.ع)",
@@ -940,6 +954,18 @@ const en: Dict = {
   fb_handled_by: "Handled by",
   fb_empty: "No suggestions or complaints yet. Try the QR code yourself.",
   nav_properties: "Properties",
+  sal_title: "Staff salaries",
+  sal_total: "Total salaries",
+  sal_paid: "Paid",
+  sal_remaining: "Remaining",
+  sal_salary: "Salary",
+  sal_not_set: "Set salary",
+  sal_unpaid: "Not paid",
+  sal_paid_on: "Paid",
+  sal_pay: "Pay salary",
+  sal_undo: "Undo",
+  sal_undo_confirm: "Cancel this salary payment and remove its expense entry?",
+  sal_hint: "Paying books a 'Salaries' expense without the employee's name; who was paid what is visible only to the owner, managers and the employee.",
   staff_phone: "Phone number",
   staff_civil_id: "Civil ID",
   staff_salary: "Monthly salary (OMR)",
@@ -1164,5 +1190,14 @@ const en: Dict = {
   err_generic: "Something went wrong. Please try again.",
 };
 
-export const dictionaries = { ar, en } as const;
+export const dictionaries = { ar, en, ur } as const;
 export type Lang = keyof typeof dictionaries;
+export const LANGS: { code: Lang; label: string }[] = [
+  { code: "ar", label: "العربية" },
+  { code: "en", label: "English" },
+  { code: "ur", label: "اردو" },
+];
+/** Arabic and Urdu are written right-to-left. */
+export const isRtl = (l: string) => l !== "en";
+/** Locale for dates and numbers (Latin digits everywhere, as on Omani documents). */
+export const intlLocale = (l: string) => (l === "ar" ? "ar-OM-u-nu-latn" : l === "ur" ? "ur-PK-u-nu-latn" : "en-GB");

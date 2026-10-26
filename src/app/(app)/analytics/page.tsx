@@ -1,6 +1,6 @@
 import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
-import type { DictKey } from "@/lib/i18n/dict";
+import { intlLocale, type DictKey } from "@/lib/i18n/dict";
 import { addDays, omr, pct, todayIn } from "@/lib/format";
 import { BarList, ColumnChart, type Datum } from "@/components/charts";
 import { PageHeader, Section, Stat } from "@/components/ui";
@@ -21,7 +21,7 @@ export default async function AnalyticsPage() {
   const today = todayIn(ctx.property.timezone);
   const from30 = addDays(today, -29);
   const from8w = addDays(today, -55);
-  const locale = lang === "ar" ? "ar-OM-u-nu-latn" : "en-GB";
+  const locale = intlLocale(lang);
   const short = (d: string) => new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(`${d}T00:00:00`));
 
   const [{ data: income }, { data: occ }, { data: res }] = await Promise.all([
@@ -72,7 +72,7 @@ export default async function AnalyticsPage() {
             max={incomeTop}
             ticks={[0, incomeTop / 2, incomeTop].map((v) => ({
               value: v,
-              label: `${(v / 1000).toLocaleString("en", { maximumFractionDigits: 0 })}${v === incomeTop ? (lang === "ar" ? " ر.ع" : " OMR") : ""}`,
+              label: `${(v / 1000).toLocaleString("en", { maximumFractionDigits: 0 })}${v === incomeTop ? (lang === "en" ? " OMR" : " ر.ع") : ""}`,
             }))}
             tableLabel={t.an_show_table}
             columns={[t.date, t.amount]}

@@ -89,7 +89,7 @@ export async function auditLookups(ctx: Ctx, rows: AuditRow[]): Promise<AuditLoo
 export type AuditEntry = AuditRow & AuditView;
 
 /** Filtered page of the log, each row already described in plain language. */
-export async function loadAudit(ctx: Ctx, f: AuditFilters, t: Dict, lang: "ar" | "en") {
+export async function loadAudit(ctx: Ctx, f: AuditFilters, t: Dict, lang: "ar" | "en" | "ur") {
   const { from, to } = range(f, ctx.property.timezone);
   // "sensitive" is decided per row in code, so read a wider window and trim afterwards
   const fetch = f.sensitive ? Math.max(f.limit * 5, 1000) : f.limit + 1;
@@ -111,7 +111,7 @@ export async function loadAudit(ctx: Ctx, f: AuditFilters, t: Dict, lang: "ar" |
 }
 
 /** Header numbers: activity today, sensitive actions today, most active person this week. */
-export async function auditStats(ctx: Ctx, t: Dict, lang: "ar" | "en") {
+export async function auditStats(ctx: Ctx, t: Dict, lang: "ar" | "en" | "ur") {
   const tz = ctx.property.timezone;
   const today = todayIn(tz);
   const { data } = await ctx.supabase

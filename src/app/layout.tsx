@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Amiri, IBM_Plex_Sans_Arabic } from "next/font/google";
 import { getDict } from "@/lib/i18n/server";
+import { isRtl } from "@/lib/i18n/dict";
 import "./globals.css";
 
 const plex = IBM_Plex_Sans_Arabic({
@@ -32,7 +33,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const { lang } = await getDict();
   return (
-    <html lang={lang} dir={lang === "ar" ? "rtl" : "ltr"} className={`${plex.variable} ${amiri.variable} h-full antialiased`}>
+    <html lang={lang} dir={isRtl(lang) ? "rtl" : "ltr"} className={`${plex.variable} ${amiri.variable} h-full antialiased`}>
       <body className="min-h-full">{children}</body>
     </html>
   );

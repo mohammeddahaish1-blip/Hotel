@@ -15,7 +15,8 @@ const s = (fd: FormData, k: string) => {
 
 /** Public: a guest submits a suggestion or complaint from the QR-code page (no account). */
 export async function submitGuestFeedback(token: string, _: ActionResult, fd: FormData): Promise<ActionResult> {
-  const t = dictionaries[fd.get("lang") === "en" ? "en" : "ar"];
+  const l = fd.get("lang");
+  const t = dictionaries[l === "en" || l === "ur" ? l : "ar"];
   const kind = s(fd, "kind") === "complaint" ? "complaint" : "suggestion";
   const message = s(fd, "message") ?? "";
   if (message.length < 3) return { error: t.err_generic };

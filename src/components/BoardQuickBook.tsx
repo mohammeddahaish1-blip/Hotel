@@ -6,7 +6,7 @@ import { QuickBook } from "./QuickBook";
 
 /** An available unit card on the status board: tap it to book straight away (same dialog as the calendar). */
 export function BoardQuickBook({ unitId, unitNumber, today, t, lang, children }: {
-  unitId: string; unitNumber: string; today: string; t: Dict; lang: "ar" | "en"; children: ReactNode;
+  unitId: string; unitNumber: string; today: string; t: Dict; lang: "ar" | "en" | "ur"; children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   return (

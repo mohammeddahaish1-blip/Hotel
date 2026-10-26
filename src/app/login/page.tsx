@@ -13,7 +13,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <div>
             <div className="brand-word text-7xl text-brand lg:text-8xl">{t.appName}</div>
             <div className="mt-2 text-lg text-[#66706c]">
-              {lang === "ar" ? "لإدارة الفنادق والشقق الفندقية" : "Hotels & serviced apartments"}
+              {{ ar: "لإدارة الفنادق والشقق الفندقية", en: "Hotels & serviced apartments", ur: "ہوٹلوں اور سروسڈ اپارٹمنٹس کے لیے" }[lang]}
             </div>
           </div>
           <div className="flex flex-1 items-end justify-center pb-6">
@@ -27,7 +27,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <span className="pointer-events-none absolute -bottom-28 -start-20 h-72 w-72 rounded-full bg-white/10" />
           <span className="pointer-events-none absolute end-10 top-10 h-3 w-3 rounded-full bg-[#f4c76b]" />
           <div className="absolute start-5 top-5 z-10">
-            <LangToggle label={t.language} />
+            <LangToggle current={lang} />
           </div>
           <div className="brand-word relative mb-2 text-5xl md:hidden">{t.appName}</div>
           {sp.reason === "idle" ? (
