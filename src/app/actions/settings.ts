@@ -152,11 +152,28 @@ export async function inviteUser(_: ActionResult, fd: FormData): Promise<ActionR
     email: (s(fd, "email") ?? "").toLowerCase(),
     full_name: s(fd, "full_name") ?? "",
     job_title: jobTitle,
+    ...staffDetails(fd),
     ...row,
   });
   if (error) return { error: errorMessage(t, error) };
   revalidatePath("/settings");
   return { ok: t.saved };
+}
+
+/** Phone, civil ID and monthly salary (baisa); kept outside memberships, which every colleague can read. */
+function staffDetails(fd: FormData) {
+  const salary = s(fd, "salary");
+  return {
+    phone: s(fd, "phone")?.slice(0, 30) ?? null,
+    civil_id: s(fd, "civil_id")?.replace(/\s/g, "").slice(0, 20) ?? null,
+    salary: salary ? toBaisa(salary) : null,
+  };
+}
+
+export async function updateStaffProfile(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase.from("staff_profiles").upsert({ tenant_id: c.tenantId, user_id: s(fd, "user_id")!, ...staffDetails(fd) }),
+  );
 }
 
 export async function updateMember(_: ActionResult, fd: FormData) {

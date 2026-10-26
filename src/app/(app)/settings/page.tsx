@@ -6,7 +6,7 @@ import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { Badge, Field, PageHeader, Section, UNIT_STATUS_EMOJI, UNIT_STATUS_TONE } from "@/components/ui";
 import {
   addFloor, addRatePlan, addUnitType, bulkUnits, deleteRatePlan, inviteUser, setUnitService, updateMember,
-  updateProperty, updateTax, updateTenantPolicy, updateUnitType,
+  updateProperty, updateStaffProfile, updateTax, updateTenantPolicy, updateUnitType,
 } from "@/app/actions/settings";
 
 const ROLES = ["owner", "manager", "reception", "accountant", "housekeeping", "maintenance"];
@@ -27,6 +27,8 @@ export default async function SettingsPage() {
       db.from("memberships").select("*").eq("tenant_id", ctx.tenantId).order("created_at"),
       db.from("invitations").select("*").eq("tenant_id", ctx.tenantId).is("accepted_at", null),
     ]);
+  const { data: profiles } = await db.from("staff_profiles").select("*").eq("tenant_id", ctx.tenantId);
+  const profile = new Map((profiles ?? []).map((p) => [p.user_id as string, p]));
   const typeName = new Map((types ?? []).map((x) => [x.id, x.name_ar]));
   const isOwner = ctx.role === "owner";
 
@@ -201,8 +203,10 @@ export default async function SettingsPage() {
             {(members ?? []).map((m) => {
               const locked = m.user_id === ctx.userId || (!isOwner && ["owner", "manager"].includes(m.role));
               const title = m.job_title || t[`role_${m.role}` as DictKey];
+              const pr = profile.get(m.user_id);
               return (
-                <ActionForm key={m.user_id} action={updateMember} className="grid grid-cols-12 items-center gap-2 text-sm">
+                <div key={m.user_id} className="rounded-xl border border-line p-2">
+                <ActionForm action={updateMember} className="grid grid-cols-12 items-center gap-2 text-sm">
                   <input type="hidden" name="user_id" value={m.user_id} />
                   <span className="col-span-4 truncate font-semibold">{m.full_name || m.user_id.slice(0, 8)}</span>
                   {locked ? (
@@ -222,8 +226,25 @@ export default async function SettingsPage() {
                     </>
                   )}
                 </ActionForm>
+                {m.role !== "owner" || m.user_id === ctx.userId ? (
+                  <details className="mt-1 text-xs">
+                    <summary className="cursor-pointer text-brand">
+                      {t.staff_details}
+                      {pr ? <span className="ms-2 text-muted">{[pr.phone, pr.civil_id && `${t.staff_civil_id}: ${pr.civil_id}`, pr.salary != null && `${t.staff_salary_short}: ${omr(pr.salary, lang)}`].filter(Boolean).join(" · ")}</span> : null}
+                    </summary>
+                    <ActionForm action={updateStaffProfile} className="mt-2 grid gap-2 sm:grid-cols-4">
+                      <input type="hidden" name="user_id" value={m.user_id} />
+                      <input name="phone" defaultValue={pr?.phone ?? ""} placeholder={t.staff_phone} aria-label={t.staff_phone} dir="ltr" inputMode="tel" className="input py-2" />
+                      <input name="civil_id" defaultValue={pr?.civil_id ?? ""} placeholder={t.staff_civil_id} aria-label={t.staff_civil_id} dir="ltr" inputMode="numeric" className="input py-2" />
+                      <input name="salary" defaultValue={pr?.salary != null ? (pr.salary / 1000).toFixed(3) : ""} placeholder={t.staff_salary} aria-label={t.staff_salary} inputMode="decimal" className="input py-2" />
+                      <SubmitButton className="btn-ghost btn-sm">{t.save}</SubmitButton>
+                    </ActionForm>
+                  </details>
+                ) : null}
+                </div>
               );
             })}
+            <p className="text-xs text-muted">🔒 {t.staff_private_hint}</p>
           </div>
           {(invites ?? []).length ? (
             <div className="mt-3 text-xs text-muted">
@@ -238,6 +259,9 @@ export default async function SettingsPage() {
               <Field label={t.job_title}>
                 <input name="job_title" list="job-titles" required placeholder={t.job_title_hint} className="input" />
               </Field>
+              <Field label={t.staff_phone}><input name="phone" dir="ltr" inputMode="tel" placeholder="+968" className="input" /></Field>
+              <Field label={t.staff_civil_id}><input name="civil_id" dir="ltr" inputMode="numeric" className="input" /></Field>
+              <Field label={t.staff_salary}><input name="salary" inputMode="decimal" placeholder="0.000" className="input" /></Field>
             </div>
             {isOwner ? (
               <div>
