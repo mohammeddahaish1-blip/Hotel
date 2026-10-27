@@ -56,6 +56,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
   const canVoidPay = hasRole(ctx, ["manager", "accountant"]);
   const canChequeOps = hasRole(ctx, ["manager", "accountant"]);
   const proofUrls = await signedUrls(ctx, "payment-proofs", (payments ?? []).map((p) => p.proof_path as string | null));
+  const propName = ctx.property.name_ar;
   const receiptLink = async (token: string) => appUrl(`/r/${token}`);
   const receiptMsg = async (p: { receipt_no: number; amount: number; receipt_token: string }) => {
     const url = await receiptLink(p.receipt_token);
@@ -66,7 +67,6 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
   const payMsgs = new Map(await Promise.all((payments ?? []).map(async (p) => [p.id as string, await receiptMsg(p as never)] as const)));
   const sum = summary as Summary | null;
 
-  const propName = ctx.property.name_ar;
   const confirmText =
     guest.preferred_language === "en"
       ? `Booking confirmed at ${ctx.property.name_en ?? propName}\nRef: ${r.code}\nUnit: ${unit.number}\nArrival: ${stay.from}\nDeparture: ${stay.to}\nTotal: ${omr(sum?.total ?? 0, "en")}\nBalance: ${omr(sum?.balance ?? 0, "en")}`
