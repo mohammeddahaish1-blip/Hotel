@@ -1,0 +1,47 @@
+# Nightly encrypted database backup, kept 30 days as a workflow artifact (private to the repo).
+# Needs two repository secrets (Settings > Secrets and variables > Actions):
+#   SUPABASE_DB_URL    - Session pooler connection string (Supabase > Connect > Session pooler; IPv4)
+#   BACKUP_PASSPHRASE  - long random password; keep a copy outside GitHub
+# Restore: download the artifact, then infra/scripts/db-import.sh (see infra/README.md).
+# Scheduled runs only happen on the repository's default branch.
+name: Nightly backup
+on:
+  schedule:
+    - cron: "37 22 * * *" # 02:37 Asia/Muscat
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    env:
+      SOURCE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Check secrets
+        id: check
+        run: |
+          if [ -z "$SOURCE_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::warning::Backup skipped: add SUPABASE_DB_URL and BACKUP_PASSPHRASE secrets."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+      - name: Install PostgreSQL 17 client
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+      - name: Export
+        if: steps.check.outputs.ready == 'true'
+        run: infra/scripts/db-export.sh "backups/nuzul-$(date -u +%Y%m%d)"
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          name: nuzul-db-${{ github.run_id }}
+          path: backups/
+          retention-days: 30
