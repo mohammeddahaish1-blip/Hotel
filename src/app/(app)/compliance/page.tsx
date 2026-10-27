@@ -1,4 +1,5 @@
-import { requireArea } from "@/lib/auth";
+import { CreditCard } from "lucide-react";
+import { can, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { addDays, dateTime, omr, parseRange, todayIn, gregorian } from "@/lib/format";
@@ -40,6 +41,21 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
   const st = stats as Stats | null;
   const missing = rows.filter((r) => !r.doc_number || !r.nationality).length;
 
+  // Where each guest's ID data came from (card reader / photo / typed) and the latest card copy
+  const codes = rows.map((r) => r.reservation_code);
+  const { data: resGuests } = codes.length
+    ? await db.from("reservations").select("code, guest_id, guests(doc_source)").eq("property_id", ctx.property.id).in("code", codes)
+    : { data: [] };
+  const guestOf = new Map((resGuests ?? []).map((x) => [x.code as string, x as unknown as { guest_id: string; guests: { doc_source: string | null } | null }]));
+  const seesCopy = can(ctx, "guests");
+  const guestIds = [...new Set((resGuests ?? []).map((x) => x.guest_id as string))];
+  const { data: docs } = seesCopy && guestIds.length
+    ? await db.from("guest_documents").select("id, guest_id, created_at").in("guest_id", guestIds).order("created_at", { ascending: false })
+    : { data: [] };
+  const copyOf = new Map<string, string>();
+  for (const d of docs ?? []) if (!copyOf.has(d.guest_id as string)) copyOf.set(d.guest_id as string, d.id as string);
+  const fromReader = rows.filter((r) => guestOf.get(r.reservation_code)?.guests?.doc_source === "reader").length;
+
   return (
     <>
       <PageHeader title={t.cmp_title} />
@@ -56,12 +72,13 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
         >
           <p className="mb-3 text-xs text-muted">{t.cmp_police_hint}</p>
           {missing ? <div className="mb-3 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger">{t.err_GUEST_DATA_INCOMPLETE} ({missing})</div> : null}
+          {rows.length ? <p className="mb-3 text-xs text-muted">{t.cmp_from_reader}: <b className="num">{fromReader} / {rows.length}</b></p> : null}
           {rows.length === 0 ? (
             <Empty>{t.none}</Empty>
           ) : (
             <div className="overflow-x-auto">
               <table className="table">
-                <thead><tr><th>{t.code}</th><th>{t.name}</th><th>{t.nationality}</th><th>{t.doc_number}</th><th>{t.unit}</th><th>{t.res_check_in}</th></tr></thead>
+                <thead><tr><th>{t.code}</th><th>{t.name}</th><th>{t.nationality}</th><th>{t.doc_number}</th><th>{t.cmp_source}</th><th>{t.unit}</th><th>{t.res_check_in}</th></tr></thead>
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.reservation_code}>
@@ -69,6 +86,23 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
                       <td>{r.guest_name}</td>
                       <td>{r.nationality}</td>
                       <td>{r.doc_type ? `${t[`dt_${r.doc_type}` as DictKey]} · ` : ""}{r.doc_number}</td>
+                      <td>
+                        {(() => {
+                          const g = guestOf.get(r.reservation_code);
+                          const src = g?.guests?.doc_source;
+                          const copy = g ? copyOf.get(g.guest_id) : undefined;
+                          return (
+                            <span className="inline-flex flex-wrap items-center gap-1.5">
+                              {src ? <Badge tone={src === "manual" ? "gray" : "ok"}>{t[`ds_${src}` as DictKey]}</Badge> : <span className="text-muted">—</span>}
+                              {copy ? (
+                                <a href={`/api/guest-doc/${copy}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-brand">
+                                  <CreditCard className="size-3.5 shrink-0" />{t.cmp_copy}
+                                </a>
+                              ) : null}
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td className="num">{r.unit}</td>
                       <td>{dateTime(r.check_in, ctx.property.timezone, lang)}</td>
                     </tr>

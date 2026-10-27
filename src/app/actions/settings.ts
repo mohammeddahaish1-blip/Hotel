@@ -217,3 +217,71 @@ export async function setPermissions(_: ActionResult, fd: FormData): Promise<Act
   revalidatePath("/settings/permissions");
   return { ok: t.saved };
 }
+
+// ---------------------------------------------------------------- edit / cancel setup data
+export async function updateFloor(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase.from("floors").update({ name: s(fd, "name") ?? "", sort: Number(s(fd, "sort") ?? 0) }).eq("id", s(fd, "id")!),
+  );
+}
+
+/** Only an empty floor can be removed. */
+export async function deleteFloor(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const id = s(fd, "id")!;
+  const { count } = await ctx.supabase.from("units").select("id", { count: "exact", head: true }).eq("floor_id", id);
+  if (count) return { error: t.floor_has_units };
+  const { error } = await ctx.supabase.from("floors").delete().eq("id", id);
+  if (error) return { error: errorMessage(t, error) };
+  revalidatePath("/settings");
+  return { ok: t.saved };
+}
+
+export async function updateUnit(_: ActionResult, fd: FormData) {
+  return run((c) =>
+    c.supabase
+      .from("units")
+      .update({ number: s(fd, "number") ?? "", unit_type_id: s(fd, "unit_type")!, floor_id: s(fd, "floor") })
+      .eq("id", s(fd, "id")!),
+  );
+}
+
+/** Stop selling a unit (kept with its history), or bring it back. */
+export async function setUnitActive(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const id = s(fd, "id")!;
+  const active = s(fd, "active") === "1";
+  if (!active) {
+    const { count } = await ctx.supabase
+      .from("reservations").select("id", { count: "exact", head: true })
+      .eq("unit_id", id).in("status", ["tentative", "confirmed", "checked_in"]);
+    if (count) return { error: t.unit_has_bookings };
+  }
+  const { error } = await ctx.supabase.from("units").update({ active }).eq("id", id);
+  if (error) return { error: errorMessage(t, error) };
+  revalidatePath("/settings");
+  return { ok: t.saved };
+}
+
+export async function updateRatePlan(_: ActionResult, fd: FormData) {
+  const nightly = s(fd, "nightly");
+  const monthly = s(fd, "monthly");
+  return run((c) =>
+    c.supabase
+      .from("rate_plans")
+      .update({
+        name: s(fd, "name") ?? "",
+        period: `[${s(fd, "from")},${s(fd, "to")}]`,
+        nightly_rate: nightly ? toBaisa(nightly) : null,
+        monthly_rate: monthly ? toBaisa(monthly) : null,
+      })
+      .eq("id", s(fd, "id")!),
+  );
+}
+
+/** Withdraw an invitation that was not accepted yet. */
+export async function cancelInvite(_: ActionResult, fd: FormData) {
+  return run((c) => c.supabase.from("invitations").delete().eq("id", s(fd, "id")!).is("accepted_at", null));
+}

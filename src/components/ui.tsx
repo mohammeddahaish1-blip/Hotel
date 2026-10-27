@@ -1,4 +1,4 @@
-import { BadgeCheck, Ban, BedDouble, CalendarClock, CircleCheck, CircleX, Hourglass, KeyRound, LogOut, SprayCan, UserX, Wrench } from "lucide-react";
+import { BadgeCheck, Ban, Pencil, BedDouble, CalendarClock, CircleCheck, CircleX, Hourglass, KeyRound, LogOut, SprayCan, UserX, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 
 const TONES = {
@@ -110,5 +110,17 @@ export function Field({ label, children, className = "" }: { label: string; chil
       <span className="label">{label}</span>
       {children}
     </label>
+  );
+}
+
+/** "Edit" button that opens an inline edit form under a row or card (no page change). */
+export function EditDetails({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <details className={`group ${className}`}>
+      <summary className="btn-ghost btn-sm inline-flex cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden">
+        <Pencil className="size-3.5 shrink-0" aria-hidden />{label}
+      </summary>
+      <div className="mt-2 rounded-xl border border-line bg-surface-2/60 p-3">{children}</div>
+    </details>
   );
 }

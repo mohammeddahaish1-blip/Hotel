@@ -3,8 +3,8 @@ import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { dateTime } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge, Empty, Field, PageHeader, Section } from "@/components/ui";
-import { createTicket, updateTicket } from "@/app/actions/ops";
+import { Badge, EditDetails, Empty, Field, PageHeader, Section } from "@/components/ui";
+import { createTicket, editTicket, updateTicket } from "@/app/actions/ops";
 
 type Ticket = {
   id: string; title: string; description: string | null; priority: number; blocks_availability: boolean;
@@ -56,7 +56,7 @@ export default async function MaintenancePage({ searchParams }: PageProps<"/main
                 {m.description ? <p className="mt-1 text-sm text-muted">{m.description}</p> : null}
                 <div className="mt-1 text-xs text-muted">{dateTime(m.created_at, ctx.property.timezone, lang)}</div>
                 {m.status !== "closed" ? (
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex flex-wrap items-start gap-2">
                     {m.status === "open" ? (
                       <ActionForm action={updateTicket}>
                         <input type="hidden" name="id" value={m.id} />
@@ -69,6 +69,20 @@ export default async function MaintenancePage({ searchParams }: PageProps<"/main
                       <input type="hidden" name="status" value="closed" />
                       <SubmitButton className="btn-primary btn-sm">{t.mt_close}</SubmitButton>
                     </ActionForm>
+                    <EditDetails label={t.edit} className="flex-1">
+                      <ActionForm action={editTicket} className="space-y-2">
+                        <input type="hidden" name="id" value={m.id} />
+                        <input name="title" defaultValue={m.title} required aria-label={t.mt_issue} className="input py-2" />
+                        <textarea name="description" defaultValue={m.description ?? ""} rows={2} aria-label={t.description} className="input py-2" />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select name="priority" defaultValue={m.priority} aria-label={t.priority} className="input w-auto py-2">
+                            {[1, 2, 3].map((p) => <option key={p} value={p}>{t[`pr_${p}` as DictKey]}</option>)}
+                          </select>
+                          <label className="flex items-center gap-1.5 text-xs"><input type="checkbox" name="blocks" defaultChecked={m.blocks_availability} /> {t.mt_blocks}</label>
+                          <SubmitButton className="btn-primary btn-sm ms-auto">{t.save}</SubmitButton>
+                        </div>
+                      </ActionForm>
+                    </EditDetails>
                   </div>
                 ) : null}
               </div>

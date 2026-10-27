@@ -5,13 +5,13 @@ import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { addDays, gregorian, omr, parseRange, todayIn } from "@/lib/format";
 import { signedUrls } from "@/lib/storage";
-import { addCheque, setChequeStatus } from "@/app/actions/money";
+import { addCheque, setChequeStatus, updateCheque } from "@/app/actions/money";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { ReceiptInput } from "@/components/FinanceInputs";
-import { Badge, Empty, Field, PageHeader, Section, Stat } from "@/components/ui";
+import { Badge, EditDetails, Empty, Field, PageHeader, Section, Stat } from "@/components/ui";
 
 type Cheque = {
-  id: string; cheque_no: string; bank: string | null; amount: number; due_date: string; status: string; bounce_reason: string | null;
+  id: string; cheque_no: string; bank: string | null; amount: number; due_date: string; status: string; bounce_reason: string | null; notes: string | null;
   reservation_id: string | null; photo_path: string | null;
   reservations: { code: string; units: { number: string } | null; guests: { full_name: string } | null } | null;
 };
@@ -26,7 +26,7 @@ export default async function ChequesPage() {
   const canOps = hasRole(ctx, ["manager", "accountant"]);
   const [{ data }, { data: active }, { data: ending }] = await Promise.all([
     ctx.supabase.from("cheques")
-      .select("id, cheque_no, bank, amount, due_date, status, bounce_reason, reservation_id, photo_path, reservations(code, units(number), guests(full_name))")
+      .select("id, cheque_no, bank, amount, due_date, status, bounce_reason, notes, reservation_id, photo_path, reservations(code, units(number), guests(full_name))")
       .eq("property_id", ctx.property.id).neq("status", "cancelled").order("due_date").limit(500),
     ctx.supabase.from("reservations").select("id, code, units(number), guests(full_name)").eq("property_id", ctx.property.id)
       .in("status", ["confirmed", "checked_in"]).order("created_at", { ascending: false }).limit(300),
@@ -83,6 +83,25 @@ export default async function ChequesPage() {
                 <SubmitButton className="btn-danger btn-sm">{t.chq_bounce}</SubmitButton>
               </ActionForm>
             </details>
+          ) : null}
+          {canOps && c.status === "pending" ? (
+            <>
+              <EditDetails label={t.edit}>
+                <ActionForm action={updateCheque} className="grid min-w-64 gap-1.5">
+                  <input type="hidden" name="id" value={c.id} />
+                  <input name="cheque_no" defaultValue={c.cheque_no} required placeholder={t.chq_no} className="input py-1.5" />
+                  <input name="bank" defaultValue={c.bank ?? ""} placeholder={t.chq_bank} className="input py-1.5" />
+                  <input name="amount" defaultValue={(c.amount / 1000).toFixed(3)} required inputMode="decimal" aria-label={t.amount} className="input py-1.5" />
+                  <input type="date" name="due_date" defaultValue={c.due_date} required aria-label={t.chq_due} className="input py-1.5" />
+                  <input name="notes" defaultValue={c.notes ?? ""} placeholder={t.notes} className="input py-1.5" />
+                  <SubmitButton className="btn-primary btn-sm">{t.save}</SubmitButton>
+                </ActionForm>
+              </EditDetails>
+              <ActionForm action={setChequeStatus}>
+                <input type="hidden" name="id" value={c.id} /><input type="hidden" name="status" value="cancelled" />
+                <SubmitButton className="btn-ghost btn-sm text-danger" confirm={`${t.chq_cancel}?`}>{t.chq_cancel}</SubmitButton>
+              </ActionForm>
+            </>
           ) : null}
           {canOps && c.status === "bounced" ? (
             <>

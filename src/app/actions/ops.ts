@@ -315,3 +315,39 @@ export async function logSubmission(_: ActionResult, fd: FormData) {
     ["/compliance"],
   );
 }
+
+// ---------------------------------------------------------------- edit open tasks / tickets
+export async function updateHkTask(_: ActionResult, fd: FormData) {
+  const kind = s(fd, "kind");
+  return run(
+    (c) =>
+      c.supabase
+        .from("hk_tasks")
+        .update({
+          ...(kind && ["checkout", "stayover", "weekly", "deep", "inspection"].includes(kind) ? { kind } : {}),
+          priority: Math.min(Math.max(Number(s(fd, "priority") ?? 2), 1), 3),
+          ...(s(fd, "date") ? { due_date: s(fd, "date") } : {}),
+          notes: s(fd, "notes"),
+        })
+        .eq("id", s(fd, "id")!)
+        .in("status", ["pending", "in_progress"]),
+    ["/housekeeping"],
+  );
+}
+
+export async function editTicket(_: ActionResult, fd: FormData) {
+  return run(
+    (c) =>
+      c.supabase
+        .from("maintenance_tickets")
+        .update({
+          title: s(fd, "title") ?? "",
+          description: s(fd, "description"),
+          priority: Math.min(Math.max(Number(s(fd, "priority") ?? 2), 1), 3),
+          blocks_availability: fd.get("blocks") === "on",
+        })
+        .eq("id", s(fd, "id")!)
+        .neq("status", "closed"),
+    ["/maintenance", "/board"],
+  );
+}

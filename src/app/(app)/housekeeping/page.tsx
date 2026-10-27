@@ -1,11 +1,11 @@
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { todayIn } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge, Empty, PageHeader, Section } from "@/components/ui";
-import { addHkTask, setHkStatus } from "@/app/actions/ops";
+import { Badge, EditDetails, Empty, PageHeader, Section } from "@/components/ui";
+import { addHkTask, setHkStatus, updateHkTask } from "@/app/actions/ops";
 
 type Task = { id: string; unit_id: string; kind: string; status: string; priority: number; due_date: string; notes: string | null; units: { number: string } | null };
 
@@ -34,6 +34,7 @@ export default async function HousekeepingPage() {
     (a, b) => Number(arriving.has(b.unit_id)) - Number(arriving.has(a.unit_id)) || a.priority - b.priority,
   );
 
+  const canManage = hasRole(ctx, ["manager", "reception"]);
   return (
     <>
       <PageHeader title={t.hk_title} />
@@ -64,12 +65,35 @@ export default async function HousekeepingPage() {
                   <SubmitButton className="btn-primary w-full"><Check className="inline size-4" /> {t.hk_done}</SubmitButton>
                 </ActionForm>
               </div>
+              {canManage ? (
+                <div className="mt-2 flex flex-wrap items-start gap-2">
+                  <EditDetails label={t.edit} className="flex-1">
+                    <ActionForm action={updateHkTask} className="grid gap-2 sm:grid-cols-2">
+                      <input type="hidden" name="id" value={task.id} />
+                      <select name="kind" defaultValue={task.kind} aria-label={t.type} className="input py-2">
+                        {["stayover", "weekly", "deep", "inspection", "checkout"].map((k) => <option key={k} value={k}>{t[`hk_kind_${k}` as DictKey]}</option>)}
+                      </select>
+                      <select name="priority" defaultValue={task.priority} aria-label={t.priority} className="input py-2">
+                        {[1, 2, 3].map((p) => <option key={p} value={p}>{t[`pr_${p}` as DictKey]}</option>)}
+                      </select>
+                      <input type="date" name="date" defaultValue={task.due_date} aria-label={t.date} className="input py-2" />
+                      <input name="notes" defaultValue={task.notes ?? ""} placeholder={t.notes} className="input py-2" />
+                      <SubmitButton className="btn-primary btn-sm sm:col-span-2">{t.save}</SubmitButton>
+                    </ActionForm>
+                  </EditDetails>
+                  <ActionForm action={setHkStatus}>
+                    <input type="hidden" name="id" value={task.id} />
+                    <input type="hidden" name="status" value="cancelled" />
+                    <SubmitButton className="btn-ghost btn-sm inline-flex items-center gap-1 text-danger" confirm={t.confirm_cancel}><X className="size-3.5 shrink-0" />{t.cancel}</SubmitButton>
+                  </ActionForm>
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
       )}
 
-      {hasRole(ctx, ["manager", "reception"]) ? (
+      {canManage ? (
         <div className="mt-6">
           <Section title={t.hk_add}>
             <ActionForm action={addHkTask} resetOnSuccess className="grid gap-2 sm:grid-cols-5">

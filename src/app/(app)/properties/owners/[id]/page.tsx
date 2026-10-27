@@ -3,7 +3,7 @@ import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { dictionaries, type DictKey } from "@/lib/i18n/dict";
 import { gregorian, omr, todayIn } from "@/lib/format";
-import { assignUnits, recordPayout, updateOwner } from "@/app/actions/owners";
+import { assignUnits, cancelPayout, recordPayout, updateOwner } from "@/app/actions/owners";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { PrintButton } from "@/components/PrintButton";
 import { Crumb, Field, PageHeader, Section } from "@/components/ui";
@@ -13,7 +13,7 @@ type Statement = {
   from: string; to: string; opening: number; revenue: number; commission: number; expenses: number; payouts: number; closing: number;
   units: { id: string; number: string; revenue: number; expenses: number }[];
   expense_lines: { date: string; unit: string; description: string; category: string; amount: number }[];
-  payout_lines: { date: string; amount: number; method: string; reference: string | null }[];
+  payout_lines: { id?: string; date: string; amount: number; method: string; reference: string | null }[];
 };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -101,7 +101,20 @@ export default async function OwnerPage({ params, searchParams }: PageProps<"/pr
             <h3 className="mb-1 font-semibold">{d.own_payouts}</h3>
             <table className="table">
               <tbody>{s.payout_lines.map((p, i) => (
-                <tr key={i}><td className="text-xs">{gregorian(p.date, L)}</td><td className="text-xs">{d[`pm_${p.method}` as DictKey]} {p.reference ?? ""}</td><td className="num text-end">{omr(p.amount, L)}</td></tr>
+                <tr key={i}>
+                  <td className="text-xs">{gregorian(p.date, L)}</td>
+                  <td className="text-xs">{d[`pm_${p.method}` as DictKey]} {p.reference ?? ""}</td>
+                  <td className="num text-end">{omr(p.amount, L)}</td>
+                  {canEdit && p.id ? (
+                    <td className="no-print w-0">
+                      <ActionForm action={cancelPayout}>
+                        <input type="hidden" name="id" value={s.owner.id} />
+                        <input type="hidden" name="payout" value={p.id} />
+                        <SubmitButton className="btn-ghost btn-sm text-danger" confirm={t.own_payout_cancel_q}>{t.cancel}</SubmitButton>
+                      </ActionForm>
+                    </td>
+                  ) : null}
+                </tr>
               ))}</tbody>
             </table>
           </>

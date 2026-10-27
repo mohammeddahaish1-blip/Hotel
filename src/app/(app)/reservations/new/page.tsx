@@ -1,4 +1,4 @@
-import { User } from "lucide-react";
+import { CreditCard, User } from "lucide-react";
 import Link from "next/link";
 import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -123,8 +123,14 @@ export default async function NewReservationPage({ searchParams }: PageProps<"/r
                   ))}
                 </ul>
                 <Link
+                  href={`/guests/new?read=1&next=${encodeURIComponent(keep({}))}`}
+                  className="btn-primary mt-3 inline-flex w-full items-center justify-center gap-2"
+                >
+                  <CreditCard className="size-4 shrink-0" />{t.rd_register}
+                </Link>
+                <Link
                   href={`/guests/new?next=${encodeURIComponent(keep({}))}`}
-                  className="btn-ghost mt-3 w-full"
+                  className="btn-ghost mt-2 w-full"
                 >
                   + {t.res_new_guest}
                 </Link>

@@ -35,12 +35,12 @@ export default async function GuestPage({ params }: PageProps<"/guests/[id]">) {
       <Crumb href="/guests" label={t.nav_guests} />
       <PageHeader
         title={g.full_name}
-        sub={<>{g.full_name_ar ? `${g.full_name_ar} · ` : ""}{lang === "ar" ? "موافقة بتاريخ" : "Consent on"} {dateTime(g.consent_at, ctx.property.timezone, lang)}</>}
+        sub={<>{g.full_name_ar ? `${g.full_name_ar} · ` : ""}{lang === "ar" ? "موافقة بتاريخ" : "Consent on"} {dateTime(g.consent_at, ctx.property.timezone, lang)}{g.doc_source ? <> · <Badge tone={g.doc_source === "manual" ? "gray" : "ok"}>{t[`ds_${g.doc_source}` as DictKey]}</Badge></> : null}</>}
         actions={<Link href={`/reservations/new?guest=${g.id}`} className="btn-primary">{t.res_new}</Link>}
       />
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="card lg:col-span-2">
-          <GuestForm t={t} tenantId={ctx.tenantId} retentionDays={prop?.doc_retention_days ?? 365} guest={g} />
+          <GuestForm t={t} tenantId={ctx.tenantId} retentionDays={prop?.doc_retention_days ?? 365} guest={g} demo={hasRole(ctx, ["manager"])} />
         </div>
         <div className="space-y-4">
           <Section title={t.guest_history}>

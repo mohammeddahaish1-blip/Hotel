@@ -110,3 +110,25 @@ export async function setChequeStatus(_: ActionResult, fd: FormData): Promise<Ac
   refresh(s(fd, "res") ? `/reservations/${s(fd, "res")}` : null, "/finance/cheques", "/finance", "/dashboard");
   return { ok: t.saved };
 }
+
+/** Fix a cheque's details while it is still with us (not yet deposited). */
+export async function updateCheque(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const { data, error } = await ctx.supabase
+    .from("cheques")
+    .update({
+      cheque_no: s(fd, "cheque_no") ?? "",
+      bank: s(fd, "bank"),
+      amount: toBaisa(s(fd, "amount")),
+      due_date: s(fd, "due_date")!,
+      notes: s(fd, "notes"),
+    })
+    .eq("id", s(fd, "id")!)
+    .eq("status", "pending")
+    .select("id");
+  if (error) return { error: errorMessage(t, error) };
+  if (!data?.length) return { error: t.err_FORBIDDEN };
+  refresh(s(fd, "res") ? `/reservations/${s(fd, "res")}` : null, "/finance/cheques");
+  return { ok: t.saved };
+}

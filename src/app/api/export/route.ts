@@ -22,9 +22,16 @@ export async function GET(req: NextRequest) {
     const { data, error } = await db.rpc("police_register", { p_property: p, p_from: from, p_to: to });
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     const rows = (data ?? []) as Record<string, unknown>[];
+    // doc_source: reader (ID card reader) / camera (photo) / manual (typed)
+    const codes = rows.map((r) => String(r.reservation_code));
+    const { data: src } = codes.length
+      ? await db.from("reservations").select("code, guests(doc_source)").eq("property_id", p).in("code", codes)
+      : { data: [] };
+    const sourceOf = new Map((src ?? []).map((x) => [x.code as string, (x.guests as unknown as { doc_source: string | null } | null)?.doc_source ?? ""]));
+    for (const r of rows) r.doc_source = sourceOf.get(String(r.reservation_code)) ?? "";
     body = csv(rows, [
       "reservation_code", "guest_name", "guest_name_ar", "nationality", "doc_type", "doc_number", "doc_expiry",
-      "date_of_birth", "gender", "phone", "unit", "check_in", "expected_checkout", "check_out", "adults", "children",
+      "date_of_birth", "gender", "phone", "unit", "check_in", "expected_checkout", "check_out", "adults", "children", "doc_source",
     ]);
     await db.from("compliance_submissions").insert({
       tenant_id: ctx.tenantId, property_id: p, authority: "rop", kind: "guest_register",

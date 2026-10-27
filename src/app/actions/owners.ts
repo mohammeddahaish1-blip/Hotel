@@ -76,3 +76,13 @@ export async function recordPayout(_: ActionResult, fd: FormData): Promise<Actio
   revalidatePath(`/properties/owners/${id}`);
   return { ok: t.saved };
 }
+
+/** Payouts are cancelled (kept with who/why), never deleted. */
+export async function cancelPayout(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const { t } = await getDict();
+  const ctx = await getCtx();
+  const { error } = await ctx.supabase.rpc("cancel_owner_payout", { p_id: s(fd, "payout")!, p_reason: s(fd, "reason") });
+  if (error) return { error: errorMessage(t, error) };
+  revalidatePath(`/properties/owners/${s(fd, "id")}`);
+  return { ok: t.saved };
+}

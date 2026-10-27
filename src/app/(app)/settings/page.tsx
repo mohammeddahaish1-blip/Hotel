@@ -5,10 +5,10 @@ import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { gregorian, omr, parseRange, plainOmr } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge, Field, PageHeader, Section, UNIT_STATUS_EMOJI, UNIT_STATUS_TONE } from "@/components/ui";
+import { Badge, EditDetails, Field, PageHeader, Section, UNIT_STATUS_EMOJI, UNIT_STATUS_TONE } from "@/components/ui";
 import {
-  addFloor, addRatePlan, addUnitType, bulkUnits, deleteRatePlan, inviteUser, setUnitService, updateMember,
-  updateProperty, updateStaffProfile, updateTax, updateTenantPolicy, updateUnitType,
+  addFloor, addRatePlan, addUnitType, bulkUnits, cancelInvite, deleteFloor, deleteRatePlan, inviteUser, setUnitActive, setUnitService,
+  updateFloor, updateMember, updateProperty, updateRatePlan, updateStaffProfile, updateTax, updateTenantPolicy, updateUnit, updateUnitType,
 } from "@/app/actions/settings";
 
 const ROLES = ["owner", "manager", "reception", "accountant", "housekeeping", "maintenance"];
@@ -23,7 +23,7 @@ export default async function SettingsPage() {
       db.from("tenants").select("*").eq("id", ctx.tenantId).single(),
       db.from("unit_types").select("*").eq("property_id", ctx.property.id).order("created_at"),
       db.from("floors").select("*").eq("property_id", ctx.property.id).order("sort"),
-      db.from("units").select("id, number, status, unit_type_id, floor_id").eq("property_id", ctx.property.id).order("number"),
+      db.from("units").select("id, number, status, unit_type_id, floor_id, active").eq("property_id", ctx.property.id).order("number"),
       db.from("rate_plans").select("*, unit_types!inner(property_id, name_ar)").eq("unit_types.property_id", ctx.property.id).order("period"),
       db.from("tax_rules").select("*").eq("tenant_id", ctx.tenantId).order("sort"),
       db.from("memberships").select("*").eq("tenant_id", ctx.tenantId).order("created_at"),
@@ -136,6 +136,19 @@ export default async function SettingsPage() {
                     <td className="text-xs">{gregorian(r.from, lang)} → {gregorian(r.to, lang)}</td>
                     <td className="num">{p.nightly_rate !== null ? omr(p.nightly_rate, lang) : "—"}</td>
                     <td>
+                      <EditDetails label={t.edit}>
+                        <ActionForm action={updateRatePlan} className="grid min-w-64 gap-1.5">
+                          <input type="hidden" name="id" value={p.id} />
+                          <input name="name" defaultValue={p.name} required aria-label={t.set_season_name} className="input py-1.5" />
+                          <input type="date" name="from" defaultValue={r.from} required aria-label={t.from} className="input py-1.5" />
+                          <input type="date" name="to" defaultValue={r.to} required aria-label={t.to} className="input py-1.5" />
+                          <input name="nightly" defaultValue={p.nightly_rate !== null ? plainOmr(p.nightly_rate) : ""} placeholder={t.set_nightly} inputMode="decimal" className="input py-1.5" />
+                          <input name="monthly" defaultValue={p.monthly_rate !== null ? plainOmr(p.monthly_rate) : ""} placeholder={t.set_monthly} inputMode="decimal" className="input py-1.5" />
+                          <SubmitButton className="btn-primary btn-sm">{t.save}</SubmitButton>
+                        </ActionForm>
+                      </EditDetails>
+                    </td>
+                    <td>
                       <ActionForm action={deleteRatePlan}>
                         <input type="hidden" name="id" value={p.id} />
                         <SubmitButton className="btn-ghost btn-sm" confirm={t.delete}>{t.delete}</SubmitButton>
@@ -164,7 +177,23 @@ export default async function SettingsPage() {
         <Section title={`${t.set_units} (${(units ?? []).length})`}>
           <div className="mb-4 grid gap-4 sm:grid-cols-2">
             <ActionForm action={addFloor} resetOnSuccess className="space-y-2">
-              <div className="label">{t.set_floors}: {(floors ?? []).map((f) => f.name).join("، ") || "—"}</div>
+              <div className="label">{t.set_floors}</div>
+              <div className="flex flex-wrap gap-1.5">
+                {(floors ?? []).map((f) => (
+                  <EditDetails key={f.id} label={f.name}>
+                    <ActionForm action={updateFloor} className="flex gap-1.5">
+                      <input type="hidden" name="id" value={f.id} />
+                      <input name="name" defaultValue={f.name} required aria-label={t.floor} className="input py-1.5" />
+                      <input name="sort" type="number" defaultValue={f.sort} aria-label="#" className="input w-16 py-1.5" />
+                      <SubmitButton className="btn-primary btn-sm">{t.save}</SubmitButton>
+                    </ActionForm>
+                    <ActionForm action={deleteFloor} className="mt-1.5">
+                      <input type="hidden" name="id" value={f.id} />
+                      <SubmitButton className="btn-ghost btn-sm text-danger" confirm={t.delete}>{t.delete}</SubmitButton>
+                    </ActionForm>
+                  </EditDetails>
+                ))}
+              </div>
               <div className="flex gap-2">
                 <input name="name" required placeholder={t.floor} className="input" />
                 <input name="sort" type="number" defaultValue={(floors ?? []).length + 1} className="input w-20" />
@@ -195,7 +224,7 @@ export default async function SettingsPage() {
                 <button
                   disabled={!["available", "dirty", "out_of_service"].includes(u.status)}
                   title={`${typeName.get(u.unit_type_id)} — ${t[`st_${u.status}` as DictKey]}`}
-                  className="rounded-lg border border-line px-2 py-1 text-xs"
+                  className={`rounded-lg border border-line px-2 py-1 text-xs ${u.active ? "" : "opacity-40 line-through"}`}
                 >
                   <span className="num font-semibold">{u.number}</span>{" "}
                   {u.status === "out_of_service" ? <Badge tone={UNIT_STATUS_TONE[u.status]}><span aria-hidden>{UNIT_STATUS_EMOJI.out_of_service}</span> {t.st_out_of_service}</Badge> : null}
@@ -203,6 +232,33 @@ export default async function SettingsPage() {
               </ActionForm>
             ))}
           </div>
+          <EditDetails label={t.set_edit_units} className="mt-3">
+            <div className="max-h-96 space-y-1.5 overflow-y-auto">
+              {(units ?? []).map((u) => (
+                <div key={u.id} className="flex flex-wrap items-center gap-1.5">
+                  <ActionForm action={updateUnit} className="flex flex-1 flex-wrap gap-1.5">
+                    <input type="hidden" name="id" value={u.id} />
+                    <input name="number" defaultValue={u.number} required aria-label={t.unit} className="input w-20 py-1.5" />
+                    <select name="unit_type" defaultValue={u.unit_type_id} aria-label={t.type} className="input w-auto py-1.5">
+                      {(types ?? []).map((x) => <option key={x.id} value={x.id}>{x.name_ar}</option>)}
+                    </select>
+                    <select name="floor" defaultValue={u.floor_id ?? ""} aria-label={t.floor} className="input w-auto py-1.5">
+                      <option value="">—</option>
+                      {(floors ?? []).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                    </select>
+                    <SubmitButton className="btn-ghost btn-sm">{t.save}</SubmitButton>
+                  </ActionForm>
+                  <ActionForm action={setUnitActive}>
+                    <input type="hidden" name="id" value={u.id} />
+                    <input type="hidden" name="active" value={u.active ? "0" : "1"} />
+                    <SubmitButton className={`btn-ghost btn-sm ${u.active ? "text-danger" : "text-ok"}`} confirm={u.active ? t.unit_deactivate_q : undefined}>
+                      {u.active ? t.unit_deactivate : t.unit_activate}
+                    </SubmitButton>
+                  </ActionForm>
+                </div>
+              ))}
+            </div>
+          </EditDetails>
         </Section>
 
         <Section title={t.set_staff}>
@@ -261,8 +317,19 @@ export default async function SettingsPage() {
             <p className="flex items-start gap-1.5 text-xs text-muted"><Lock className="size-3.5 shrink-0" /> {t.staff_private_hint}</p>
           </div>
           {(invites ?? []).length ? (
-            <div className="mt-3 text-xs text-muted">
-              {t.pending_invites}: {(invites ?? []).map((i) => `${i.email} (${i.job_title || t[`role_${i.role}` as DictKey]})`).join("، ")}
+            <div className="mt-3 text-xs">
+              <div className="mb-1 text-muted">{t.pending_invites}:</div>
+              <ul className="space-y-1">
+                {(invites ?? []).map((i) => (
+                  <li key={i.id} className="flex items-center gap-2">
+                    <span className="flex-1 truncate"><span dir="ltr">{i.email}</span> · {i.full_name} ({i.job_title || t[`role_${i.role}` as DictKey]})</span>
+                    <ActionForm action={cancelInvite}>
+                      <input type="hidden" name="id" value={i.id} />
+                      <SubmitButton className="btn-ghost btn-sm text-danger" confirm={t.inv_cancel_q}>{t.inv_cancel}</SubmitButton>
+                    </ActionForm>
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : null}
           <ActionForm action={inviteUser} resetOnSuccess className="mt-4 space-y-3 border-t border-line pt-4">
