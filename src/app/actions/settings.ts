@@ -160,20 +160,26 @@ export async function inviteUser(_: ActionResult, fd: FormData): Promise<ActionR
   return { ok: t.saved };
 }
 
-/** Phone, civil ID and monthly salary (baisa); kept outside memberships, which every colleague can read. */
+/** Phone, civil ID, monthly salary (baisa) and work card; kept outside memberships, which every colleague can read. */
 function staffDetails(fd: FormData) {
   const salary = s(fd, "salary");
+  const expiry = s(fd, "work_card_expiry");
   return {
     phone: s(fd, "phone")?.slice(0, 30) ?? null,
     civil_id: s(fd, "civil_id")?.replace(/\s/g, "").slice(0, 20) ?? null,
     salary: salary ? toBaisa(salary) : null,
+    work_card_no: s(fd, "work_card_no")?.slice(0, 30) ?? null,
+    work_card_expiry: expiry && /^\d{4}-\d{2}-\d{2}$/.test(expiry) ? expiry : null,
   };
 }
 
 export async function updateStaffProfile(_: ActionResult, fd: FormData) {
-  return run((c) =>
-    c.supabase.from("staff_profiles").upsert({ tenant_id: c.tenantId, user_id: s(fd, "user_id")!, ...staffDetails(fd) }),
+  const userId = s(fd, "user_id")!;
+  const res = await run((c) =>
+    c.supabase.from("staff_profiles").upsert({ tenant_id: c.tenantId, user_id: userId, ...staffDetails(fd) }),
   );
+  revalidatePath(`/profile/${userId}`);
+  return res;
 }
 
 export async function updateMember(_: ActionResult, fd: FormData) {

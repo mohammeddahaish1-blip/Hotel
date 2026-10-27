@@ -1,4 +1,5 @@
 import { Lock, ShieldCheck, FileSpreadsheet, FolderArchive } from "lucide-react";
+import Link from "next/link";
 import { AREAS, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
@@ -219,7 +220,7 @@ export default async function SettingsPage() {
                 <div key={m.user_id} className="rounded-xl border border-line p-2">
                 <ActionForm action={updateMember} className="grid grid-cols-12 items-center gap-2 text-sm">
                   <input type="hidden" name="user_id" value={m.user_id} />
-                  <span className="col-span-4 truncate font-semibold">{m.full_name || m.user_id.slice(0, 8)}</span>
+                  <Link href={`/profile/${m.user_id}`} className="col-span-4 truncate font-semibold text-brand hover:underline">{m.full_name || m.user_id.slice(0, 8)}</Link>
                   {locked ? (
                     <span className="col-span-8 text-muted">{title}</span>
                   ) : (
@@ -241,13 +242,15 @@ export default async function SettingsPage() {
                   <details className="mt-1 text-xs">
                     <summary className="cursor-pointer text-brand">
                       {t.staff_details}
-                      {pr ? <span className="ms-2 text-muted">{[pr.phone, pr.civil_id && `${t.staff_civil_id}: ${pr.civil_id}`, pr.salary != null && `${t.staff_salary_short}: ${omr(pr.salary, lang)}`].filter(Boolean).join(" · ")}</span> : null}
+                      {pr ? <span className="ms-2 text-muted">{[pr.phone, pr.civil_id && `${t.staff_civil_id}: ${pr.civil_id}`, pr.salary != null && `${t.staff_salary_short}: ${omr(pr.salary, lang)}`, pr.work_card_expiry && `${t.staff_card_expiry}: ${gregorian(pr.work_card_expiry, lang)}`].filter(Boolean).join(" · ")}</span> : null}
                     </summary>
-                    <ActionForm action={updateStaffProfile} className="mt-2 grid gap-2 sm:grid-cols-4">
+                    <ActionForm action={updateStaffProfile} className="mt-2 grid gap-2 sm:grid-cols-3">
                       <input type="hidden" name="user_id" value={m.user_id} />
                       <input name="phone" defaultValue={pr?.phone ?? ""} placeholder={t.staff_phone} aria-label={t.staff_phone} dir="ltr" inputMode="tel" className="input py-2" />
                       <input name="civil_id" defaultValue={pr?.civil_id ?? ""} placeholder={t.staff_civil_id} aria-label={t.staff_civil_id} dir="ltr" inputMode="numeric" className="input py-2" />
                       <input name="salary" defaultValue={pr?.salary != null ? (pr.salary / 1000).toFixed(3) : ""} placeholder={t.staff_salary} aria-label={t.staff_salary} inputMode="decimal" className="input py-2" />
+                      <input name="work_card_no" defaultValue={pr?.work_card_no ?? ""} placeholder={t.staff_card_no} aria-label={t.staff_card_no} dir="ltr" className="input py-2" />
+                      <input name="work_card_expiry" type="date" defaultValue={pr?.work_card_expiry ?? ""} aria-label={t.staff_card_expiry} title={t.staff_card_expiry} className="input py-2" />
                       <SubmitButton className="btn-ghost btn-sm">{t.save}</SubmitButton>
                     </ActionForm>
                   </details>
@@ -273,6 +276,8 @@ export default async function SettingsPage() {
               <Field label={t.staff_phone}><input name="phone" dir="ltr" inputMode="tel" placeholder="+968" className="input" /></Field>
               <Field label={t.staff_civil_id}><input name="civil_id" dir="ltr" inputMode="numeric" className="input" /></Field>
               <Field label={t.staff_salary}><input name="salary" inputMode="decimal" placeholder="0.000" className="input" /></Field>
+              <Field label={t.staff_card_no}><input name="work_card_no" dir="ltr" className="input" /></Field>
+              <Field label={t.staff_card_expiry}><input name="work_card_expiry" type="date" className="input" /></Field>
             </div>
             {isOwner ? (
               <div>

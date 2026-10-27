@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  Activity, Building2, CalendarCheck, ChartColumn, FileText, FileUp, LayoutGrid,
+  Activity, Building2, CircleUserRound, CalendarCheck, ChartColumn, FileText, FileUp, LayoutGrid,
   MessageSquareText, Settings, ShieldCheck, SprayCan, Wallet, type LucideIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -13,7 +13,7 @@ export type NavGroup = { key: string; label: string; tabs: NavTab[]; also?: stri
 const ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutGrid, units: Building2, reservations: CalendarCheck, ops: SprayCan, finance: Wallet,
   reports: FileText, analytics: ChartColumn, feedback: MessageSquareText, import: FileUp,
-  settings: Settings, activity: Activity, audit: ShieldCheck,
+  settings: Settings, activity: Activity, profile: CircleUserRound, audit: ShieldCheck,
 };
 
 function GroupIcon({ k, className }: { k: string; className: string }) {

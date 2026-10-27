@@ -55,6 +55,10 @@ export async function loadAlerts(ctx: Ctx, t: Dict, lang: "ar" | "en" | "ur"): P
       case "contract_ending":
         extra = r.info ? gregorian(r.info, lang) : null;
         break;
+      case "work_card_expiring":
+        extra = r.info ? gregorian(r.info, lang) : null;
+        href = `/profile/${r.ref_id}`;
+        break;
       case "new_complaint":
         extra = r.info;
         href = "/feedback";

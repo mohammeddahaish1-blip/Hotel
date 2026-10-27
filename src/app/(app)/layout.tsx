@@ -10,6 +10,7 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { AlertsBell } from "@/components/AlertsBell";
 import { BackButton } from "@/components/BackButton";
 import { loadAlerts } from "@/lib/alerts";
+import Link from "next/link";
 
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -65,6 +66,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       ],
     },
     { key: "activity", label: t.nav_activity, tabs: [{ href: "/activity", label: t.nav_activity }] },
+    { key: "profile", label: t.nav_profile, tabs: [{ href: "/profile", label: t.nav_profile }] },
     { key: "audit", label: t.nav_audit, tabs: tab("audit") },
   ].filter((g) => g.tabs.length > 0);
   const alerts = await loadAlerts(ctx, t, lang);
@@ -81,7 +83,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <NavLinks groups={groups} variant="side" />
         </nav>
         <div className="mt-4 border-t border-line pt-3 text-xs text-muted">
-          <div className="font-semibold text-ink">{ctx.fullName || ctx.email}</div>
+          <Link href="/profile" className="font-semibold text-ink hover:text-brand">{ctx.fullName || ctx.email}</Link>
           <div>{roleLabel}</div>
           <div className="mt-3 flex gap-2">
             <LangToggle current={lang} />
