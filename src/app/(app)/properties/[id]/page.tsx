@@ -1,3 +1,4 @@
+import { Check, Pencil } from "lucide-react";
 import { notFound } from "next/navigation";
 import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -45,7 +46,7 @@ export default async function PropertyPage({ params }: PageProps<"/properties/[i
         title={name}
         sub={[t[`kind_${p.kind}` as DictKey], p.address].filter(Boolean).join("، ")}
         actions={
-          isCurrent ? <Badge tone="brand">✓ {t.prop_current}</Badge> : (
+          isCurrent ? <Badge tone="brand"><Check className="size-3.5 shrink-0" /> {t.prop_current}</Badge> : (
             <form action={switchProperty}>
               <input type="hidden" name="id" value={p.id} />
               <SubmitButton className="btn-primary">{t.prop_make_current}</SubmitButton>
@@ -103,7 +104,7 @@ export default async function PropertyPage({ params }: PageProps<"/properties/[i
 
       {canEdit ? (
         <details className="card">
-          <summary className="cursor-pointer font-semibold">✏️ {t.prop_edit}</summary>
+          <summary className="cursor-pointer font-semibold"><Pencil className="inline size-4" /> {t.prop_edit}</summary>
           <ActionForm action={updatePropertyInfo} className="mt-4 grid gap-3 sm:grid-cols-2">
             <input type="hidden" name="id" value={p.id} />
             <Field label={t.set_name_ar}><input name="name_ar" defaultValue={p.name_ar} required className="input" /></Field>
@@ -118,7 +119,7 @@ export default async function PropertyPage({ params }: PageProps<"/properties/[i
             <Field label={t.phone}><input name="phone" defaultValue={p.phone ?? ""} dir="ltr" className="input" /></Field>
             <Field label={t.set_address}><input name="address" defaultValue={p.address ?? ""} className="input" /></Field>
             <Field label={t.set_license}><input name="license_no" defaultValue={p.license_no ?? ""} className="input" /></Field>
-            <div className="sm:col-span-2"><ReceiptInput name="photo" label={t.prop_photo} ready="✓" accept="image/*" /></div>
+            <div className="sm:col-span-2"><ReceiptInput name="photo" label={t.prop_photo} ready="" accept="image/*" /></div>
             <div className="sm:col-span-2"><SubmitButton className="btn-primary">{t.save}</SubmitButton></div>
           </ActionForm>
         </details>

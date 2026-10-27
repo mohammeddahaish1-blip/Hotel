@@ -1,13 +1,14 @@
 "use client";
 
+import { CircleCheck, Frown, Lightbulb, Star } from "lucide-react";
 import { useActionState, useState } from "react";
 import { submitGuestFeedback } from "@/app/actions/feedback";
 
 const TEXT = {
   ar: {
     intro: "يسعدنا سماع رأيك. اكتب اقتراحك أو شكواك وستصل مباشرة إلى إدارة الفندق.",
-    suggestion: "💡 اقتراح",
-    complaint: "😟 شكوى",
+    suggestion: "اقتراح",
+    complaint: "شكوى",
     rating: "تقييمك لإقامتك (اختياري)",
     message: "اكتب رسالتك",
     messagePh: "ما الذي أعجبك؟ وما الذي يمكن أن نحسّنه؟",
@@ -16,15 +17,15 @@ const TEXT = {
     contact: "الجوال أو البريد للتواصل (اختياري)",
     send: "إرسال",
     sending: "جارٍ الإرسال…",
-    thanks: "شكراً لك! 🌷",
+    thanks: "شكراً لك!",
     thanksBody: "وصلت رسالتك إلى إدارة الفندق وسنهتم بها.",
     another: "إرسال رسالة أخرى",
     privacy: "لا نشارك بياناتك مع أي جهة. الاسم ووسيلة التواصل اختيارية.",
   },
   en: {
     intro: "We'd love to hear from you. Write your suggestion or complaint and it goes straight to the hotel management.",
-    suggestion: "💡 Suggestion",
-    complaint: "😟 Complaint",
+    suggestion: "Suggestion",
+    complaint: "Complaint",
     rating: "Rate your stay (optional)",
     message: "Your message",
     messagePh: "What did you like? What could we improve?",
@@ -33,15 +34,15 @@ const TEXT = {
     contact: "Phone or email to reach you (optional)",
     send: "Send",
     sending: "Sending…",
-    thanks: "Thank you! 🌷",
+    thanks: "Thank you!",
     thanksBody: "Your message has reached the hotel management and we will look into it.",
     another: "Send another message",
     privacy: "We never share your details. Name and contact are optional.",
   },
   ur: {
     intro: "ہمیں آپ کی رائے جاننے کی خوشی ہوگی۔ اپنی تجویز یا شکایت لکھیں، یہ براہِ راست ہوٹل انتظامیہ تک پہنچے گی۔",
-    suggestion: "💡 تجویز",
-    complaint: "😟 شکایت",
+    suggestion: "تجویز",
+    complaint: "شکایت",
     rating: "اپنے قیام کی ریٹنگ دیں (اختیاری)",
     message: "اپنا پیغام لکھیں",
     messagePh: "آپ کو کیا اچھا لگا؟ ہم کیا بہتر کر سکتے ہیں؟",
@@ -50,7 +51,7 @@ const TEXT = {
     contact: "رابطے کے لیے فون یا ای میل (اختیاری)",
     send: "بھیجیں",
     sending: "بھیجا جا رہا ہے…",
-    thanks: "شکریہ! 🌷",
+    thanks: "شکریہ!",
     thanksBody: "آپ کا پیغام ہوٹل انتظامیہ تک پہنچ گیا ہے، ہم اس پر توجہ دیں گے۔",
     another: "ایک اور پیغام بھیجیں",
     privacy: "ہم آپ کی معلومات کسی سے شیئر نہیں کرتے۔ نام اور رابطہ اختیاری ہیں۔",
@@ -66,6 +67,7 @@ export function GuestFeedbackForm({ token, lang }: { token: string; lang: "ar" |
   if (state?.ok) {
     return (
       <div className="py-8 text-center">
+        <CircleCheck className="mx-auto mb-3 size-12 text-ok" strokeWidth={1.5} />
         <div className="text-3xl font-bold text-brand">{x.thanks}</div>
         <p className="mt-3 text-muted">{x.thanksBody}</p>
         <button type="button" className="btn-ghost mt-6" onClick={() => window.location.reload()}>{x.another}</button>
@@ -89,7 +91,7 @@ export function GuestFeedbackForm({ token, lang }: { token: string; lang: "ar" |
               kind === k ? (k === "complaint" ? "border-danger bg-danger-soft text-danger" : "border-brand bg-brand-soft text-brand") : "border-line text-muted"
             }`}
           >
-            {x[k]}
+            <span className="inline-flex items-center justify-center gap-2">{k === "complaint" ? <Frown className="size-5" /> : <Lightbulb className="size-5" />} {x[k]}</span>
           </button>
         ))}
       </div>
@@ -98,7 +100,7 @@ export function GuestFeedbackForm({ token, lang }: { token: string; lang: "ar" |
         <div className="flex gap-1" dir="ltr">
           {[1, 2, 3, 4, 5].map((n) => (
             <button key={n} type="button" aria-label={`${n}/5`} onClick={() => setRating(n === rating ? 0 : n)} className="text-3xl leading-none">
-              <span className={n <= rating ? "text-warn" : "text-line"}>★</span>
+              <Star className={`size-8 ${n <= rating ? "text-warn" : "text-line"}`} fill={n <= rating ? "currentColor" : "none"} strokeWidth={1.5} />
             </button>
           ))}
         </div>

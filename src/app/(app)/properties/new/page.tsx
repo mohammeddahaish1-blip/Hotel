@@ -26,7 +26,7 @@ export default async function NewPropertyPage() {
         </Field>
         <Field label={t.phone}><input name="phone" dir="ltr" inputMode="tel" className="input" /></Field>
         <Field label={t.set_address} className="sm:col-span-2"><input name="address" className="input" /></Field>
-        <div className="sm:col-span-2"><ReceiptInput name="photo" label={t.prop_photo} ready="✓" accept="image/*" /></div>
+        <div className="sm:col-span-2"><ReceiptInput name="photo" label={t.prop_photo} ready="" accept="image/*" /></div>
         <label className="flex items-center gap-2 text-sm sm:col-span-2">
           <input type="checkbox" name="make_current" defaultChecked /> {t.prop_make_current_now}
         </label>

@@ -176,7 +176,7 @@ function dictOr(t: Dict, key: string, fallback: string) {
   return typeof v === "string" ? v : fallback;
 }
 
-/** One stored value → what a person would write ("28.500 ر.ع", "تحويل بنكي", "🔑 مقيم"). */
+/** One stored value → what a person would write ("28.500 ر.ع", "تحويل بنكي", "مقيم"). */
 function formatValue(table: string, field: string, v: unknown, t: Dict, lang: AuditLang, lk: AuditLookups): string {
   const x = LL(lang);
   if (v === null || v === undefined || v === "") return x.empty;

@@ -1,3 +1,4 @@
+import { Lock, ShieldCheck, FileSpreadsheet, FolderArchive } from "lucide-react";
 import { AREAS, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
@@ -38,11 +39,11 @@ export default async function SettingsPage() {
       {ctx.role === "owner" || ctx.role === "manager" ? (
         <section className="card mb-4 flex flex-wrap items-center gap-3">
           <div className="flex-1">
-            <h2 className="h2">🔐 {t.exp_all}</h2>
+            <h2 className="h2 inline-flex items-center gap-1.5"><ShieldCheck className="size-5 text-brand" /> {t.exp_all}</h2>
             <p className="text-sm text-muted">{t.exp_all_hint}</p>
           </div>
-          <a href="/api/export/all?kind=excel" className="btn-primary btn-sm">{t.exp_excel}</a>
-          <a href="/api/export/all?kind=docs" className="btn-ghost btn-sm">{t.exp_docs}</a>
+          <a href="/api/export/all?kind=excel" className="btn-primary btn-sm inline-flex items-center gap-1.5"><FileSpreadsheet className="size-4 shrink-0" />{t.exp_excel}</a>
+          <a href="/api/export/all?kind=docs" className="btn-ghost btn-sm inline-flex items-center gap-1.5"><FolderArchive className="size-4 shrink-0" />{t.exp_docs}</a>
         </section>
       ) : null}
       <div className="grid gap-4 lg:grid-cols-2">
@@ -254,7 +255,7 @@ export default async function SettingsPage() {
                 </div>
               );
             })}
-            <p className="text-xs text-muted">🔒 {t.staff_private_hint}</p>
+            <p className="flex items-start gap-1.5 text-xs text-muted"><Lock className="size-3.5 shrink-0" /> {t.staff_private_hint}</p>
           </div>
           {(invites ?? []).length ? (
             <div className="mt-3 text-xs text-muted">

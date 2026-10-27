@@ -1,3 +1,4 @@
+import { User } from "lucide-react";
 import Link from "next/link";
 import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -82,7 +83,7 @@ export default async function NewReservationPage({ searchParams }: PageProps<"/r
                       className={`rounded-xl border p-3 ${u.unit_id === unitId ? "border-brand bg-brand-soft" : "border-line bg-surface"}`}
                     >
                       <div className="num text-lg font-bold">{u.number}</div>
-                      <div className="truncate text-xs text-muted">{u.type_name} · {u.capacity}👤</div>
+                      <div className="truncate text-xs text-muted">{u.type_name} · {u.capacity} <User className="inline size-3" /></div>
                       <div className="num mt-1 text-sm font-semibold">
                         {kind === "contract" ? `${omr(u.monthly_rate, lang)} / ${lang === "ar" ? "شهر" : lang === "ur" ? "ماہ" : "mo"}` : omr(u.quote, lang)}
                       </div>

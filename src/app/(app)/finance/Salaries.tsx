@@ -1,3 +1,4 @@
+import { Check, Lock } from "lucide-react";
 import Link from "next/link";
 import type { Ctx } from "@/lib/auth";
 import type { Dict, DictKey, Lang } from "@/lib/i18n/dict";
@@ -52,7 +53,7 @@ export async function Salaries({ ctx, month, monthLabel, t, lang }: { ctx: Ctx; 
                     <td className="num whitespace-nowrap">{s != null ? omr(s, lang) : <Link href="/settings" className="text-xs text-brand">{t.sal_not_set}</Link>}</td>
                     <td className="text-xs">
                       {p ? (
-                        <Badge tone="ok">✓ {t.sal_paid_on} {dateTime(p.paid_at, ctx.property.timezone, lang)} · {t[`pm_${p.method}` as DictKey]}</Badge>
+                        <Badge tone="ok"><Check className="size-3.5 shrink-0" /> {t.sal_paid_on} {dateTime(p.paid_at, ctx.property.timezone, lang)} · {t[`pm_${p.method}` as DictKey]}</Badge>
                       ) : (
                         <Badge tone="warn">{t.sal_unpaid}</Badge>
                       )}
@@ -82,7 +83,7 @@ export async function Salaries({ ctx, month, monthLabel, t, lang }: { ctx: Ctx; 
           </table>
         </div>
       )}
-      <p className="mt-2 text-xs text-muted">🔒 {t.sal_hint}</p>
+      <p className="mt-2 flex items-start gap-1.5 text-xs text-muted"><Lock className="size-3.5 shrink-0" /> {t.sal_hint}</p>
     </Section>
   );
 }

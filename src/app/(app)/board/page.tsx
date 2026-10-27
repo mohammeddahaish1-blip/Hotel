@@ -1,3 +1,4 @@
+import { Zap } from "lucide-react";
 import Link from "next/link";
 import { requireArea, can, hasRole } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -71,7 +72,7 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
                       ) : r.next_arrival ? (
                         <div className="text-xs text-muted">{t.res_upcoming}: {gregorian(r.next_arrival, lang)}</div>
                       ) : null}
-                      {bookable ? <div className="mt-2 text-xs font-semibold text-brand">⚡ {t.qb_title}</div> : null}
+                      {bookable ? <div className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand"><Zap className="size-3.5 shrink-0" /> {t.qb_title}</div> : null}
                     </div>
                   );
                   if (bookable) {

@@ -1,3 +1,5 @@
+import { Download, TriangleAlert } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -8,7 +10,7 @@ import { auditStats, filtersToQuery, loadAudit, parseAuditFilters } from "@/lib/
 import { Badge, Empty, PageHeader, Stat, type Tone } from "@/components/ui";
 
 const ACTION_TONE: Record<string, Tone> = { insert: "ok", update: "info", delete: "danger" };
-const ACTION_EMOJI: Record<string, string> = { insert: "➕", update: "✏️", delete: "🗑️" };
+const ACTION_EMOJI: Record<string, React.ReactNode> = { insert: <Plus className="size-3.5 shrink-0" />, update: <Pencil className="size-3.5 shrink-0" />, delete: <Trash2 className="size-3.5 shrink-0" /> };
 
 // FR-54: who, when, before → after — in plain language. Read-only; the table is append-only in the database.
 export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
@@ -24,14 +26,14 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
     <>
       <PageHeader
         title={t.audit_title}
-        actions={<a href={`/api/export/audit${qs ? `?${qs}` : ""}`} className="btn-ghost btn-sm">⬇️ {t.audit_export}</a>}
+        actions={<a href={`/api/export/audit${qs ? `?${qs}` : ""}`} className="btn-ghost btn-sm inline-flex items-center gap-1.5"><Download className="size-4 shrink-0" /> {t.audit_export}</a>}
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <Stat label={t.audit_stat_today} value={stats.today} />
         <Stat
           label={t.audit_stat_sensitive}
-          value={<Link href={`/audit?period=today&sensitive=1`}>⚠️ {stats.sensitiveToday}</Link>}
+          value={<Link href={`/audit?period=today&sensitive=1`} className="inline-flex items-center gap-1.5"><TriangleAlert className="size-5" /> {stats.sensitiveToday}</Link>}
           tone={stats.sensitiveToday ? "warn" : undefined}
         />
         <Stat label={t.audit_stat_top} value={stats.top ? stats.top.name : "—"} hint={stats.top ? `${stats.top.count} ${t.audit_ops}` : undefined} />
@@ -80,13 +82,13 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
         </label>
         <label className="flex items-center gap-2 self-end pb-2 text-sm" title={t.audit_sensitive_hint}>
           <input type="checkbox" name="sensitive" value="1" defaultChecked={f.sensitive} />
-          ⚠️ {t.audit_sensitive_only}
+          <TriangleAlert className="size-4 shrink-0" /> {t.audit_sensitive_only}
         </label>
         <div className="flex items-end gap-2">
           <button className="btn-primary btn-sm">{t.audit_apply}</button>
           {filtered ? <Link href="/audit" className="btn-ghost btn-sm">{t.audit_reset}</Link> : null}
         </div>
-        <p className="text-xs text-muted sm:col-span-2 lg:col-span-4">⚠️ {t.audit_sensitive_hint}</p>
+        <p className="flex items-start gap-1.5 text-xs text-muted sm:col-span-2 lg:col-span-4"><TriangleAlert className="size-3.5 shrink-0" /> {t.audit_sensitive_hint}</p>
       </form>
 
       {!entries.length ? (
@@ -112,7 +114,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
                     </td>
                     <td className="min-w-72 text-sm">
                       <div className="flex flex-wrap items-center gap-2">
-                        {e.sensitive ? <Badge tone="warn">⚠️ {t.audit_sensitive}</Badge> : null}
+                        {e.sensitive ? <Badge tone="warn"><TriangleAlert className="size-3.5 shrink-0" /> {t.audit_sensitive}</Badge> : null}
                         {e.href ? (
                           <Link href={e.href} className="font-medium hover:text-brand hover:underline">{e.summary}</Link>
                         ) : (

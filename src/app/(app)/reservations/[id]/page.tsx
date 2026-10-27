@@ -1,3 +1,4 @@
+import { MessageCircle, Paperclip, Receipt } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { hasRole, requireArea } from "@/lib/auth";
@@ -236,21 +237,21 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
                           <td className="num">{omr(p.amount, lang)}</td>
                           <td className="space-y-1 text-xs">
                             <div className="flex flex-wrap gap-1.5">
-                              <a href={`/r/${p.receipt_token}`} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">🧾 {t.rc_view}</a>
+                              <a href={`/r/${p.receipt_token}`} target="_blank" rel="noreferrer" className="btn-ghost btn-sm inline-flex items-center gap-1"><Receipt className="size-3.5 shrink-0" /> {t.rc_view}</a>
                               {guest.phone && !p.voided_at ? (
-                                <a href={whatsappLink(guest.phone, payMsgs.get(p.id) ?? "")} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">💬 {t.rc_send}</a>
+                                <a href={whatsappLink(guest.phone, payMsgs.get(p.id) ?? "")} target="_blank" rel="noreferrer" className="btn-ghost btn-sm inline-flex items-center gap-1"><MessageCircle className="size-3.5 shrink-0" /> {t.rc_send}</a>
                               ) : null}
                               {p.proof_path && proofUrls.get(p.proof_path) ? (
-                                <a href={proofUrls.get(p.proof_path)} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">📎 {t.rc_proof}</a>
+                                <a href={proofUrls.get(p.proof_path)} target="_blank" rel="noreferrer" className="btn-ghost btn-sm inline-flex items-center gap-1"><Paperclip className="size-3.5 shrink-0" /> {t.rc_proof}</a>
                               ) : null}
                             </div>
                             {!p.voided_at && !p.proof_path ? (
                               <details>
-                                <summary className="cursor-pointer text-brand">📎 {t.rc_attach_proof}</summary>
+                                <summary className="cursor-pointer text-brand"><Paperclip className="inline size-3.5" /> {t.rc_attach_proof}</summary>
                                 <ActionForm action={attachPaymentProof} className="mt-1 space-y-1">
                                   <input type="hidden" name="id" value={p.id} />
                                   <input type="hidden" name="res" value={id} />
-                                  <ReceiptInput name="proof" label="" ready="✓" />
+                                  <ReceiptInput name="proof" label="" ready="" />
                                   <SubmitButton className="btn-ghost btn-sm">{t.save}</SubmitButton>
                                 </ActionForm>
                               </details>
@@ -294,7 +295,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
                 <input name="amount" required inputMode="decimal" placeholder={t.amount} defaultValue={sum && sum.balance > 0 ? (sum.balance / 1000).toFixed(3) : ""} className="input" />
                 <input name="reference" placeholder={t.reference} className="input" />
                 <SubmitButton>{t.add_payment}</SubmitButton>
-                <div className="sm:col-span-5"><ReceiptInput name="proof" label={t.rc_proof_label} ready="✓" /></div>
+                <div className="sm:col-span-5"><ReceiptInput name="proof" label={t.rc_proof_label} ready="" /></div>
               </ActionForm>
             </Section>
           ) : null}
@@ -352,7 +353,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
                 <input name="amount" required inputMode="decimal" placeholder={t.amount} className="input" />
                 <input type="date" name="due_date" required aria-label={t.chq_due} className="input" />
                 <SubmitButton className="btn-ghost">{t.chq_add}</SubmitButton>
-                <div className="sm:col-span-5"><ReceiptInput name="photo" label={t.chq_photo} ready="✓" /></div>
+                <div className="sm:col-span-5"><ReceiptInput name="photo" label={t.chq_photo} ready="" /></div>
               </ActionForm>
             </Section>
           ) : null}

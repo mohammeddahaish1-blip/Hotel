@@ -1,3 +1,4 @@
+import { Info, FileSpreadsheet, FileText } from "lucide-react";
 import Link from "next/link";
 import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -23,7 +24,7 @@ export default async function ImportPage() {
     <>
       <PageHeader title={L.title} sub={L.sub} />
       <ImportDropzone labels={{ drop: L.drop, dropHint: L.dropHint, dropTypes: L.dropTypes, reading: L.reading, done: L.done, errSize: L.errSize }} />
-      <p className="mb-4 text-xs text-muted">ℹ️ {L.supported}</p>
+      <p className="mb-4 flex items-center gap-1.5 text-xs text-muted"><Info className="size-3.5 shrink-0" />{L.supported}</p>
       <section className="card overflow-hidden p-0">
         <h2 className="h2 px-5 py-4">{L.jobs}</h2>
         {!jobs?.length ? (
@@ -39,7 +40,7 @@ export default async function ImportPage() {
                   <tr key={j.id}>
                     <td>
                       <Link href={`/import/${j.id}`} className="flex items-start gap-2 hover:text-brand">
-                        <span aria-hidden className="text-lg">{j.file_kind === "pdf" ? "📄" : "📊"}</span>
+                        <span aria-hidden className="mt-0.5 text-muted">{j.file_kind === "pdf" ? <FileText className="size-5" /> : <FileSpreadsheet className="size-5" />}</span>
                         <span>
                           <span className="block font-semibold">{j.file_name.replace(/\.(xlsx|xlsm|csv|pdf)$/i, "")}</span>
                           <span className="block text-xs text-muted">{L.kind[j.file_kind]}</span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleCheck, X } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -86,12 +87,12 @@ export function QuickBook({ target, today, t, lang, onClose }: { target: QuickBo
             <div className="text-lg font-bold">{t.qb_title} · {t.unit} {target.unitNumber}</div>
             <div className="text-xs text-muted">{n} {t.nightsLabel}</div>
           </div>
-          <button type="button" onClick={onClose} className="btn-ghost btn-sm" aria-label={t.cancel}>✕</button>
+          <button type="button" onClick={onClose} className="btn-ghost btn-sm" aria-label={t.cancel}><X className="size-4 shrink-0" /></button>
         </div>
 
         {doneId ? (
           <div className="space-y-3 text-center">
-            <div className="rounded-2xl bg-ok-soft px-4 py-6 text-lg font-bold text-ok">✓ {t.qb_done}</div>
+            <div className="rounded-2xl bg-ok-soft px-4 py-6 text-lg font-bold text-ok"><span className="inline-flex items-center gap-2"><CircleCheck className="size-5 shrink-0" />{t.qb_done}</span></div>
             {error ? <div className="rounded-xl bg-warn-soft px-3 py-2 text-sm text-warn">{error}</div> : null}
             <div className="flex justify-center gap-2">
               <Link href={`/reservations/${doneId}`} className="btn-primary">{t.qb_open}</Link>

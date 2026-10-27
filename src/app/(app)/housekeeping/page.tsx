@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
@@ -60,7 +61,7 @@ export default async function HousekeepingPage() {
                 <ActionForm action={setHkStatus} className="flex-1">
                   <input type="hidden" name="id" value={task.id} />
                   <input type="hidden" name="status" value="done" />
-                  <SubmitButton className="btn-primary w-full">✓ {t.hk_done}</SubmitButton>
+                  <SubmitButton className="btn-primary w-full"><Check className="inline size-4" /> {t.hk_done}</SubmitButton>
                 </ActionForm>
               </div>
             </div>

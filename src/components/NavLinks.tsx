@@ -1,10 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import {
+  Activity, Building2, CalendarCheck, ChartColumn, FileText, FileUp, LayoutGrid,
+  MessageSquareText, Settings, ShieldCheck, SprayCan, Wallet, type LucideIcon,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export type NavTab = { href: string; label: string };
 export type NavGroup = { key: string; label: string; tabs: NavTab[]; also?: string[] };
+
+const ICONS: Record<string, LucideIcon> = {
+  dashboard: LayoutGrid, units: Building2, reservations: CalendarCheck, ops: SprayCan, finance: Wallet,
+  reports: FileText, analytics: ChartColumn, feedback: MessageSquareText, import: FileUp,
+  settings: Settings, activity: Activity, audit: ShieldCheck,
+};
+
+function GroupIcon({ k, className }: { k: string; className: string }) {
+  const Icon = ICONS[k];
+  return Icon ? <Icon className={className} strokeWidth={1.75} aria-hidden /> : null;
+}
 
 const matches = (path: string, href: string) => path === href || path.startsWith(`${href}/`);
 
@@ -34,8 +49,9 @@ export function NavLinks({ groups, variant }: { groups: NavGroup[]; variant: "si
           <Link
             key={g.key}
             href={g.tabs[0].href}
-            className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ${g.key === current ? "bg-brand text-brand-ink" : "text-muted"}`}
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ${g.key === current ? "bg-brand text-brand-ink" : "text-muted"}`}
           >
+            <GroupIcon k={g.key} className="size-4 shrink-0" />
             {g.label}
           </Link>
         ))}
@@ -48,8 +64,9 @@ export function NavLinks({ groups, variant }: { groups: NavGroup[]; variant: "si
         <li key={g.key}>
           <Link
             href={g.tabs[0].href}
-            className={`block rounded-lg px-3 py-2 text-sm ${g.key === current ? "bg-brand-soft font-semibold text-brand" : "text-ink hover:bg-surface-2"}`}
+            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${g.key === current ? "bg-brand-soft font-semibold text-brand" : "text-ink hover:bg-surface-2"}`}
           >
+            <GroupIcon k={g.key} className={`size-[18px] shrink-0 ${g.key === current ? "" : "text-muted"}`} />
             {g.label}
           </Link>
         </li>

@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleCheck, CircleX, LoaderCircle } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { analyzeImport } from "@/app/actions/import";
@@ -68,7 +69,7 @@ export function ImportDropzone({ labels }: { labels: Labels }) {
         <ul className="mt-3 space-y-1.5 text-sm">
           {items.map((it, i) => (
             <li key={i} className="flex flex-wrap items-center gap-2 rounded-xl bg-surface px-3 py-2">
-              <span>{it.state === "reading" ? "⏳" : it.state === "done" ? "✅" : "❌"}</span>
+              <span>{it.state === "reading" ? <LoaderCircle className="size-4 animate-spin text-muted" /> : it.state === "done" ? <CircleCheck className="size-4 text-ok" /> : <CircleX className="size-4 text-danger" />}</span>
               <span className="font-medium">{it.name}</span>
               <span className={`text-xs ${it.state === "error" ? "text-danger" : "text-muted"}`}>
                 {it.state === "reading" ? labels.reading : it.state === "done" ? labels.done : it.msg}

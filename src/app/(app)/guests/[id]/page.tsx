@@ -1,3 +1,4 @@
+import { Lock } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { hasRole, requireArea } from "@/lib/auth";
@@ -71,7 +72,7 @@ export default async function GuestPage({ params }: PageProps<"/guests/[id]">) {
                 {docs.map((d) => (
                   <li key={d.id} className="text-sm">
                     <div className="flex items-center justify-between gap-2">
-                      <span>🔒 {t[`dt_${d.kind}` as DictKey]} · {gregorian(d.created_at, lang)}</span>
+                      <span className="inline-flex items-center gap-1.5"><Lock className="size-3.5 shrink-0" /> {t[`dt_${d.kind}` as DictKey]} · {gregorian(d.created_at, lang)}</span>
                       <a href={`/api/guest-doc/${d.id}`} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">{t.doc_view}</a>
                     </div>
                     {seesLog ? (

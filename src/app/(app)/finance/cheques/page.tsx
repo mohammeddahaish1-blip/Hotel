@@ -1,3 +1,4 @@
+import { Camera } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { hasRole, requireArea } from "@/lib/auth";
@@ -49,7 +50,7 @@ export default async function ChequesPage() {
   const row = (c: Cheque) => (
     <tr key={c.id}>
       <td className="whitespace-nowrap">{gregorian(c.due_date, lang)}</td>
-      <td className="num">{c.cheque_no}{c.photo_path && photos.get(c.photo_path) ? <a href={photos.get(c.photo_path)} target="_blank" rel="noreferrer" className="ms-1">📷</a> : null}</td>
+      <td className="num">{c.cheque_no}{c.photo_path && photos.get(c.photo_path) ? <a href={photos.get(c.photo_path)} target="_blank" rel="noreferrer" className="ms-1 inline-flex align-middle text-brand"><Camera className="size-3.5 shrink-0" /></a> : null}</td>
       <td className="text-xs">{c.bank ?? ""}</td>
       <td>
         {c.reservation_id ? (
@@ -135,7 +136,7 @@ export default async function ChequesPage() {
                 <Field label={t.amount}><input name="amount" required inputMode="decimal" className="input" /></Field>
                 <Field label={t.chq_due}><input type="date" name="due_date" required defaultValue={today} className="input" /></Field>
               </div>
-              <ReceiptInput name="photo" label={t.chq_photo} ready="✓" />
+              <ReceiptInput name="photo" label={t.chq_photo} ready="" />
               <SubmitButton className="btn-primary w-full">{t.chq_add}</SubmitButton>
             </ActionForm>
           </Section>

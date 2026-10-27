@@ -1,3 +1,4 @@
+import { Info, CircleCheck, CircleX, FileSpreadsheet, Save, SkipForward, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireArea } from "@/lib/auth";
@@ -17,8 +18,8 @@ const COLS: Record<ImportType, string[]> = {
   units: ["number", "type", "floor", "rate"],
   guests: ["name", "phone", "doc_number", "nationality"],
 };
-const STATUS: Record<ImportRow["status"], { icon: string; tone: Tone }> = {
-  ok: { icon: "✅", tone: "ok" }, warn: { icon: "⚠️", tone: "warn" }, skip: { icon: "⏭️", tone: "gray" }, error: { icon: "❌", tone: "danger" },
+const STATUS: Record<ImportRow["status"], { icon: React.ReactNode; tone: Tone }> = {
+  ok: { icon: <CircleCheck className="size-4 text-ok" />, tone: "ok" }, warn: { icon: <TriangleAlert className="size-4 text-warn" />, tone: "warn" }, skip: { icon: <SkipForward className="size-4 text-muted" />, tone: "gray" }, error: { icon: <CircleX className="size-4 text-danger" />, tone: "danger" },
 };
 
 export default async function ImportReviewPage({ params }: PageProps<"/import/[id]">) {
@@ -81,7 +82,7 @@ export default async function ImportReviewPage({ params }: PageProps<"/import/[i
         {sheets.map((s, i) => (
           <section key={i} className="card">
             <div className="mb-3 flex flex-wrap items-center gap-3">
-              <h2 className="h2">📄 {s.name}</h2>
+              <h2 className="h2 inline-flex items-center gap-1.5"><FileSpreadsheet className="size-5 text-muted" /> {s.name}</h2>
               {open ? (
                 <form action={setSheetType} className="flex items-center gap-2">
                   <input type="hidden" name="id" value={job.id} />
@@ -96,7 +97,7 @@ export default async function ImportReviewPage({ params }: PageProps<"/import/[i
               ) : s.type ? <Badge tone="brand">{L.types[s.type]}</Badge> : null}
               {s.type ? (() => {
                 const k = counts(s.rows);
-                return <span className="text-xs text-muted">✅ {k.ready} · ⚠️ {k.warnings} · ❌ {k.errors}</span>;
+                return <span className="inline-flex items-center gap-2 text-xs text-muted"><span className="inline-flex items-center gap-1"><CircleCheck className="size-3.5 shrink-0" />{k.ready}</span><span className="inline-flex items-center gap-1"><TriangleAlert className="size-3.5 shrink-0" />{k.warnings}</span><span className="inline-flex items-center gap-1"><CircleX className="size-3.5 shrink-0" />{k.errors}</span></span>;
               })() : null}
             </div>
 
@@ -126,7 +127,7 @@ export default async function ImportReviewPage({ params }: PageProps<"/import/[i
                       {s.rows.slice(0, SHOW).map((r) => (
                         <tr key={r.n} className={r.status === "error" || r.result === "failed" ? "bg-danger-soft/40" : undefined}>
                           <td className="num text-xs text-muted">{r.n}</td>
-                          <td title={r.status}>{r.result === "saved" ? "💾" : r.result === "failed" ? "❌" : STATUS[r.status].icon}</td>
+                          <td title={r.status}>{r.result === "saved" ? <Save className="size-4 text-ok" /> : r.result === "failed" ? <CircleX className="size-4 text-danger" /> : STATUS[r.status].icon}</td>
                           {COLS[s.type!].map((col) => (
                             <td key={col} className="text-xs" dir="auto">{show(s.type!, col, r.data)}</td>
                           ))}
@@ -156,14 +157,14 @@ export default async function ImportReviewPage({ params }: PageProps<"/import/[i
           <form action={commitImport}>
             <input type="hidden" name="id" value={job.id} />
             <SubmitButton className="btn-primary" confirm={L.saveConfirm.replace("{n}", String(savable))}>
-              💾 {L.save.replace("{n}", String(savable))}
+              <Save className="inline size-4" /> {L.save.replace("{n}", String(savable))}
             </SubmitButton>
           </form>
           <form action={cancelImport}>
             <input type="hidden" name="id" value={job.id} />
             <SubmitButton className="btn-ghost">{L.cancel}</SubmitButton>
           </form>
-          {hasGuests ? <p className="text-xs text-muted">ℹ️ {L.consent}</p> : null}
+          {hasGuests ? <p className="flex items-center gap-1.5 text-xs text-muted"><Info className="size-3.5 shrink-0" />{L.consent}</p> : null}
         </div>
       ) : null}
     </>

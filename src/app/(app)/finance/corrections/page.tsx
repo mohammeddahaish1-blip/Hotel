@@ -1,3 +1,4 @@
+import { MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { hasRole, requireArea } from "@/lib/auth";
@@ -57,7 +58,7 @@ export default async function CorrectionsPage() {
           {r.action === "edit" && r.proposed.amount != null ? <span className="text-ok">→ {omr(r.proposed.amount, lang)}</span> : null}
           <span className="ms-auto text-xs text-muted">{who.get(r.requested_by) ?? "—"} · {dateTime(r.requested_at, tz, lang)}</span>
         </div>
-        <p className="mt-2 text-sm" dir="auto">💬 {r.reason}</p>
+        <p className="mt-2 flex items-start gap-1.5 text-sm" dir="auto"><MessageCircle className="mt-0.5 size-4 shrink-0 text-muted" /> {r.reason}</p>
         {open ? (
           <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
             {[["1", t.cr_approve, "btn-primary"], ["0", t.cr_reject, "btn-ghost"]].map(([v, l, c]) => (

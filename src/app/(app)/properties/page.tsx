@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import Link from "next/link";
 import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -30,7 +31,7 @@ export default async function PropertiesPage() {
             <Link key={p.id} href={`/properties/${p.id}`} className="card group overflow-hidden p-0 transition hover:-translate-y-0.5 hover:shadow-md">
               <div className="relative">
                 <PropertyPhoto url={photos.get(p.id)} alt={name} className="h-44 w-full" />
-                {p.id === ctx.property.id ? <span className="absolute start-3 top-3"><Badge tone="brand">✓ {t.prop_current}</Badge></span> : null}
+                {p.id === ctx.property.id ? <span className="absolute start-3 top-3"><Badge tone="brand"><Check className="size-3.5 shrink-0" /> {t.prop_current}</Badge></span> : null}
               </div>
               <div className="p-5">
                 <h2 className="text-lg font-bold group-hover:text-brand">{name}</h2>

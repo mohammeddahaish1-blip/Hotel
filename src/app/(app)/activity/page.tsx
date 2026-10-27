@@ -1,3 +1,4 @@
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { getCtx, hasRole } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -7,7 +8,7 @@ import { auditLookups } from "@/lib/audit-query";
 import { Badge, Empty, PageHeader, Stat, type Tone } from "@/components/ui";
 
 const ACTION_TONE: Record<string, Tone> = { insert: "ok", update: "info", delete: "danger" };
-const ACTION_EMOJI: Record<string, string> = { insert: "➕", update: "✏️", delete: "🗑️" };
+const ACTION_EMOJI: Record<string, React.ReactNode> = { insert: <Plus className="size-3.5 shrink-0" />, update: <Pencil className="size-3.5 shrink-0" />, delete: <Trash2 className="size-3.5 shrink-0" /> };
 
 /**
  * What happened in the hotel, phone-friendly. Everyone sees their own operations;

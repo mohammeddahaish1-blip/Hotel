@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     [t.audit_table]: tableLabel(e.table_name, lang),
     [t.audit_action]: actionLabel(e.action, lang),
     [t.audit_what]: e.summary,
-    [t.audit_sensitive]: e.sensitive ? "⚠️" : "",
+    [t.audit_sensitive]: e.sensitive ? "!" : "",
     [t.audit_changes]: e.changes.map((c) => `${c.label}: ${c.before !== null ? `${c.before} → ` : ""}${c.after}`).join(" | "),
   }));
   const body = csv(rows, [t.date, t.audit_actor, t.audit_table, t.audit_action, t.audit_what, t.audit_sensitive, t.audit_changes]);

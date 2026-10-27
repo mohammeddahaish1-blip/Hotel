@@ -1,3 +1,4 @@
+import { BadgeCheck, Ban, BedDouble, CalendarClock, CircleCheck, CircleX, Hourglass, KeyRound, LogOut, SprayCan, UserX, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 
 const TONES = {
@@ -13,7 +14,7 @@ export type Tone = keyof typeof TONES;
 
 export function Badge({ tone = "gray", children }: { tone?: Tone; children: ReactNode }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${TONES[tone]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${TONES[tone]}`}>
       {children}
     </span>
   );
@@ -28,23 +29,23 @@ export const UNIT_STATUS_TONE: Record<string, Tone> = {
   out_of_service: "gray",
 };
 
-/** Visual cue shown before a unit status label (🔧 maintenance, 🧹 dirty …). */
-export const UNIT_STATUS_EMOJI: Record<string, string> = {
-  available: "✅",
-  reserved: "📅",
-  occupied: "🛏️",
-  dirty: "🧹",
-  maintenance: "🔧",
-  out_of_service: "⛔",
+/** Line icon shown before a unit status label (wrench for maintenance, spray for cleaning …). */
+export const UNIT_STATUS_EMOJI: Record<string, ReactNode> = {
+  available: <CircleCheck className="size-3.5 shrink-0" />,
+  reserved: <CalendarClock className="size-3.5 shrink-0" />,
+  occupied: <BedDouble className="size-3.5 shrink-0" />,
+  dirty: <SprayCan className="size-3.5 shrink-0" />,
+  maintenance: <Wrench className="size-3.5 shrink-0" />,
+  out_of_service: <Ban className="size-3.5 shrink-0" />,
 };
 
-export const RES_STATUS_EMOJI: Record<string, string> = {
-  tentative: "⏳",
-  confirmed: "📌",
-  checked_in: "🔑",
-  checked_out: "👋",
-  cancelled: "❌",
-  no_show: "🚫",
+export const RES_STATUS_EMOJI: Record<string, ReactNode> = {
+  tentative: <Hourglass className="size-3.5 shrink-0" />,
+  confirmed: <BadgeCheck className="size-3.5 shrink-0" />,
+  checked_in: <KeyRound className="size-3.5 shrink-0" />,
+  checked_out: <LogOut className="size-3.5 shrink-0" />,
+  cancelled: <CircleX className="size-3.5 shrink-0" />,
+  no_show: <UserX className="size-3.5 shrink-0" />,
 };
 
 export const RES_STATUS_TONE: Record<string, Tone> = {

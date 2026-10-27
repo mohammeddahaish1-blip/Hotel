@@ -1,3 +1,4 @@
+import { CircleCheck } from "lucide-react";
 import Link from "next/link";
 import { hasRole, type Ctx } from "@/lib/auth";
 import type { Dict, Lang } from "@/lib/i18n/dict";
@@ -78,7 +79,7 @@ export async function TodayBoard({ ctx, t, lang }: { ctx: Ctx; t: Dict; lang: La
   return (
     <div className="mb-4 grid gap-4 lg:grid-cols-3">
       <section className="card lg:col-span-2">
-        <h2 className="text-2xl font-bold">{hour < 12 ? t.tb_morning : t.tb_evening}{first ? (lang === "ar" ? ` يا ${first}` : lang === "ur" ? `، ${first}` : `, ${first}`) : ""} 👋</h2>
+        <h2 className="text-2xl font-bold">{hour < 12 ? t.tb_morning : t.tb_evening}{first ? (lang === "ar" ? ` يا ${first}` : lang === "ur" ? `، ${first}` : `, ${first}`) : ""}</h2>
         <p className="mt-1 text-sm text-muted">{t.tb_attention} · {gregorian(today, lang)}</p>
         {tiles.length ? (
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -91,7 +92,7 @@ export async function TodayBoard({ ctx, t, lang }: { ctx: Ctx; t: Dict; lang: La
             ))}
           </div>
         ) : (
-          <p className="mt-4 rounded-xl bg-ok-soft px-4 py-3 text-sm font-semibold text-ok">{t.tb_all_clear}</p>
+          <p className="mt-4 rounded-xl bg-ok-soft px-4 py-3 text-sm font-semibold text-ok"><span className="inline-flex items-center gap-2"><CircleCheck className="size-4 shrink-0" />{t.tb_all_clear}</span></p>
         )}
       </section>
       <section className="card">

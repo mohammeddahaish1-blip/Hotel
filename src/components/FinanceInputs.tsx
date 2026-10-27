@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, MessageCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { omr, toBaisa } from "@/lib/format";
 
@@ -85,7 +86,7 @@ export function ReceiptInput({ name = "receipt", label, ready, accept = "image/*
           setDone(true);
         }}
       />
-      {done ? <span className="mt-1 block text-ok">{ready}</span> : null}
+      {done ? <span className="mt-1 flex items-center gap-1 text-ok"><Check className="size-3.5 shrink-0" />{ready}</span> : null}
     </label>
   );
 }
@@ -98,7 +99,7 @@ export function RemindAll({ items, label, hint }: { items: { key: string; name: 
   return (
     <div className="mb-3">
       <button type="button" className="btn-ghost btn-sm" onClick={() => setOpen((o) => !o)}>
-        💬 {label} ({items.length})
+        <MessageCircle className="inline size-4" /> {label} ({items.length})
       </button>
       {open ? (
         <div className="mt-2 rounded-xl border border-line p-3">
@@ -113,7 +114,7 @@ export function RemindAll({ items, label, hint }: { items: { key: string; name: 
                   onClick={() => setSent((s) => new Set(s).add(x.key))}
                   className={`flex items-center justify-between rounded-lg px-2 py-1.5 text-sm hover:bg-brand-soft ${sent.has(x.key) ? "text-muted line-through" : ""}`}
                 >
-                  <span>{sent.has(x.key) ? "✓ " : ""}{x.name}</span>
+                  <span className="inline-flex items-center gap-1">{sent.has(x.key) ? <Check className="size-3.5 shrink-0" /> : null}{x.name}</span>
                   <span className="num text-xs" dir="auto">{x.amount}</span>
                 </a>
               </li>

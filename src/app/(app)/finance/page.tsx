@@ -1,3 +1,4 @@
+import { Archive, Download, Paperclip, TrendingDown, TrendingUp, TriangleAlert, Undo2 } from "lucide-react";
 import Link from "next/link";
 import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -112,7 +113,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
     const c = change(now, prev);
     if (c === null) return undefined;
     const up = c >= 0;
-    return <span className={up === goodUp ? "text-ok" : "text-danger"}>{up ? "↑" : "↓"} {Math.abs(c)}% {t.fin_vs_prev}</span>;
+    return <span className={up === goodUp ? "text-ok" : "text-danger"}>{up ? <TrendingUp className="inline size-3.5" /> : <TrendingDown className="inline size-3.5" />} {Math.abs(c)}% {t.fin_vs_prev}</span>;
   };
 
   // ---- expenses
@@ -284,8 +285,8 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
             </div>
             {withoutProof ? (
               <div className="mb-2">
-                <Link href={qs({ noproof: noProofOnly ? "" : "1" })} className={`btn-sm ${noProofOnly ? "btn-primary" : "btn-ghost"}`}>
-                  📎 {t.rc_only_no_proof} ({withoutProof})
+                <Link href={qs({ noproof: noProofOnly ? "" : "1" })} className={`btn-sm inline-flex items-center gap-1 ${noProofOnly ? "btn-primary" : "btn-ghost"}`}>
+                  <Paperclip className="size-3.5 shrink-0" /> {t.rc_only_no_proof} ({withoutProof})
                 </Link>
               </div>
             ) : null}
@@ -315,7 +316,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                             <td className="text-xs">{(p.received_by && staffName.get(p.received_by)) || "—"}</td>
                             <td className="text-xs">
                               {p.proof_path && proofUrls.get(p.proof_path) ? (
-                                <a href={proofUrls.get(p.proof_path)} target="_blank" rel="noreferrer" className="text-brand">📎</a>
+                                <a href={proofUrls.get(p.proof_path)} target="_blank" rel="noreferrer" className="inline-flex text-brand"><Paperclip className="size-4 shrink-0" /></a>
                               ) : <span className="text-warn">{t.rc_no_proof}</span>}
                             </td>
                             <td className={`num font-semibold ${signed(p) < 0 ? "text-danger" : ""}`}>{omr(signed(p), lang)}</td>
@@ -398,7 +399,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
             <div className="space-y-4 lg:col-span-2">
               <Section
                 title={`${t.expenses} · ${monthLabel} · ${omr(expTotal, lang)}`}
-                actions={<a href={`/api/export?kind=expenses&from=${from}&to=${monthEnd(month)}`} className="btn-ghost btn-sm">⬇️ {t.fin_export}</a>}
+                actions={<a href={`/api/export?kind=expenses&from=${from}&to=${monthEnd(month)}`} className="btn-ghost btn-sm inline-flex items-center gap-1.5"><Download className="size-4 shrink-0" /> {t.fin_export}</a>}
               >
                 {byCat.length ? (
                   <div className="mb-4">
@@ -436,7 +437,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                               {e.description}
                               {e.unit_id ? <Badge>{t.unit} {unitNumber.get(e.unit_id)}</Badge> : null}
                               {receipts.get(e.id) ? (
-                                <a href={receipts.get(e.id)} target="_blank" rel="noreferrer" className="ms-2 text-xs text-brand">{t.fin_receipt_view}</a>
+                                <a href={receipts.get(e.id)} target="_blank" rel="noreferrer" className="ms-2 inline-flex items-center gap-1 text-xs text-brand"><Paperclip className="size-3.5 shrink-0" />{t.fin_receipt_view}</a>
                               ) : null}
                               <details className="mt-1">
                                 <summary className="cursor-pointer text-xs text-brand">{t.edit}</summary>
@@ -457,7 +458,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                                 <ActionForm action={archiveExpense} className="mt-2 flex flex-wrap gap-2">
                                   <input type="hidden" name="id" value={e.id} />
                                   <input name="reason" required minLength={3} placeholder={t.arch_reason} className="input w-auto flex-1 py-1.5" />
-                                  <SubmitButton className="btn-danger btn-sm" confirm={`${t.arch_archive}: ${e.description}?`}>🗄️ {t.arch_archive}</SubmitButton>
+                                  <SubmitButton className="btn-danger btn-sm" confirm={`${t.arch_archive}: ${e.description}?`}><Archive className="inline size-3.5" /> {t.arch_archive}</SubmitButton>
                                 </ActionForm>
                               </details>
                             </td>
@@ -471,8 +472,8 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                   </div>
                 )}
                 <div className="mt-4 border-t border-line pt-3">
-                  <Link href={qs({ archived: showArchive ? "" : "1" })} className="text-xs text-brand">
-                    🗄️ {showArchive ? t.arch_hide : t.arch_show} ({archivedExpenses.length})
+                  <Link href={qs({ archived: showArchive ? "" : "1" })} className="inline-flex items-center gap-1 text-xs text-brand">
+                    <Archive className="size-3.5 shrink-0" /> {showArchive ? t.arch_hide : t.arch_show} ({archivedExpenses.length})
                   </Link>
                   <p className="mt-1 text-xs text-muted">{t.arch_hint}</p>
                   {showArchive && archivedExpenses.length ? (
@@ -483,7 +484,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                           <span className="text-xs">{t.arch_archived}: {e.archive_reason ?? "—"} · {(e.archived_by && staffName.get(e.archived_by)) || "—"}</span>
                           <ActionForm action={restoreExpense} className="ms-auto">
                             <input type="hidden" name="id" value={e.id} />
-                            <SubmitButton className="btn-ghost btn-sm">↩️ {t.arch_restore}</SubmitButton>
+                            <SubmitButton className="btn-ghost btn-sm"><Undo2 className="inline size-3.5" /> {t.arch_restore}</SubmitButton>
                           </ActionForm>
                         </li>
                       ))}
@@ -526,7 +527,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                                 <td className="num align-top">{omr(sh.expected_cash, lang)}</td>
                                 <td className="num align-top">{omr(sh.counted_cash, lang)}</td>
                                 <td className={`num align-top font-semibold ${sh.difference < 0 ? "text-danger" : sh.difference > 0 ? "text-warn" : "text-ok"}`}>
-                                  {sh.difference < 0 ? "⚠️ " : ""}{omr(sh.difference, lang)}
+                                  {sh.difference < 0 ? <TriangleAlert className="me-1 inline size-3.5" /> : null}{omr(sh.difference, lang)}
                                 </td>
                               </tr>
                             );
