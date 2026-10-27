@@ -2,7 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // "/f/" is the guests' suggestions & complaints form (opened from a QR code)
-const PUBLIC_PATHS = ["/login", "/auth", "/f/"];
+// "/r/" is a payment receipt opened from WhatsApp
+const PUBLIC_PATHS = ["/login", "/auth", "/f/", "/r/"];
 
 export async function updateSession(request: NextRequest) {
   // Auth emails fall back to the Site URL ("/?code=…") when the callback URL

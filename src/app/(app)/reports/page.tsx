@@ -23,7 +23,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
       .in("status", ["confirmed", "checked_in", "checked_out"]).overlaps("stay", `[${from},${toExcl})`),
     db.from("payments").select("kind, method, amount, folios!inner(property_id)").eq("folios.property_id", ctx.property.id)
       .is("voided_at", null).gte("received_at", `${from}T00:00:00+04:00`).lt("received_at", `${toExcl}T00:00:00+04:00`),
-    db.from("expenses").select("category, amount").eq("property_id", ctx.property.id).gte("expense_date", from).lte("expense_date", to),
+    db.from("expenses").select("category, amount").eq("property_id", ctx.property.id).is("archived_at", null).gte("expense_date", from).lte("expense_date", to),
   ]);
   const rows = (occ ?? []) as Occ[];
   const sold = rows.reduce((a, r) => a + r.sold, 0);

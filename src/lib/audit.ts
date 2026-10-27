@@ -28,7 +28,7 @@ export type AuditView = { summary: string; changes: AuditChange[]; href: string 
 
 export const AUDIT_TABLES = [
   "reservations", "payments", "charges", "invoices", "credit_notes", "expenses", "cash_shifts",
-  "unit_types", "rate_plans", "tax_rules", "maintenance_tickets", "compliance_submissions", "memberships", "invitations", "feedback",
+  "unit_types", "rate_plans", "tax_rules", "maintenance_tickets", "compliance_submissions", "memberships", "invitations", "feedback", "cheques", "correction_requests", "unit_owners", "owner_payouts",
 ] as const;
 
 const L = {
@@ -38,7 +38,8 @@ const L = {
       credit_notes: "الإشعارات الدائنة", expenses: "المصروفات", cash_shifts: "الصندوق",
       unit_types: "أنواع الوحدات", rate_plans: "خطط الأسعار", tax_rules: "الضرائب",
       maintenance_tickets: "الصيانة", compliance_submissions: "الامتثال", memberships: "الموظفون", invitations: "الدعوات",
-      feedback: "المقترحات والشكاوي",
+      feedback: "المقترحات والشكاوي", cheques: "الشيكات", correction_requests: "طلبات التصحيح",
+      unit_owners: "ملاك الوحدات", owner_payouts: "دفعات الملاك",
     } as Record<string, string>,
     actions: { insert: "إضافة", update: "تعديل", delete: "حذف" } as Record<string, string>,
     fields: {
@@ -90,7 +91,7 @@ const L = {
       unit_types: "نوع وحدة", rate_plans: "خطة سعر", tax_rules: "ضريبة", compliance_submissions: "سجل امتثال",
       memberships: "بيانات موظف", invitations: "دعوة", maintenance_tickets: "بلاغ صيانة", invoices: "فاتورة",
       reservations: "حجز", payments: "دفعة", charges: "رسوم", expenses: "مصروف", cash_shifts: "وردية صندوق", credit_notes: "إشعار دائن",
-      feedback: "ملاحظة نزيل",
+      feedback: "ملاحظة نزيل", cheques: "شيك", correction_requests: "طلب تصحيح", unit_owners: "مالك وحدة", owner_payouts: "دفعة لمالك",
     } as Record<string, string>,
     verb: { insert: "أضاف", update: "عدّل", delete: "حذف" } as Record<string, string>,
   },
@@ -100,7 +101,8 @@ const L = {
       credit_notes: "Credit notes", expenses: "Expenses", cash_shifts: "Cash drawer",
       unit_types: "Unit types", rate_plans: "Rate plans", tax_rules: "Taxes",
       maintenance_tickets: "Maintenance", compliance_submissions: "Compliance", memberships: "Staff", invitations: "Invitations",
-      feedback: "Suggestions & complaints",
+      feedback: "Suggestions & complaints", cheques: "Cheques", correction_requests: "Correction requests",
+      unit_owners: "Unit owners", owner_payouts: "Owner payouts",
     } as Record<string, string>,
     actions: { insert: "Added", update: "Edited", delete: "Deleted" } as Record<string, string>,
     fields: {} as Record<string, string>,
@@ -132,7 +134,7 @@ const L = {
       unit_types: "unit type", rate_plans: "rate plan", tax_rules: "tax", compliance_submissions: "compliance record",
       memberships: "staff details", invitations: "invitation", maintenance_tickets: "maintenance ticket", invoices: "invoice",
       reservations: "reservation", payments: "payment", charges: "charge", expenses: "expense", cash_shifts: "cash shift", credit_notes: "credit note",
-      feedback: "guest feedback",
+      feedback: "guest feedback", cheques: "cheque", correction_requests: "correction request", unit_owners: "unit owner", owner_payouts: "owner payout",
     } as Record<string, string>,
     verb: { insert: "Added", update: "Edited", delete: "Deleted" } as Record<string, string>,
   },
@@ -343,6 +345,22 @@ export function describeAudit(r: AuditRow, t: Dict, lang: AuditLang, lk: AuditLo
       href = "/feedback";
       break;
     }
+    case "cheques":
+      summary = x.generic(x.verb[r.action] ?? r.action, x.what.cheques, `${str("cheque_no")} · ${money("amount")}${changed("status") ? ` → ${dictOr(t, `chq_st_${str("status")}`, str("status"))}` : ""}`);
+      if (changed("status") && after.status === "bounced") sensitive = true;
+      href = data.reservation_id ? `/reservations/${data.reservation_id}` : "/finance/cheques";
+      break;
+    case "correction_requests":
+      summary = x.generic(x.verb[r.action] ?? r.action, x.what.correction_requests, str("reason"));
+      if (changed("status")) sensitive = true;
+      href = "/finance/corrections";
+      break;
+    case "unit_owners":
+    case "owner_payouts":
+      summary = x.generic(x.verb[r.action] ?? r.action, x.what[r.table_name], str("name") || money("amount"));
+      if (r.table_name === "owner_payouts") sensitive = true;
+      href = "/properties/owners";
+      break;
     case "compliance_submissions":
       summary = x.generic(x.verb[r.action] ?? r.action, x.what.compliance_submissions, str("authority").toUpperCase());
       href = "/compliance";

@@ -5,6 +5,7 @@ import type { DictKey } from "@/lib/i18n/dict";
 import { omr, pct, gregorian, hijri } from "@/lib/format";
 import { Badge, Empty, PageHeader, Section, Stat, UNIT_STATUS_TONE, UNIT_STATUS_EMOJI, RES_STATUS_TONE, RES_STATUS_EMOJI } from "@/components/ui";
 import { loadAlerts } from "@/lib/alerts";
+import { TodayBoard } from "./TodayBoard";
 
 type Dash = {
   date: string;
@@ -39,6 +40,7 @@ export default async function DashboardPage() {
         sub={<>{gregorian(d.date, lang)} · {hijri(d.date, lang)}</>}
         actions={<Link href="/reservations/new" className="btn-primary">{t.res_new}</Link>}
       />
+      <TodayBoard ctx={ctx} t={t} lang={lang} />
       {alerts.length ? (
         <div className="mb-4 rounded-2xl border border-warn/30 bg-warn-soft/60 p-4">
           <div className="mb-2 text-sm font-bold text-warn">{t.alerts_title} ({alerts.length})</div>

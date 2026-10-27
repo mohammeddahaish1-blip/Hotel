@@ -9,6 +9,10 @@ import { Badge, Empty, Field, PageHeader, Section, RES_STATUS_TONE, RES_STATUS_E
 import {
   addCharge, addPayment, cancelReservation, changeReservation, checkIn, checkOut, issueInvoice, voidCharge, voidPayment,
 } from "@/app/actions/ops";
+import { addCheque, attachPaymentProof, requestCorrection, setChequeStatus } from "@/app/actions/money";
+import { ReceiptInput } from "@/components/FinanceInputs";
+import { appUrl } from "@/lib/feedback-qr";
+import { signedUrls } from "@/lib/storage";
 
 type TaxLine = { code: string; name_ar: string; name_en: string; rate_bp: number; amount: number };
 type Summary = {
@@ -47,6 +51,18 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
     r.kind === "contract" ? db.from("contracts").select("*, billing_schedules(*)").eq("reservation_id", id).maybeSingle() : Promise.resolve({ data: null }),
     db.from("units").select("id, number").eq("property_id", ctx.property.id).eq("active", true).order("number"),
   ]);
+  const { data: cheques } = await db.from("cheques").select("*").eq("reservation_id", id).order("due_date");
+  const canVoidPay = hasRole(ctx, ["manager", "accountant"]);
+  const canChequeOps = hasRole(ctx, ["manager", "accountant"]);
+  const proofUrls = await signedUrls(ctx, "payment-proofs", (payments ?? []).map((p) => p.proof_path as string | null));
+  const receiptLink = async (token: string) => appUrl(`/r/${token}`);
+  const receiptMsg = async (p: { receipt_no: number; amount: number; receipt_token: string }) => {
+    const url = await receiptLink(p.receipt_token);
+    return guest.preferred_language === "en"
+      ? `${ctx.property.name_en ?? propName}\nReceipt #${p.receipt_no}: ${omr(p.amount, "en")}\n${url}`
+      : `${propName}\nسند قبض رقم ${p.receipt_no} بمبلغ ${omr(p.amount, "ar")}\n${url}`;
+  };
+  const payMsgs = new Map(await Promise.all((payments ?? []).map(async (p) => [p.id as string, await receiptMsg(p as never)] as const)));
   const sum = summary as Summary | null;
 
   const propName = ctx.property.name_ar;
@@ -208,22 +224,56 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
               ) : (
                 <div className="overflow-x-auto">
                   <table className="table">
-                    <thead><tr><th>{t.date}</th><th>{t.type}</th><th>{t.method}</th><th>{t.reference}</th><th>{t.amount}</th><th></th></tr></thead>
+                    <thead><tr><th>{t.rc_no}</th><th>{t.date}</th><th>{t.type}</th><th>{t.method}</th><th>{t.reference}</th><th>{t.amount}</th><th></th></tr></thead>
                     <tbody>
                       {(payments ?? []).map((p) => (
                         <tr key={p.id} className={p.voided_at ? "text-muted line-through" : ""}>
+                          <td className="num text-xs">#{p.receipt_no}</td>
                           <td>{dateTime(p.received_at, ctx.property.timezone, lang)}</td>
                           <td>{t[`pk_${p.kind}` as DictKey]}</td>
                           <td>{t[`pm_${p.method}` as DictKey]}</td>
                           <td>{p.reference ?? ""}</td>
                           <td className="num">{omr(p.amount, lang)}</td>
-                          <td>
-                            {!p.voided_at && hasRole(ctx, ["manager", "accountant"]) ? (
+                          <td className="space-y-1 text-xs">
+                            <div className="flex flex-wrap gap-1.5">
+                              <a href={`/r/${p.receipt_token}`} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">🧾 {t.rc_view}</a>
+                              {guest.phone && !p.voided_at ? (
+                                <a href={whatsappLink(guest.phone, payMsgs.get(p.id) ?? "")} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">💬 {t.rc_send}</a>
+                              ) : null}
+                              {p.proof_path && proofUrls.get(p.proof_path) ? (
+                                <a href={proofUrls.get(p.proof_path)} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">📎 {t.rc_proof}</a>
+                              ) : null}
+                            </div>
+                            {!p.voided_at && !p.proof_path ? (
+                              <details>
+                                <summary className="cursor-pointer text-brand">📎 {t.rc_attach_proof}</summary>
+                                <ActionForm action={attachPaymentProof} className="mt-1 space-y-1">
+                                  <input type="hidden" name="id" value={p.id} />
+                                  <input type="hidden" name="res" value={id} />
+                                  <ReceiptInput name="proof" label="" ready="✓" />
+                                  <SubmitButton className="btn-ghost btn-sm">{t.save}</SubmitButton>
+                                </ActionForm>
+                              </details>
+                            ) : null}
+                            {!p.voided_at && canVoidPay ? (
                               <ActionForm action={voidPayment}>
                                 <input type="hidden" name="id" value={p.id} />
                                 <input type="hidden" name="res" value={id} />
                                 <SubmitButton className="btn-ghost btn-sm" confirm={t.void}>{t.void}</SubmitButton>
                               </ActionForm>
+                            ) : null}
+                            {!p.voided_at && !canVoidPay ? (
+                              <details>
+                                <summary className="cursor-pointer text-brand">{t.cr_request}</summary>
+                                <ActionForm action={requestCorrection} resetOnSuccess className="mt-1 flex flex-wrap gap-1.5">
+                                  <input type="hidden" name="target" value="payment" />
+                                  <input type="hidden" name="action" value="void" />
+                                  <input type="hidden" name="id" value={p.id} />
+                                  <input type="hidden" name="res" value={id} />
+                                  <input name="reason" required minLength={3} placeholder={t.cr_reason} className="input w-auto flex-1 py-1.5" />
+                                  <SubmitButton className="btn-ghost btn-sm">{t.cr_request}</SubmitButton>
+                                </ActionForm>
+                              </details>
                             ) : null}
                           </td>
                         </tr>
@@ -244,6 +294,65 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
                 <input name="amount" required inputMode="decimal" placeholder={t.amount} defaultValue={sum && sum.balance > 0 ? (sum.balance / 1000).toFixed(3) : ""} className="input" />
                 <input name="reference" placeholder={t.reference} className="input" />
                 <SubmitButton>{t.add_payment}</SubmitButton>
+                <div className="sm:col-span-5"><ReceiptInput name="proof" label={t.rc_proof_label} ready="✓" /></div>
+              </ActionForm>
+            </Section>
+          ) : null}
+
+          {folio && (r.kind === "contract" || (cheques ?? []).length) ? (
+            <Section title={t.chq_title}>
+              {(cheques ?? []).length === 0 ? (
+                <Empty>{t.chq_none}</Empty>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="table">
+                    <thead><tr><th>{t.chq_due}</th><th>{t.chq_no}</th><th>{t.chq_bank}</th><th>{t.amount}</th><th>{t.status}</th><th></th></tr></thead>
+                    <tbody>
+                      {(cheques ?? []).map((c) => (
+                        <tr key={c.id}>
+                          <td className="whitespace-nowrap">{gregorian(c.due_date, lang)}</td>
+                          <td className="num">{c.cheque_no}</td>
+                          <td className="text-xs">{c.bank ?? ""}</td>
+                          <td className="num">{omr(c.amount, lang)}</td>
+                          <td><Badge tone={c.status === "cleared" ? "ok" : c.status === "bounced" ? "danger" : c.status === "deposited" ? "info" : c.status === "cancelled" ? "gray" : c.due_date < today ? "danger" : "warn"}>{t[`chq_st_${c.status}` as DictKey]}</Badge></td>
+                          <td className="flex flex-wrap gap-1">
+                            {c.status === "pending" ? (
+                              <ActionForm action={setChequeStatus}>
+                                <input type="hidden" name="id" value={c.id} /><input type="hidden" name="res" value={id} /><input type="hidden" name="status" value="deposited" />
+                                <SubmitButton className="btn-ghost btn-sm">{t.chq_deposit}</SubmitButton>
+                              </ActionForm>
+                            ) : null}
+                            {canChequeOps && (c.status === "pending" || c.status === "deposited") ? (
+                              <ActionForm action={setChequeStatus}>
+                                <input type="hidden" name="id" value={c.id} /><input type="hidden" name="res" value={id} /><input type="hidden" name="status" value="cleared" />
+                                <SubmitButton className="btn-primary btn-sm" confirm={`${t.chq_clear}?`}>{t.chq_clear}</SubmitButton>
+                              </ActionForm>
+                            ) : null}
+                            {canChequeOps && c.status !== "bounced" && c.status !== "cancelled" ? (
+                              <details className="text-xs">
+                                <summary className="cursor-pointer text-danger">{t.chq_bounce}</summary>
+                                <ActionForm action={setChequeStatus} className="mt-1 flex gap-1">
+                                  <input type="hidden" name="id" value={c.id} /><input type="hidden" name="res" value={id} /><input type="hidden" name="status" value="bounced" />
+                                  <input name="reason" placeholder={t.chq_bounce_reason} className="input py-1.5" />
+                                  <SubmitButton className="btn-danger btn-sm">{t.chq_bounce}</SubmitButton>
+                                </ActionForm>
+                              </details>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <ActionForm action={addCheque} resetOnSuccess className="mt-3 grid gap-2 sm:grid-cols-5">
+                <input type="hidden" name="res" value={id} />
+                <input name="cheque_no" required placeholder={t.chq_no} className="input" />
+                <input name="bank" placeholder={t.chq_bank} className="input" />
+                <input name="amount" required inputMode="decimal" placeholder={t.amount} className="input" />
+                <input type="date" name="due_date" required aria-label={t.chq_due} className="input" />
+                <SubmitButton className="btn-ghost">{t.chq_add}</SubmitButton>
+                <div className="sm:col-span-5"><ReceiptInput name="photo" label={t.chq_photo} ready="✓" /></div>
               </ActionForm>
             </Section>
           ) : null}

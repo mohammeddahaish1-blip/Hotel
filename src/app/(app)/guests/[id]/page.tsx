@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireArea } from "@/lib/auth";
+import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { gregorian, dateTime, omr, parseRange } from "@/lib/format";
@@ -18,10 +18,16 @@ export default async function GuestPage({ params }: PageProps<"/guests/[id]">) {
     ctx.supabase.from("guest_documents").select("id, storage_path, kind, delete_after, created_at").eq("guest_id", id).order("created_at", { ascending: false }),
     ctx.supabase.from("properties").select("doc_retention_days").eq("id", ctx.property.id).single(),
   ]);
-  // NFR-03: document images are only exposed through short-lived signed URLs
-  const signed = docs?.length
-    ? (await ctx.supabase.storage.from("guest-docs").createSignedUrls(docs.map((d) => d.storage_path), 300)).data ?? []
-    : [];
+  // NFR-03: images open only through /api/guest-doc (logged, 60-second link); owner/manager see who opened them
+  const seesLog = hasRole(ctx, ["manager"]);
+  const [{ data: log }, { data: staff }] = seesLog && docs?.length
+    ? await Promise.all([
+        ctx.supabase.from("document_access_log").select("guest_document_id, viewed_by, viewed_at").eq("guest_id", id).order("viewed_at", { ascending: false }).limit(200),
+        ctx.supabase.from("memberships").select("user_id, full_name").eq("tenant_id", ctx.tenantId),
+      ])
+    : [{ data: [] }, { data: [] }];
+  const who = new Map((staff ?? []).map((m) => [m.user_id, m.full_name]));
+  const views = (docId: string) => (log ?? []).filter((l) => l.guest_document_id === docId);
 
   return (
     <>
@@ -62,16 +68,28 @@ export default async function GuestPage({ params }: PageProps<"/guests/[id]">) {
               <Empty>{t.none}</Empty>
             ) : (
               <ul className="space-y-2">
-                {docs.map((d, i) => (
+                {docs.map((d) => (
                   <li key={d.id} className="text-sm">
-                    <a href={signed[i]?.signedUrl ?? "#"} target="_blank" rel="noreferrer" className="text-brand">
-                      {t[`dt_${d.kind}` as DictKey]} · {gregorian(d.created_at, lang)}
-                    </a>
+                    <div className="flex items-center justify-between gap-2">
+                      <span>🔒 {t[`dt_${d.kind}` as DictKey]} · {gregorian(d.created_at, lang)}</span>
+                      <a href={`/api/guest-doc/${d.id}`} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">{t.doc_view}</a>
+                    </div>
+                    {seesLog ? (
+                      <details className="text-xs text-muted">
+                        <summary className="cursor-pointer">{t.doc_views.replace("{n}", String(views(d.id).length))}</summary>
+                        <ul className="mt-1 space-y-0.5">
+                          {views(d.id).slice(0, 20).map((v, k) => (
+                            <li key={k}>{who.get(v.viewed_by) ?? "—"} · {dateTime(v.viewed_at, ctx.property.timezone, lang)}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    ) : null}
                     {d.delete_after ? <div className="text-xs text-muted">{lang === "ar" ? "يُحذف تلقائياً في" : "Auto-deletes on"} {gregorian(d.delete_after, lang)}</div> : null}
                   </li>
                 ))}
               </ul>
             )}
+            <p className="mt-2 text-xs text-muted">{t.doc_protected}</p>
           </Section>
         </div>
       </div>

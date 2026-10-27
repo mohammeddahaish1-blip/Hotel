@@ -23,11 +23,26 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     {
       key: "units",
       label: t.nav_grp_units,
-      tabs: [...(can(ctx, "board") ? [{ href: "/properties", label: t.nav_properties }] : []), ...tab("board"), ...tab("calendar")],
+      tabs: [
+        ...(can(ctx, "board") ? [{ href: "/properties", label: t.nav_properties }] : []),
+        ...tab("board"),
+        ...tab("calendar"),
+        ...(hasRole(ctx, ["manager", "accountant"]) ? [{ href: "/properties/owners", label: t.nav_owners }] : []),
+      ],
     },
     { key: "reservations", label: t.nav_reservations, tabs: [...tab("reservations"), ...tab("guests")], also: ["/invoices"] },
     { key: "ops", label: t.nav_grp_ops, tabs: [...tab("housekeeping"), ...tab("maintenance")] },
-    { key: "finance", label: t.nav_finance, tabs: tab("finance") },
+    {
+      key: "finance",
+      label: t.nav_finance,
+      tabs: can(ctx, "finance")
+        ? [
+            { href: "/finance", label: t.nav_finance },
+            ...(hasRole(ctx, ["manager", "reception", "accountant"]) ? [{ href: "/finance/cheques", label: t.nav_cheques }] : []),
+            ...(hasRole(ctx, ["manager"]) ? [{ href: "/finance/corrections", label: t.cr_title }] : []),
+          ]
+        : [],
+    },
     { key: "reports", label: t.nav_grp_reports, tabs: [...tab("reports"), ...tab("compliance")] },
     {
       key: "analytics",
@@ -49,6 +64,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         ...(ctx.role === "owner" ? [{ href: "/settings/permissions", label: t.nav_permissions }] : []),
       ],
     },
+    { key: "activity", label: t.nav_activity, tabs: [{ href: "/activity", label: t.nav_activity }] },
     { key: "audit", label: t.nav_audit, tabs: tab("audit") },
   ].filter((g) => g.tabs.length > 0);
   const alerts = await loadAlerts(ctx, t, lang);

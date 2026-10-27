@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
   } else if (kind === "expenses") {
     if (!hasRole(ctx, ["manager", "accountant"])) return NextResponse.json({ error: "forbidden" }, { status: 403 });
     const { data } = await db.from("expenses").select("expense_date, category, description, method, amount, created_by, attachment_path")
-      .eq("property_id", p).gte("expense_date", from).lte("expense_date", to).order("expense_date");
+      .eq("property_id", p).is("archived_at", null).gte("expense_date", from).lte("expense_date", to).order("expense_date");
     const { data: staff } = await db.from("memberships").select("user_id, full_name").eq("tenant_id", ctx.tenantId);
     const who = new Map((staff ?? []).map((m) => [m.user_id, m.full_name]));
     body = csv(

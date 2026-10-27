@@ -35,6 +35,16 @@ export default async function SettingsPage() {
   return (
     <>
       <PageHeader title={t.set_title} />
+      {ctx.role === "owner" || ctx.role === "manager" ? (
+        <section className="card mb-4 flex flex-wrap items-center gap-3">
+          <div className="flex-1">
+            <h2 className="h2">🔐 {t.exp_all}</h2>
+            <p className="text-sm text-muted">{t.exp_all_hint}</p>
+          </div>
+          <a href="/api/export/all?kind=excel" className="btn-primary btn-sm">{t.exp_excel}</a>
+          <a href="/api/export/all?kind=docs" className="btn-ghost btn-sm">{t.exp_docs}</a>
+        </section>
+      ) : null}
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title={t.set_property}>
           <ActionForm action={updateProperty} className="grid gap-2 sm:grid-cols-2">

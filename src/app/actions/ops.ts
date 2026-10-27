@@ -6,6 +6,7 @@ import { getCtx } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { errorMessage } from "@/lib/errors";
 import { toBaisa } from "@/lib/format";
+import { uploadTo } from "@/lib/storage";
 import type { ActionResult } from "@/components/ActionForm";
 
 const s = (fd: FormData, k: string) => {
@@ -107,20 +108,25 @@ export async function voidCharge(_: ActionResult, fd: FormData) {
   );
 }
 
-export async function addPayment(_: ActionResult, fd: FormData) {
-  return run(
-    (c) =>
-      c.supabase.from("payments").insert({
-        tenant_id: c.tenantId,
-        folio_id: s(fd, "folio")!,
-        kind: s(fd, "kind") ?? "payment",
-        method: s(fd, "method") ?? "cash",
-        amount: toBaisa(s(fd, "amount")),
-        reference: s(fd, "reference"),
-      }),
-    [`/reservations/${s(fd, "res")}`, "/dashboard", "/finance"],
-  );
+export async function addPayment(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const proof = await uploadTo(ctx, "payment-proofs", fd.get("proof"));
+  if (proof && "error" in proof) return { error: errorMessage(t, proof.error as { message: string }) };
+  const { error } = await ctx.supabase.from("payments").insert({
+    tenant_id: ctx.tenantId,
+    folio_id: s(fd, "folio")!,
+    kind: s(fd, "kind") ?? "payment",
+    method: s(fd, "method") ?? "cash",
+    amount: toBaisa(s(fd, "amount")),
+    reference: s(fd, "reference"),
+    proof_path: proof?.path ?? null,
+  });
+  if (error) return { error: errorMessage(t, error) };
+  [`/reservations/${s(fd, "res")}`, "/dashboard", "/finance"].forEach((p) => revalidatePath(p));
+  return { ok: t.saved };
 }
+
 
 export async function voidPayment(_: ActionResult, fd: FormData) {
   return run(
@@ -184,6 +190,7 @@ export async function addExpense(_: ActionResult, fd: FormData): Promise<ActionR
       amount: toBaisa(s(fd, "amount")),
       expense_date: s(fd, "date") ?? undefined,
       method: s(fd, "method") ?? "cash",
+      unit_id: s(fd, "unit_id"),
     })
     .select("id")
     .single();
@@ -219,10 +226,31 @@ export async function updateExpense(_: ActionResult, fd: FormData): Promise<Acti
   return { ok: t.saved };
 }
 
-export async function deleteExpense(_: ActionResult, fd: FormData): Promise<ActionResult> {
+/** Nothing is removed for good: the expense moves to the archive (reason kept) and can be restored. */
+export async function archiveExpense(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const ctx = await getCtx();
   const { t } = await getDict();
-  const { data, error } = await ctx.supabase.from("expenses").delete().eq("id", s(fd, "id")!).select("id");
+  const { data, error } = await ctx.supabase
+    .from("expenses")
+    .update({ archived_at: new Date().toISOString(), archived_by: ctx.userId, archive_reason: s(fd, "reason") })
+    .eq("id", s(fd, "id")!)
+    .is("archived_at", null)
+    .select("id");
+  if (error) return { error: errorMessage(t, error) };
+  if (!data?.length) return { error: t.err_FORBIDDEN };
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  return { ok: t.saved };
+}
+
+export async function restoreExpense(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const { data, error } = await ctx.supabase
+    .from("expenses")
+    .update({ archived_at: null, archived_by: null, archive_reason: null })
+    .eq("id", s(fd, "id")!)
+    .select("id");
   if (error) return { error: errorMessage(t, error) };
   if (!data?.length) return { error: t.err_FORBIDDEN };
   revalidatePath("/finance");

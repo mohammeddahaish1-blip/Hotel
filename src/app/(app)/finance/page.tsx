@@ -8,7 +8,9 @@ import { AmountInput, ReceiptInput, RemindAll } from "@/components/FinanceInputs
 import { BarList } from "@/components/charts";
 import { Badge, Empty, Field, PageHeader, Section, Stat } from "@/components/ui";
 import { Salaries } from "./Salaries";
-import { addExpense, closeShift, deleteExpense, openShift, postDueRent, updateExpense } from "@/app/actions/ops";
+import { addExpense, archiveExpense, closeShift, openShift, postDueRent, restoreExpense, updateExpense } from "@/app/actions/ops";
+import { requestCorrection } from "@/app/actions/money";
+import { signedUrls } from "@/lib/storage";
 
 const CATEGORIES = ["utilities", "salaries", "maintenance", "supplies", "laundry", "marketing", "rent", "commission", "government", "other"];
 const METHODS = ["cash", "card", "transfer", "link"];
@@ -23,6 +25,7 @@ type Aging = { folio_id: string; reservation_id: string | null; code: string | n
 type Breakdown = { opening_float: number; cash_in: number; cash_refunds: number; cash_expenses: number; expected: number; payments_count: number; expenses_count: number };
 type PaymentRow = {
   id: string; amount: number; kind: string; method: string; received_at: string; received_by: string | null; cash_shift_id: string | null;
+  receipt_no: number | null; proof_path: string | null;
   folios: { reservation_id: string | null; reservations: { code: string; guests: { full_name: string } | null } | null } | null;
 };
 
@@ -45,6 +48,8 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
   const month = typeof sp.month === "string" && /^\d{4}-\d{2}$/.test(sp.month) && sp.month <= thisMonth ? sp.month : thisMonth;
   const cat = typeof sp.cat === "string" && CATEGORIES.includes(sp.cat) ? sp.cat : "";
   const shiftLimit = Math.min(Math.max(Number(sp.shifts) || 10, 10), 200);
+  const showArchive = sp.archived === "1";
+  const noProofOnly = sp.noproof === "1";
   const from = `${month}-01`;
   const to = month === thisMonth ? today : monthEnd(month);
   const prevFrom = `${addMonth(month, -1)}-01`;
@@ -62,13 +67,13 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
       seesMoney
         ? db.from("expenses").select("*").eq("property_id", ctx.property.id).gte("expense_date", from).lte("expense_date", monthEnd(month)).order("expense_date", { ascending: false })
         : none,
-      seesMoney ? db.from("expenses").select("amount").eq("property_id", ctx.property.id).gte("expense_date", prevFrom).lte("expense_date", prevTo) : none,
+      seesMoney ? db.from("expenses").select("amount").eq("property_id", ctx.property.id).is("archived_at", null).gte("expense_date", prevFrom).lte("expense_date", prevTo) : none,
       db.rpc("aging_report", { p_property: ctx.property.id }),
       seesMoney ? db.rpc("daily_income", { p_property: ctx.property.id, p_from: from, p_to: to }) : none,
       seesMoney ? db.rpc("daily_income", { p_property: ctx.property.id, p_from: prevFrom, p_to: prevTo }) : none,
       seesMoney
         ? db.from("payments")
-            .select("id, amount, kind, method, received_at, received_by, cash_shift_id, folios!inner(property_id, reservation_id, reservations(code, guests(full_name)))")
+            .select("id, amount, kind, method, received_at, received_by, cash_shift_id, receipt_no, proof_path, folios!inner(property_id, reservation_id, reservations(code, guests(full_name)))")
             .eq("folios.property_id", ctx.property.id)
             .is("voided_at", null)
             .gte("received_at", zonedStart(from, tz))
@@ -78,6 +83,13 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
       db.from("memberships").select("user_id, full_name").eq("tenant_id", ctx.tenantId),
     ]);
   const staffName = new Map((staff ?? []).map((m) => [m.user_id, m.full_name]));
+  const [{ data: unitList }, { data: myExpenses }] = await Promise.all([
+    db.from("units").select("id, number, owner_id").eq("property_id", ctx.property.id).eq("active", true).order("number"),
+    !seesMoney
+      ? db.from("expenses").select("id, amount, description, category, created_at").eq("property_id", ctx.property.id).eq("created_by", ctx.userId).is("archived_at", null).gte("created_at", zonedStart(today, tz)).order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+  ]);
+  const unitNumber = new Map((unitList ?? []).map((u) => [u.id as string, u.number as string]));
   const { data: bd } = myShift ? await db.rpc("shift_breakdown", { p_shift: myShift.id }) : { data: null };
   const breakdown = ((bd ?? []) as Breakdown[])[0];
 
@@ -85,7 +97,11 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
   const sum = (rows: { amount: number }[] | null) => (rows ?? []).reduce((a, r) => a + Number(r.amount), 0);
   const collected = sum(income as { amount: number }[] | null);
   const prevCollected = sum(prevIncome as { amount: number }[] | null);
-  const allExpenses = (expenses ?? []) as { id: string; amount: number; category: string; description: string; method: string; expense_date: string; created_by: string | null; attachment_path: string | null }[];
+  type Expense = { id: string; amount: number; category: string; description: string; method: string; expense_date: string; created_by: string | null; attachment_path: string | null; archived_at: string | null; archive_reason: string | null; archived_by: string | null; unit_id: string | null };
+  const monthExpenses = (expenses ?? []) as Expense[];
+  // archived expenses never count; they are listed apart and can be restored
+  const allExpenses = monthExpenses.filter((e) => !e.archived_at);
+  const archivedExpenses = monthExpenses.filter((e) => e.archived_at);
   const expTotal = sum(allExpenses);
   const prevExpTotal = sum(prevExpenses as { amount: number }[] | null);
   const net = collected - expTotal;
@@ -113,6 +129,9 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
 
   // ---- payments
   const payRows = (payments ?? []) as unknown as PaymentRow[];
+  const proofUrls = await signedUrls(ctx, "payment-proofs", payRows.map((p) => p.proof_path));
+  const shownPayRows = noProofOnly ? payRows.filter((p) => !p.proof_path) : payRows;
+  const withoutProof = payRows.filter((p) => !p.proof_path).length;
   const signed = (p: PaymentRow) => (p.kind === "refund" || p.kind === "deposit_refund" ? -p.amount : p.amount);
   const byMethod = METHODS.map((m) => ({ m, v: payRows.filter((p) => p.method === m).reduce((a, p) => a + signed(p), 0) })).filter((x) => x.v !== 0);
   const todayStart = zonedStart(today, tz);
@@ -124,7 +143,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
   const [{ data: shiftPays }, { data: shiftExps }] = shiftIds.length
     ? await Promise.all([
         db.from("payments").select("id, amount, kind, received_at, cash_shift_id, folios(reservations(code))").in("cash_shift_id", shiftIds).is("voided_at", null),
-        db.from("expenses").select("id, amount, description, expense_date, cash_shift_id").in("cash_shift_id", shiftIds),
+        db.from("expenses").select("id, amount, description, expense_date, cash_shift_id").in("cash_shift_id", shiftIds).is("archived_at", null),
       ])
     : [{ data: [] }, { data: [] }];
 
@@ -263,19 +282,27 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                 </div>
               ))}
             </div>
-            {payRows.length === 0 ? (
+            {withoutProof ? (
+              <div className="mb-2">
+                <Link href={qs({ noproof: noProofOnly ? "" : "1" })} className={`btn-sm ${noProofOnly ? "btn-primary" : "btn-ghost"}`}>
+                  📎 {t.rc_only_no_proof} ({withoutProof})
+                </Link>
+              </div>
+            ) : null}
+            {shownPayRows.length === 0 ? (
               <Empty>{t.none}</Empty>
             ) : (
-              <details open={payRows.length <= 15}>
+              <details open={shownPayRows.length <= 15 || noProofOnly}>
                 <summary className="cursor-pointer text-xs text-muted">{t.fin_count.replace("{n}", String(payRows.length))}</summary>
                 <div className="mt-2 max-h-[28rem] overflow-auto">
                   <table className="table">
-                    <thead><tr><th>{t.date}</th><th>{t.guest}</th><th>{t.method}</th><th>{t.fin_received_by}</th><th>{t.amount}</th></tr></thead>
+                    <thead><tr><th>{t.rc_no}</th><th>{t.date}</th><th>{t.guest}</th><th>{t.method}</th><th>{t.fin_received_by}</th><th>{t.rc_proof}</th><th>{t.amount}</th></tr></thead>
                     <tbody>
-                      {payRows.map((p) => {
+                      {shownPayRows.map((p) => {
                         const res = p.folios?.reservations;
                         return (
                           <tr key={p.id}>
+                            <td className="num text-xs">#{p.receipt_no ?? "—"}</td>
                             <td className="whitespace-nowrap text-xs">{dateTime(p.received_at, tz, lang)}</td>
                             <td>
                               {p.folios?.reservation_id ? (
@@ -286,6 +313,11 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                             </td>
                             <td className="text-xs">{t[`pm_${p.method}` as DictKey]} {p.kind !== "payment" ? <Badge>{t[`pk_${p.kind}` as DictKey]}</Badge> : null}</td>
                             <td className="text-xs">{(p.received_by && staffName.get(p.received_by)) || "—"}</td>
+                            <td className="text-xs">
+                              {p.proof_path && proofUrls.get(p.proof_path) ? (
+                                <a href={proofUrls.get(p.proof_path)} target="_blank" rel="noreferrer" className="text-brand">📎</a>
+                              ) : <span className="text-warn">{t.rc_no_proof}</span>}
+                            </td>
                             <td className={`num font-semibold ${signed(p) < 0 ? "text-danger" : ""}`}>{omr(signed(p), lang)}</td>
                           </tr>
                         );
@@ -324,9 +356,43 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                 </Field>
                 <Field label={t.date}><input type="date" name="date" defaultValue={today} className="input" /></Field>
               </div>
+              {(unitList ?? []).length ? (
+                <Field label={t.own_expense_unit}>
+                  <select name="unit_id" className="input">
+                    <option value="">{t.own_no_unit}</option>
+                    {(unitList ?? []).map((u) => <option key={u.id} value={u.id}>{u.number}</option>)}
+                  </select>
+                </Field>
+              ) : null}
               <ReceiptInput label={t.fin_receipt} ready={t.fin_receipt_ready} />
               <SubmitButton className="btn-primary w-full">{t.add}</SubmitButton>
             </ActionForm>
+            {!seesMoney && (myExpenses ?? []).length ? (
+              <div className="mt-4 border-t border-line pt-3">
+                <div className="mb-2 text-xs font-semibold text-muted">{t.cr_my_expenses}</div>
+                <ul className="space-y-2 text-sm">
+                  {(myExpenses ?? []).map((e) => (
+                    <li key={e.id}>
+                      <div className="flex justify-between gap-2"><span>{e.description}</span><span className="num">{omr(e.amount, lang)}</span></div>
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-brand">{t.cr_request}</summary>
+                        <ActionForm action={requestCorrection} resetOnSuccess className="mt-1 grid gap-1.5">
+                          <input type="hidden" name="target" value="expense" />
+                          <input type="hidden" name="id" value={e.id} />
+                          <select name="action" className="input py-1.5">
+                            <option value="edit">{t.cr_action_edit}</option>
+                            <option value="void">{t.cr_action_void}</option>
+                          </select>
+                          <input name="amount" inputMode="decimal" placeholder={t.cr_new_amount} className="input py-1.5" />
+                          <input name="reason" required minLength={3} placeholder={t.cr_reason} className="input py-1.5" />
+                          <SubmitButton className="btn-ghost btn-sm">{t.cr_request}</SubmitButton>
+                        </ActionForm>
+                      </details>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </Section>
           {seesMoney ? (
             <div className="space-y-4 lg:col-span-2">
@@ -368,6 +434,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                             <td className="align-top text-xs">{t[`ec_${e.category}` as DictKey]}</td>
                             <td className="align-top">
                               {e.description}
+                              {e.unit_id ? <Badge>{t.unit} {unitNumber.get(e.unit_id)}</Badge> : null}
                               {receipts.get(e.id) ? (
                                 <a href={receipts.get(e.id)} target="_blank" rel="noreferrer" className="ms-2 text-xs text-brand">{t.fin_receipt_view}</a>
                               ) : null}
@@ -387,9 +454,10 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                                   <ReceiptInput label={t.fin_receipt} ready={t.fin_receipt_ready} />
                                   <SubmitButton className="btn-primary btn-sm">{t.save}</SubmitButton>
                                 </ActionForm>
-                                <ActionForm action={deleteExpense} className="mt-2">
+                                <ActionForm action={archiveExpense} className="mt-2 flex flex-wrap gap-2">
                                   <input type="hidden" name="id" value={e.id} />
-                                  <SubmitButton className="btn-danger btn-sm" confirm={`${t.delete}: ${e.description}?`}>{t.delete}</SubmitButton>
+                                  <input name="reason" required minLength={3} placeholder={t.arch_reason} className="input w-auto flex-1 py-1.5" />
+                                  <SubmitButton className="btn-danger btn-sm" confirm={`${t.arch_archive}: ${e.description}?`}>🗄️ {t.arch_archive}</SubmitButton>
                                 </ActionForm>
                               </details>
                             </td>
@@ -402,6 +470,26 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                     </table>
                   </div>
                 )}
+                <div className="mt-4 border-t border-line pt-3">
+                  <Link href={qs({ archived: showArchive ? "" : "1" })} className="text-xs text-brand">
+                    🗄️ {showArchive ? t.arch_hide : t.arch_show} ({archivedExpenses.length})
+                  </Link>
+                  <p className="mt-1 text-xs text-muted">{t.arch_hint}</p>
+                  {showArchive && archivedExpenses.length ? (
+                    <ul className="mt-2 space-y-1.5 text-sm">
+                      {archivedExpenses.map((e) => (
+                        <li key={e.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-surface-2 px-3 py-2 text-muted">
+                          <span className="line-through">{gregorian(e.expense_date, lang)} · {e.description} · {omr(e.amount, lang)}</span>
+                          <span className="text-xs">{t.arch_archived}: {e.archive_reason ?? "—"} · {(e.archived_by && staffName.get(e.archived_by)) || "—"}</span>
+                          <ActionForm action={restoreExpense} className="ms-auto">
+                            <input type="hidden" name="id" value={e.id} />
+                            <SubmitButton className="btn-ghost btn-sm">↩️ {t.arch_restore}</SubmitButton>
+                          </ActionForm>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
               </Section>
               <Section title={t.shift_history}>
                 {shiftRows.length === 0 ? (

@@ -40,6 +40,21 @@ export async function loadAlerts(ctx: Ctx, t: Dict, lang: "ar" | "en" | "ur"): P
         extra = r.info ? omr(Number(r.info), lang) : null;
         href = "/finance";
         break;
+      case "correction_pending":
+        extra = r.info ? (t[`cr_target_${r.info}` as DictKey] ?? r.info) : null;
+        href = "/finance/corrections";
+        break;
+      case "cheque_due":
+        extra = r.info ? gregorian(r.info, lang) : null;
+        href = "/finance/cheques";
+        break;
+      case "cheque_bounced":
+        extra = r.info ? omr(Number(r.info), lang) : null;
+        href = "/finance/cheques";
+        break;
+      case "contract_ending":
+        extra = r.info ? gregorian(r.info, lang) : null;
+        break;
       case "new_complaint":
         extra = r.info;
         href = "/feedback";
