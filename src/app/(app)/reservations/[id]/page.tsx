@@ -1,4 +1,4 @@
-import { MessageCircle, Paperclip, Receipt } from "lucide-react";
+import { FileSignature, Link2 as LinkIcon, MessageCircle, Paperclip, Receipt } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { hasRole, requireArea } from "@/lib/auth";
@@ -10,7 +10,10 @@ import { Badge, Empty, Field, PageHeader, Section, RES_STATUS_TONE, RES_STATUS_E
 import {
   addCharge, addPayment, cancelReservation, changeReservation, checkIn, checkOut, issueInvoice, voidCharge, voidPayment,
 } from "@/app/actions/ops";
-import { addCheque, attachPaymentProof, requestCorrection, setChequeStatus } from "@/app/actions/money";
+import { addCheque, attachPaymentProof, createPaymentLink, requestCorrection, setChequeStatus } from "@/app/actions/money";
+import { loadPaymentLinks } from "@/lib/paylinks";
+import { issueContract, voidContract } from "@/app/actions/contracts";
+import { PaymentLinksList } from "@/components/PaymentLinksList";
 import { ReceiptInput } from "@/components/FinanceInputs";
 import { appUrl } from "@/lib/feedback-qr";
 import { signedUrls } from "@/lib/storage";
@@ -54,6 +57,14 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
   ]);
   const { data: cheques } = await db.from("cheques").select("*").eq("reservation_id", id).order("due_date");
   const canVoidPay = hasRole(ctx, ["manager", "accountant"]);
+  const canLinks = hasRole(ctx, ["manager", "reception", "accountant"]);
+  const payLinks = folio && canLinks ? await loadPaymentLinks(ctx, { reservation: id }) : [];
+  const canContracts = hasRole(ctx, ["manager", "reception"]);
+  const { data: docs } = canContracts
+    ? await db.from("contract_documents").select("id, token, title, status, created_at, guest_signed_at, guest_sign_name").eq("reservation_id", id).order("created_at", { ascending: false })
+    : { data: [] };
+  const docUrl = async (token: string) => appUrl(`/s/${token}`);
+  const docLinks = await Promise.all((docs ?? []).map(async (d) => ({ ...d, url: await docUrl(d.token as string) })));
   const canChequeOps = hasRole(ctx, ["manager", "accountant"]);
   const proofUrls = await signedUrls(ctx, "payment-proofs", (payments ?? []).map((p) => p.proof_path as string | null));
   const propName = ctx.property.name_ar;
@@ -296,6 +307,63 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
                 <input name="reference" placeholder={t.reference} className="input" />
                 <SubmitButton>{t.add_payment}</SubmitButton>
                 <div className="sm:col-span-5"><ReceiptInput name="proof" label={t.rc_proof_label} ready="" /></div>
+              </ActionForm>
+            </Section>
+          ) : null}
+
+          {canContracts ? (
+            <Section title={t.ct_section}>
+              {docLinks.length === 0 ? <p className="text-sm text-muted">{t.ct_hint}</p> : null}
+              <ul className="divide-y divide-line">
+                {docLinks.map((d) => (
+                  <li key={d.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
+                    <FileSignature className="size-4 shrink-0 text-muted" />
+                    <span className="font-semibold">{d.title}</span>
+                    <Badge tone={d.status === "signed" ? "ok" : d.status === "void" ? "gray" : "warn"}>{t[`ct_st_${d.status}` as DictKey]}</Badge>
+                    {d.guest_signed_at ? <span className="text-xs text-muted">{d.guest_sign_name} · {dateTime(d.guest_signed_at, ctx.property.timezone, lang)}</span> : null}
+                    <span className="ms-auto flex flex-wrap gap-1.5">
+                      <a href={d.url} target="_blank" rel="noreferrer" className="btn-ghost btn-sm inline-flex items-center gap-1"><LinkIcon className="size-3.5 shrink-0" />{t.ct_open}</a>
+                      {d.status === "awaiting_guest" && guest.phone ? (
+                        <a
+                          href={whatsappLink(guest.phone, guest.preferred_language === "en"
+                            ? `Hello ${guest.full_name.split(" ")[0]}, your contract for unit ${unit.number} is ready to sign: ${d.url}`
+                            : `مرحباً ${guest.full_name.split(" ")[0]}، عقدكم للوحدة ${unit.number} جاهز للتوقيع الإلكتروني: ${d.url}`)}
+                          target="_blank" rel="noreferrer" className="btn-ghost btn-sm inline-flex items-center gap-1"
+                        >
+                          <MessageCircle className="size-3.5 shrink-0" />{t.rc_send}
+                        </a>
+                      ) : null}
+                      {d.status !== "void" && hasRole(ctx, ["manager"]) ? (
+                        <ActionForm action={voidContract}>
+                          <input type="hidden" name="id" value={d.id} />
+                          <input type="hidden" name="res" value={id} />
+                          <SubmitButton className="btn-ghost btn-sm text-danger" confirm={t.ct_void_q}>{t.ct_void_btn}</SubmitButton>
+                        </ActionForm>
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {!docLinks.some((d) => d.status !== "void") ? (
+                <ActionForm action={issueContract} className="mt-3">
+                  <input type="hidden" name="res" value={id} />
+                  <SubmitButton className="btn-primary inline-flex items-center gap-1.5"><FileSignature className="size-4 shrink-0" />{t.ct_issue}</SubmitButton>
+                </ActionForm>
+              ) : null}
+            </Section>
+          ) : null}
+
+          {folio && canLinks ? (
+            <Section title={t.pl_title}>
+              {payLinks.length ? <PaymentLinksList links={payLinks} t={t} lang={lang} tz={ctx.property.timezone} /> : <p className="text-sm text-muted">{t.pl_hint}</p>}
+              <ActionForm action={createPaymentLink} resetOnSuccess className="mt-3 grid gap-2 sm:grid-cols-4">
+                <input type="hidden" name="res" value={id} />
+                <input name="amount" inputMode="decimal" placeholder={sum && sum.balance > 0 ? (sum.balance / 1000).toFixed(3) : t.amount} aria-label={t.amount} className="input" />
+                <select name="purpose" defaultValue={r.kind === "contract" ? "rent" : "balance"} aria-label={t.type} className="input">
+                  {["balance", "deposit", "rent", "other"].map((p) => <option key={p} value={p}>{t[`pl_purpose_${p}` as DictKey]}</option>)}
+                </select>
+                <input name="note" maxLength={200} placeholder={t.notes} className="input" />
+                <SubmitButton>{t.pl_create}</SubmitButton>
               </ActionForm>
             </Section>
           ) : null}

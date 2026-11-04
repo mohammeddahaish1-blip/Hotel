@@ -36,6 +36,10 @@ export async function updateProperty(_: ActionResult, fd: FormData) {
         vat_no: s(fd, "vat_no"),
         municipality: s(fd, "municipality") ?? "muscat",
         doc_retention_days: Number(s(fd, "doc_retention_days") ?? 365),
+        bank_name: s(fd, "bank_name"),
+        bank_account_name: s(fd, "bank_account_name"),
+        bank_iban: s(fd, "bank_iban")?.replace(/\s/g, "").toUpperCase() ?? null,
+        payment_instructions: s(fd, "payment_instructions"),
       })
       .eq("id", c.property.id),
   );

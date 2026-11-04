@@ -132,3 +132,37 @@ export async function updateCheque(_: ActionResult, fd: FormData): Promise<Actio
   refresh(s(fd, "res") ? `/reservations/${s(fd, "res")}` : null, "/finance/cheques");
   return { ok: t.saved };
 }
+
+// ---------------------------------------------------------------- payment links
+export async function createPaymentLink(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const res = s(fd, "res")!;
+  const amount = s(fd, "amount");
+  const { error } = await ctx.supabase.rpc("create_payment_link", {
+    p_reservation: res, p_amount: amount ? toBaisa(amount) : null, p_purpose: s(fd, "purpose") ?? "balance", p_note: s(fd, "note"),
+  });
+  if (error) return { error: errorMessage(t, error) };
+  refresh(`/reservations/${res}`, "/finance/links");
+  return { ok: t.saved };
+}
+
+export async function confirmPaymentLink(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const amount = s(fd, "amount");
+  const { error } = await ctx.supabase.rpc("confirm_payment_link", { p_id: s(fd, "id")!, p_method: s(fd, "method") ?? "transfer", p_amount: amount ? toBaisa(amount) : null });
+  if (error) return { error: errorMessage(t, error) };
+  refresh(s(fd, "res") ? `/reservations/${s(fd, "res")}` : null, "/finance/links", "/finance");
+  return { ok: t.saved };
+}
+
+export async function cancelPaymentLink(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const { error } = await ctx.supabase.from("payment_links").update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+    .eq("id", s(fd, "id")!).in("status", ["open", "proof_submitted"]);
+  if (error) return { error: errorMessage(t, error) };
+  refresh(s(fd, "res") ? `/reservations/${s(fd, "res")}` : null, "/finance/links");
+  return { ok: t.saved };
+}

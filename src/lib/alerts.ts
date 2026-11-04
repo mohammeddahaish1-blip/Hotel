@@ -59,6 +59,23 @@ export async function loadAlerts(ctx: Ctx, t: Dict, lang: "ar" | "en" | "ur"): P
         extra = r.info ? gregorian(r.info, lang) : null;
         href = `/profile/${r.ref_id}`;
         break;
+      case "payment_proof":
+        extra = r.info ? omr(Number(r.info), lang) : null;
+        href = "/finance/links";
+        break;
+      case "channel_conflict":
+      case "channel_sync_error":
+        extra = r.kind === "channel_conflict" ? (r.info ? gregorian(r.info, lang) : null) : r.info;
+        href = "/channels";
+        break;
+      case "messages_due":
+        extra = r.info;
+        href = "/messages";
+        break;
+      case "staff_notice":
+        extra = r.info;
+        href = "/messages";
+        break;
       case "new_complaint":
         extra = r.info;
         href = "/feedback";

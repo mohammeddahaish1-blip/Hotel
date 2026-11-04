@@ -59,6 +59,10 @@ export default async function SettingsPage() {
             <Field label={t.onb_municipality}><input name="municipality" defaultValue={prop?.municipality ?? ""} className="input" /></Field>
             <Field label={t.set_license}><input name="license_no" defaultValue={prop?.license_no ?? ""} className="input" /></Field>
             <Field label={t.vat_no}><input name="vat_no" defaultValue={prop?.vat_no ?? ""} dir="ltr" className="input" /></Field>
+            <Field label={t.set_bank_name}><input name="bank_name" defaultValue={prop?.bank_name ?? ""} className="input" /></Field>
+            <Field label={t.set_bank_account}><input name="bank_account_name" defaultValue={prop?.bank_account_name ?? ""} className="input" /></Field>
+            <Field label="IBAN" className="sm:col-span-2"><input name="bank_iban" defaultValue={prop?.bank_iban ?? ""} dir="ltr" className="input" /></Field>
+            <Field label={t.set_pay_instructions} className="sm:col-span-2"><textarea name="payment_instructions" defaultValue={prop?.payment_instructions ?? ""} rows={2} maxLength={500} className="input" /></Field>
             <Field label={t.set_retention}><input name="doc_retention_days" type="number" min={1} defaultValue={prop?.doc_retention_days ?? 365} className="input" /></Field>
             <div className="flex items-end"><SubmitButton className="btn-primary w-full">{t.save}</SubmitButton></div>
           </ActionForm>

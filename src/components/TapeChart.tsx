@@ -7,13 +7,14 @@ import { addDays, nights } from "@/lib/format";
 import { intlLocale, type Dict } from "@/lib/i18n/dict";
 import { QuickBook, type QuickBookTarget } from "./QuickBook";
 
-export type Bar = { id: string; code: string; unitId: string; from: string; to: string; status: string; kind: string; guest: string };
+export type Bar = { id: string; code: string; unitId: string; from: string; to: string; status: string; kind: string; guest: string; href?: string };
 
 const BAR_TONE: Record<string, string> = {
   tentative: "bg-gray-soft text-ink border-line",
   confirmed: "bg-info-soft text-info border-info/30",
   checked_in: "bg-violet-soft text-violet border-violet/30",
   checked_out: "bg-ok-soft text-ok border-ok/30",
+  channel: "bg-warn-soft text-warn border-warn/40 border-dashed",
 };
 
 export function TapeChart({
@@ -104,11 +105,11 @@ export function TapeChart({
                   const offset = nights(start, s);
                   const width = Math.max(nights(s, e), 0);
                   if (width === 0) return null;
-                  const movable = b.status !== "checked_out";
+                  const movable = b.status !== "checked_out" && b.status !== "channel";
                   return (
                     <a
                       key={b.id}
-                      href={`/reservations/${b.id}`}
+                      href={b.href ?? `/reservations/${b.id}`}
                       draggable={movable}
                       onDragStart={() => setDrag(b)}
                       onDragEnd={() => setDrag(null)}

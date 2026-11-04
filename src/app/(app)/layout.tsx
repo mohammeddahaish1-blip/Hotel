@@ -28,10 +28,20 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         ...(can(ctx, "board") ? [{ href: "/properties", label: t.nav_properties }] : []),
         ...tab("board"),
         ...tab("calendar"),
+        ...(can(ctx, "board") && hasRole(ctx, ["manager", "reception"]) ? [{ href: "/channels", label: t.ch_title }] : []),
         ...(hasRole(ctx, ["manager", "accountant"]) ? [{ href: "/properties/owners", label: t.nav_owners }] : []),
       ],
     },
-    { key: "reservations", label: t.nav_reservations, tabs: [...tab("reservations"), ...tab("guests")], also: ["/invoices"] },
+    {
+      key: "reservations",
+      label: t.nav_reservations,
+      tabs: [
+        ...tab("reservations"),
+        ...tab("guests"),
+        ...(can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"]) ? [{ href: "/messages", label: t.msg_title }] : []),
+      ],
+      also: ["/invoices"],
+    },
     { key: "ops", label: t.nav_grp_ops, tabs: [...tab("housekeeping"), ...tab("maintenance")] },
     {
       key: "finance",
@@ -40,6 +50,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         ? [
             { href: "/finance", label: t.nav_finance },
             ...(hasRole(ctx, ["manager", "reception", "accountant"]) ? [{ href: "/finance/cheques", label: t.nav_cheques }] : []),
+            ...(hasRole(ctx, ["manager", "reception", "accountant"]) ? [{ href: "/finance/links", label: t.pl_title }] : []),
             ...(hasRole(ctx, ["manager"]) ? [{ href: "/finance/corrections", label: t.cr_title }] : []),
           ]
         : [],
@@ -55,6 +66,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           ]
         : [],
     },
+    { key: "assistant", label: t.ai_title, tabs: hasRole(ctx, ["manager"]) ? [{ href: "/assistant", label: t.ai_title }] : [] },
     { key: "feedback", label: t.nav_feedback, tabs: tab("feedback") },
     { key: "import", label: t.nav_import, tabs: tab("import") },
     {
@@ -63,6 +75,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       tabs: [
         ...tab("settings", t.nav_settings_general),
         ...(ctx.role === "owner" ? [{ href: "/settings/permissions", label: t.nav_permissions }] : []),
+        ...(can(ctx, "settings") && hasRole(ctx, ["manager"]) ? [{ href: "/settings/automation", label: t.auto_title }] : []),
       ],
     },
     { key: "activity", label: t.nav_activity, tabs: [{ href: "/activity", label: t.nav_activity }] },
