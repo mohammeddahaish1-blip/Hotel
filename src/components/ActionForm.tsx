@@ -11,13 +11,20 @@ export function SubmitButton({ children, className = "btn-primary", confirm }: {
   return (
     <button
       type="submit"
-      className={className}
+      className={`relative ${className}`}
       disabled={pending}
+      aria-busy={pending}
       onClick={(e) => {
         if (confirm && !window.confirm(confirm)) e.preventDefault();
       }}
     >
-      {pending ? "…" : children}
+      {/* keep the label (and the button's width) while saving; a spinner sits on top */}
+      <span className={`inline-flex items-center gap-1.5 ${pending ? "opacity-0" : ""}`}>{children}</span>
+      {pending ? (
+        <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
+          <span className="size-4 animate-spin rounded-full border-2 border-current border-e-transparent" />
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -34,7 +41,11 @@ export function ActionForm({
   className?: string;
   resetOnSuccess?: boolean;
 }) {
-  const [state, formAction] = useActionState(action, null);
+  // n counts results so the success note replays its fade on every save
+  const [state, formAction] = useActionState(async (prev: (ActionResult & { n?: number }) | null, fd: FormData) => {
+    const r = await action(prev, fd);
+    return r ? { ...r, n: (prev?.n ?? 0) + 1 } : r;
+  }, null);
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state?.ok && resetOnSuccess) ref.current?.reset();
@@ -45,7 +56,7 @@ export function ActionForm({
       {state?.error ? (
         <div role="alert" className="mt-3 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger">{state.error}</div>
       ) : null}
-      {state?.ok ? <div className="mt-3 rounded-xl bg-ok-soft px-3 py-2 text-sm text-ok">{state.ok}</div> : null}
+      {state?.ok ? <div key={state.n} role="status" className="flash mt-3 rounded-xl bg-ok-soft px-3 py-2 text-sm text-ok">{state.ok}</div> : null}
     </form>
   );
 }

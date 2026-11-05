@@ -124,3 +124,27 @@ export function EditDetails({ label, children, className = "" }: { label: string
     </details>
   );
 }
+
+/** Grey placeholder block shown while content loads. */
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div aria-hidden className={`skeleton rounded-xl ${className}`} />;
+}
+
+/** Page-shaped placeholder: title, a row of figures, then a few cards. */
+export function PageSkeleton() {
+  return (
+    <div role="status" aria-busy="true" className="space-y-5">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-24" />)}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Skeleton className="h-72 lg:col-span-2" />
+        <Skeleton className="h-72" />
+      </div>
+    </div>
+  );
+}

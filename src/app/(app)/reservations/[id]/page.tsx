@@ -34,35 +34,39 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
   const { id } = await params;
   const db = ctx.supabase;
 
-  const { data: r } = await db
-    .from("reservations")
-    .select("*, guests(id, full_name, phone, preferred_language, doc_number, nationality), units(id, number, unit_types(name_ar))")
-    .eq("id", id)
-    .maybeSingle();
+  const canVoidPay = hasRole(ctx, ["manager", "accountant"]);
+  const canLinks = hasRole(ctx, ["manager", "reception", "accountant"]);
+  const canContracts = hasRole(ctx, ["manager", "reception"]);
+  const canOperate = hasRole(ctx, ["manager", "reception"]);
+  // Everything that only needs the booking id, in one round trip
+  const [{ data: r }, { data: folio }, { data: cheques }, { data: docs }, { data: units }, { data: contract }] = await Promise.all([
+    db
+      .from("reservations")
+      .select("*, guests(id, full_name, phone, preferred_language, doc_number, nationality), units(id, number, unit_types(name_ar))")
+      .eq("id", id)
+      .maybeSingle(),
+    db.from("folios").select("id, status").eq("reservation_id", id).maybeSingle(),
+    db.from("cheques").select("*").eq("reservation_id", id).order("due_date"),
+    canContracts
+      ? db.from("contract_documents").select("id, token, title, status, created_at, guest_signed_at, guest_sign_name").eq("reservation_id", id).order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    db.from("units").select("id, number").eq("property_id", ctx.property.id).eq("active", true).order("number"),
+    db.from("contracts").select("*, billing_schedules(*)").eq("reservation_id", id).maybeSingle(),
+  ]);
   if (!r) notFound();
   const guest = r.guests as unknown as { id: string; full_name: string; phone: string | null; preferred_language: string; doc_number: string | null; nationality: string | null };
   const unit = r.units as unknown as { id: string; number: string; unit_types: { name_ar: string } };
   const stay = parseRange(r.stay as string);
   const today = todayIn(ctx.property.timezone);
-  const canOperate = hasRole(ctx, ["manager", "reception"]);
 
-  const { data: folio } = await db.from("folios").select("id, status").eq("reservation_id", id).maybeSingle();
-  const [{ data: summary }, { data: charges }, { data: payments }, { data: invoices }, { data: contract }, { data: units }] = await Promise.all([
+  // Then everything that needs the guest account (folio), also in one round trip
+  const [{ data: summary }, { data: charges }, { data: payments }, { data: invoices }, payLinks] = await Promise.all([
     folio ? db.rpc("folio_summary", { p_folio: folio.id }) : Promise.resolve({ data: null }),
     folio ? db.from("charges").select("*").eq("folio_id", folio.id).order("created_at") : Promise.resolve({ data: [] }),
     folio ? db.from("payments").select("*").eq("folio_id", folio.id).order("received_at") : Promise.resolve({ data: [] }),
     folio ? db.from("invoices").select("id, series, number, total, issued_at").eq("folio_id", folio.id).order("number") : Promise.resolve({ data: [] }),
-    r.kind === "contract" ? db.from("contracts").select("*, billing_schedules(*)").eq("reservation_id", id).maybeSingle() : Promise.resolve({ data: null }),
-    db.from("units").select("id, number").eq("property_id", ctx.property.id).eq("active", true).order("number"),
+    folio && canLinks ? loadPaymentLinks(ctx, { reservation: id }) : Promise.resolve([]),
   ]);
-  const { data: cheques } = await db.from("cheques").select("*").eq("reservation_id", id).order("due_date");
-  const canVoidPay = hasRole(ctx, ["manager", "accountant"]);
-  const canLinks = hasRole(ctx, ["manager", "reception", "accountant"]);
-  const payLinks = folio && canLinks ? await loadPaymentLinks(ctx, { reservation: id }) : [];
-  const canContracts = hasRole(ctx, ["manager", "reception"]);
-  const { data: docs } = canContracts
-    ? await db.from("contract_documents").select("id, token, title, status, created_at, guest_signed_at, guest_sign_name").eq("reservation_id", id).order("created_at", { ascending: false })
-    : { data: [] };
   const docUrl = async (token: string) => appUrl(`/s/${token}`);
   const docLinks = await Promise.all((docs ?? []).map(async (d) => ({ ...d, url: await docUrl(d.token as string) })));
   const canChequeOps = hasRole(ctx, ["manager", "accountant"]);

@@ -142,6 +142,34 @@ body {
 .pill-button:hover:not(:disabled) { background: #ffffff; color: var(--brand); }
 .pill-button:disabled { opacity: 0.6; }
 
+/* ---------------------------------------------------------------- motion
+   Small, quick feedback so the system feels responsive: placeholders shimmer while
+   loading, pages fade in, buttons and links react to the press. Off for reduced motion. */
+html { scroll-behavior: smooth; }
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--line) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.3s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer { from { background-position: 100% 50%; } to { background-position: 0 50%; } }
+.page-enter { animation: page-enter 0.22s ease-out both; }
+@keyframes page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.btn, .btn-primary, .btn-ghost, .btn-danger { transition: transform 0.08s ease, filter 0.15s, background-color 0.15s, border-color 0.15s, opacity 0.15s; }
+.btn:active:not(:disabled), .btn-primary:active:not(:disabled), .btn-ghost:active:not(:disabled), .btn-danger:active:not(:disabled) { transform: scale(0.97); }
+a.card, a.rounded-xl, button.rounded-xl { transition: transform 0.12s ease, box-shadow 0.15s, border-color 0.15s, background-color 0.15s; }
+a.card:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06); }
+a.card:active, a.rounded-xl:active { transform: scale(0.985); }
+/* success note: shows, then folds away */
+.flash { overflow: hidden; animation: flash-out 0.35s ease 2.6s forwards; }
+@keyframes flash-out { to { opacity: 0; max-height: 0; margin-top: 0; padding-top: 0; padding-bottom: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .skeleton, .page-enter { animation: none; }
+  .btn, .btn-primary, .btn-ghost, .btn-danger, a.card, a.rounded-xl, button.rounded-xl { transition: none; }
+  .btn:active, .btn-primary:active, .btn-ghost:active, .btn-danger:active, a.card:active, a.rounded-xl:active { transform: none; }
+}
+
 @media print {
   .no-print { display: none !important; }
   body { background: white; }

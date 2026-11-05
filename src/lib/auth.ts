@@ -49,18 +49,19 @@ export const getCtx = cache(async (): Promise<Ctx> => {
 
   const loadMemberships = () =>
     supabase.from("memberships").select("tenant_id, role, full_name, permissions, job_title").eq("user_id", claims.sub).eq("active", true);
-  let { data: memberships } = await loadMemberships();
+  const loadProperties = () =>
+    supabase
+      .from("properties")
+      .select("id, tenant_id, name_ar, name_en, timezone, currency, kind, phone, whatsapp, address, vat_no, license_no")
+      .order("created_at");
+  // One round trip for both: they don't depend on each other
+  let [{ data: memberships }, { data: properties }] = await Promise.all([loadMemberships(), loadProperties()]);
   if (!memberships || memberships.length === 0) {
     // First sign-in of invited staff: attach pending invitations for this email
     const { data: attached } = await supabase.rpc("accept_invitations");
-    if (attached) ({ data: memberships } = await loadMemberships());
+    if (attached) [{ data: memberships }, { data: properties }] = await Promise.all([loadMemberships(), loadProperties()]);
   }
   if (!memberships || memberships.length === 0) redirect("/onboarding");
-
-  const { data: properties } = await supabase
-    .from("properties")
-    .select("id, tenant_id, name_ar, name_en, timezone, currency, kind, phone, whatsapp, address, vat_no, license_no")
-    .order("created_at");
   if (!properties || properties.length === 0) redirect("/onboarding");
 
   const wanted = (await cookies()).get("property")?.value;

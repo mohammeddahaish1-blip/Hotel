@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { omr, pct, gregorian, hijri } from "@/lib/format";
-import { Badge, Empty, PageHeader, Section, Stat, UNIT_STATUS_TONE, UNIT_STATUS_EMOJI, RES_STATUS_TONE, RES_STATUS_EMOJI } from "@/components/ui";
+import { Badge, Empty, PageHeader, Section, Skeleton, Stat, UNIT_STATUS_TONE, UNIT_STATUS_EMOJI, RES_STATUS_TONE, RES_STATUS_EMOJI } from "@/components/ui";
 import { loadAlerts } from "@/lib/alerts";
 import { TodayBoard } from "./TodayBoard";
 
@@ -27,10 +28,12 @@ type Dash = {
 export default async function DashboardPage() {
   const ctx = await requireArea("dashboard");
   const { t, lang } = await getDict();
-  const { data, error } = await ctx.supabase.rpc("owner_dashboard", { p_property: ctx.property.id });
+  const [{ data, error }, alerts] = await Promise.all([
+    ctx.supabase.rpc("owner_dashboard", { p_property: ctx.property.id }),
+    loadAlerts(ctx, t, lang),
+  ]);
   if (error) throw new Error(error.message);
   const d = data as Dash;
-  const alerts = await loadAlerts(ctx, t, lang);
   const statuses = ["available", "reserved", "occupied", "dirty", "maintenance", "out_of_service"];
 
   return (
@@ -40,7 +43,9 @@ export default async function DashboardPage() {
         sub={<>{gregorian(d.date, lang)} · {hijri(d.date, lang)}</>}
         actions={<Link href="/reservations/new" className="btn-primary">{t.res_new}</Link>}
       />
-      <TodayBoard ctx={ctx} t={t} lang={lang} />
+      <Suspense fallback={<Skeleton className="mb-4 h-56" />}>
+        <TodayBoard ctx={ctx} t={t} lang={lang} />
+      </Suspense>
       {alerts.length ? (
         <div className="mb-4 rounded-2xl border border-warn/30 bg-warn-soft/60 p-4">
           <div className="mb-2 text-sm font-bold text-warn">{t.alerts_title} ({alerts.length})</div>
