@@ -5,12 +5,14 @@ import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { gregorian, omr, parseRange, plainOmr } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
+import { BulkUnitsForm } from "@/components/BulkUnitsForm";
 import { Badge, EditDetails, Field, PageHeader, Section, UNIT_STATUS_EMOJI, UNIT_STATUS_TONE } from "@/components/ui";
 import {
-  addFloor, addRatePlan, addUnitType, bulkUnits, cancelInvite, deleteFloor, deleteRatePlan, inviteUser, setUnitActive, setUnitService,
+  addFloor, addRatePlan, addUnitType, bulkAddUnits, cancelInvite, deleteUnit, deleteUnitType, renameUnitType, deleteFloor, deleteRatePlan, inviteUser, setUnitActive, setUnitService,
   updateFloor, updateMember, updateProperty, updateRatePlan, updateStaffProfile, updateTax, updateTenantPolicy, updateUnit, updateUnitType,
 } from "@/app/actions/settings";
 
+const UNIT_KINDS = ["room", "suite", "studio", "apartment"] as const;
 const ROLES = ["owner", "manager", "reception", "accountant", "housekeeping", "maintenance"];
 
 export default async function SettingsPage() {
@@ -32,6 +34,9 @@ export default async function SettingsPage() {
   const { data: profiles } = await db.from("staff_profiles").select("*").eq("tenant_id", ctx.tenantId);
   const profile = new Map((profiles ?? []).map((p) => [p.user_id as string, p]));
   const typeName = new Map((types ?? []).map((x) => [x.id, x.name_ar]));
+  const floorName = new Map((floors ?? []).map((f) => [f.id, f.name]));
+  const unitsPerType = new Map<string, number>();
+  for (const u of units ?? []) unitsPerType.set(u.unit_type_id, (unitsPerType.get(u.unit_type_id) ?? 0) + 1);
   const isOwner = ctx.role === "owner";
 
   return (
@@ -99,26 +104,50 @@ export default async function SettingsPage() {
 
         <Section title={t.set_unit_types}>
           <div className="space-y-2">
-            {(types ?? []).map((x) => (
-              <ActionForm key={x.id} action={updateUnitType} className="grid grid-cols-12 items-end gap-2 text-sm">
-                <input type="hidden" name="id" value={x.id} />
-                <span className="col-span-3 pb-2 font-semibold">{x.name_ar}</span>
-                <Field label={t.set_nightly} className="col-span-3"><input name="nightly" defaultValue={plainOmr(x.nightly_rate)} inputMode="decimal" className="input" /></Field>
-                <Field label={t.set_monthly} className="col-span-3"><input name="monthly" defaultValue={plainOmr(x.monthly_rate)} inputMode="decimal" className="input" /></Field>
-                <Field label={t.set_capacity} className="col-span-1"><input name="capacity" defaultValue={x.capacity} type="number" min={1} className="input px-2" /></Field>
-                <div className="col-span-2"><SubmitButton className="btn-ghost btn-sm w-full">{t.save}</SubmitButton></div>
-              </ActionForm>
-            ))}
+            {(types ?? []).map((x) => {
+              const used = unitsPerType.get(x.id) ?? 0;
+              return (
+                <div key={x.id} className="rounded-xl border border-line p-3">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="font-semibold">{x.name_ar}</span>
+                    {x.name_en ? <span dir="ltr" className="text-xs text-muted">{x.name_en}</span> : null}
+                    <Badge tone="gray">{t[`ukind_${x.kind}` as DictKey] ?? x.kind}</Badge>
+                    <span className="text-xs text-muted">{t.type_units_count.replace("{n}", String(used))}</span>
+                    <span className="ms-auto flex items-start gap-1.5">
+                      <EditDetails label={t.edit}>
+                        <ActionForm action={renameUnitType} className="grid min-w-64 gap-1.5">
+                          <input type="hidden" name="id" value={x.id} />
+                          <input name="name_ar" defaultValue={x.name_ar} required aria-label={t.set_name_ar} placeholder={t.set_name_ar} className="input py-1.5" />
+                          <input name="name_en" defaultValue={x.name_en ?? ""} aria-label={t.set_name_en} placeholder={t.set_name_en} dir="ltr" className="input py-1.5" />
+                          <select name="kind" defaultValue={x.kind} aria-label={t.type} className="input py-1.5">
+                            {UNIT_KINDS.map((k) => <option key={k} value={k}>{t[`ukind_${k}` as DictKey]}</option>)}
+                          </select>
+                          <SubmitButton className="btn-primary btn-sm">{t.save}</SubmitButton>
+                        </ActionForm>
+                      </EditDetails>
+                      <ActionForm action={deleteUnitType}>
+                        <input type="hidden" name="id" value={x.id} />
+                        <SubmitButton className="btn-ghost btn-sm text-danger" confirm={t.type_delete_q.replace("{name}", x.name_ar)}>{t.delete}</SubmitButton>
+                      </ActionForm>
+                    </span>
+                  </div>
+                  <ActionForm action={updateUnitType} className="grid grid-cols-12 items-end gap-2 text-sm">
+                    <input type="hidden" name="id" value={x.id} />
+                    <Field label={t.set_nightly} className="col-span-4"><input name="nightly" defaultValue={plainOmr(x.nightly_rate)} inputMode="decimal" className="input" /></Field>
+                    <Field label={t.set_monthly} className="col-span-4"><input name="monthly" defaultValue={plainOmr(x.monthly_rate)} inputMode="decimal" className="input" /></Field>
+                    <Field label={t.set_capacity} className="col-span-2"><input name="capacity" defaultValue={x.capacity} type="number" min={1} className="input px-2" /></Field>
+                    <div className="col-span-2"><SubmitButton className="btn-ghost btn-sm w-full">{t.save}</SubmitButton></div>
+                  </ActionForm>
+                </div>
+              );
+            })}
           </div>
           <ActionForm action={addUnitType} resetOnSuccess className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4 sm:grid-cols-3">
             <Field label={t.set_name_ar}><input name="name_ar" required className="input" /></Field>
             <Field label={t.set_name_en}><input name="name_en" dir="ltr" className="input" /></Field>
             <Field label={t.type}>
               <select name="kind" className="input">
-                <option value="room">{lang === "ar" ? "غرفة" : "Room"}</option>
-                <option value="suite">{lang === "ar" ? "جناح" : "Suite"}</option>
-                <option value="studio">{lang === "ar" ? "استوديو" : "Studio"}</option>
-                <option value="apartment">{lang === "ar" ? "شقة" : "Apartment"}</option>
+                {UNIT_KINDS.map((k) => <option key={k} value={k}>{t[`ukind_${k}` as DictKey]}</option>)}
               </select>
             </Field>
             <Field label={t.set_nightly}><input name="nightly" required inputMode="decimal" className="input" /></Field>
@@ -204,65 +233,81 @@ export default async function SettingsPage() {
                 <SubmitButton className="btn-ghost">{t.add}</SubmitButton>
               </div>
             </ActionForm>
-            <ActionForm action={bulkUnits} resetOnSuccess className="space-y-2">
-              <div className="label">{t.set_bulk_units}</div>
-              <input name="spec" required placeholder="101-120, 201-220" dir="ltr" className="input" />
-              <div className="flex gap-2">
-                <select name="unit_type" required className="input">
-                  {(types ?? []).map((x) => <option key={x.id} value={x.id}>{x.name_ar}</option>)}
-                </select>
-                <select name="floor" className="input">
-                  <option value="">—</option>
-                  {(floors ?? []).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                </select>
-                <SubmitButton className="btn-primary">{t.add}</SubmitButton>
-              </div>
-              <p className="text-xs text-muted">{t.set_bulk_hint}</p>
-            </ActionForm>
+            {(types ?? []).length ? (
+              <BulkUnitsForm
+                action={bulkAddUnits}
+                types={(types ?? []).map((x) => ({ id: x.id, name: x.name_ar }))}
+                floors={(floors ?? []).map((f) => ({ id: f.id, name: f.name, sort: f.sort }))}
+                existing={(units ?? []).map((u) => u.number)}
+                labels={{
+                  title: t.set_bulk_units, type: t.type, floor: t.floor, noFloor: t.bulk_no_floor, sequence: t.bulk_sequence, list: t.bulk_list,
+                  prefix: t.bulk_prefix, prefixPh: "A-", start: t.bulk_start, count: t.bulk_count, listPh: "101 102 105 PH1",
+                  preview: t.bulk_preview, existing: t.bulk_existing, add: t.bulk_add, none: t.bulk_none,
+                }}
+              />
+            ) : (
+              <p className="text-sm text-muted">{t.bulk_need_type}</p>
+            )}
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {(units ?? []).map((u) => (
-              <ActionForm key={u.id} action={setUnitService}>
-                <input type="hidden" name="id" value={u.id} />
-                <input type="hidden" name="out" value={u.status === "out_of_service" ? "0" : "1"} />
-                <button
-                  disabled={!["available", "dirty", "out_of_service"].includes(u.status)}
-                  title={`${typeName.get(u.unit_type_id)} — ${t[`st_${u.status}` as DictKey]}`}
-                  className={`rounded-lg border border-line px-2 py-1 text-xs ${u.active ? "" : "opacity-40 line-through"}`}
-                >
-                  <span className="num font-semibold">{u.number}</span>{" "}
-                  {u.status === "out_of_service" ? <Badge tone={UNIT_STATUS_TONE[u.status]}><span aria-hidden>{UNIT_STATUS_EMOJI.out_of_service}</span> {t.st_out_of_service}</Badge> : null}
-                </button>
-              </ActionForm>
-            ))}
-          </div>
-          <EditDetails label={t.set_edit_units} className="mt-3">
-            <div className="max-h-96 space-y-1.5 overflow-y-auto">
-              {(units ?? []).map((u) => (
-                <div key={u.id} className="flex flex-wrap items-center gap-1.5">
-                  <ActionForm action={updateUnit} className="flex flex-1 flex-wrap gap-1.5">
-                    <input type="hidden" name="id" value={u.id} />
-                    <input name="number" defaultValue={u.number} required aria-label={t.unit} className="input w-20 py-1.5" />
-                    <select name="unit_type" defaultValue={u.unit_type_id} aria-label={t.type} className="input w-auto py-1.5">
-                      {(types ?? []).map((x) => <option key={x.id} value={x.id}>{x.name_ar}</option>)}
-                    </select>
-                    <select name="floor" defaultValue={u.floor_id ?? ""} aria-label={t.floor} className="input w-auto py-1.5">
-                      <option value="">—</option>
-                      {(floors ?? []).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                    </select>
-                    <SubmitButton className="btn-ghost btn-sm">{t.save}</SubmitButton>
-                  </ActionForm>
-                  <ActionForm action={setUnitActive}>
-                    <input type="hidden" name="id" value={u.id} />
-                    <input type="hidden" name="active" value={u.active ? "0" : "1"} />
-                    <SubmitButton className={`btn-ghost btn-sm ${u.active ? "text-danger" : "text-ok"}`} confirm={u.active ? t.unit_deactivate_q : undefined}>
-                      {u.active ? t.unit_deactivate : t.unit_activate}
-                    </SubmitButton>
-                  </ActionForm>
-                </div>
-              ))}
+          {(units ?? []).length === 0 ? (
+            <p className="text-sm text-muted">{t.units_none}</p>
+          ) : (
+            <div className="max-h-[28rem] overflow-y-auto">
+              <table className="table">
+                <thead><tr><th>{t.unit}</th><th>{t.type}</th><th>{t.floor}</th><th>{t.status}</th><th></th></tr></thead>
+                <tbody>
+                  {(units ?? []).map((u) => (
+                    <tr key={u.id} className={u.active ? undefined : "opacity-55"}>
+                      <td className="num font-semibold">{u.number}</td>
+                      <td className="text-xs">{typeName.get(u.unit_type_id)}</td>
+                      <td className="text-xs">{floorName.get(u.floor_id ?? "") ?? "—"}</td>
+                      <td>
+                        {!u.active ? <Badge tone="gray">{t.unit_inactive}</Badge> : (
+                          <Badge tone={UNIT_STATUS_TONE[u.status]}><span aria-hidden>{UNIT_STATUS_EMOJI[u.status]}</span> {t[`st_${u.status}` as DictKey]}</Badge>
+                        )}
+                      </td>
+                      <td>
+                        <div className="flex flex-wrap items-start justify-end gap-1">
+                          <EditDetails label={t.edit}>
+                            <ActionForm action={updateUnit} className="grid min-w-56 gap-1.5">
+                              <input type="hidden" name="id" value={u.id} />
+                              <input name="number" defaultValue={u.number} required aria-label={t.unit} placeholder={t.unit} className="input py-1.5" />
+                              <select name="unit_type" defaultValue={u.unit_type_id} aria-label={t.type} className="input py-1.5">
+                                {(types ?? []).map((x) => <option key={x.id} value={x.id}>{x.name_ar}</option>)}
+                              </select>
+                              <select name="floor" defaultValue={u.floor_id ?? ""} aria-label={t.floor} className="input py-1.5">
+                                <option value="">—</option>
+                                {(floors ?? []).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                              </select>
+                              <SubmitButton className="btn-primary btn-sm">{t.save}</SubmitButton>
+                            </ActionForm>
+                            {u.active && ["available", "dirty", "out_of_service"].includes(u.status) ? (
+                              <ActionForm action={setUnitService} className="mt-1.5">
+                                <input type="hidden" name="id" value={u.id} />
+                                <input type="hidden" name="out" value={u.status === "out_of_service" ? "0" : "1"} />
+                                <SubmitButton className="btn-ghost btn-sm w-full">{u.status === "out_of_service" ? t.unit_back_in_service : t.unit_out_of_service}</SubmitButton>
+                              </ActionForm>
+                            ) : null}
+                          </EditDetails>
+                          <ActionForm action={setUnitActive}>
+                            <input type="hidden" name="id" value={u.id} />
+                            <input type="hidden" name="active" value={u.active ? "0" : "1"} />
+                            <SubmitButton className={`btn-ghost btn-sm ${u.active ? "" : "text-ok"}`} confirm={u.active ? t.unit_deactivate_q : undefined}>
+                              {u.active ? t.unit_deactivate : t.unit_activate}
+                            </SubmitButton>
+                          </ActionForm>
+                          <ActionForm action={deleteUnit}>
+                            <input type="hidden" name="id" value={u.id} />
+                            <SubmitButton className="btn-ghost btn-sm text-danger" confirm={t.unit_delete_q.replace("{n}", u.number)}>{t.delete}</SubmitButton>
+                          </ActionForm>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </EditDetails>
+          )}
         </Section>
 
         <Section title={t.set_staff}>

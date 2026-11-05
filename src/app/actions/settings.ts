@@ -289,3 +289,63 @@ export async function updateRatePlan(_: ActionResult, fd: FormData) {
 export async function cancelInvite(_: ActionResult, fd: FormData) {
   return run((c) => c.supabase.from("invitations").delete().eq("id", s(fd, "id")!).is("accepted_at", null));
 }
+
+// ---------------------------------------------------------------- unit types & units: rename / delete / bulk add
+const KINDS = ["room", "suite", "studio", "apartment"];
+
+export async function renameUnitType(_: ActionResult, fd: FormData) {
+  const kind = s(fd, "kind") ?? "room";
+  return run((c) =>
+    c.supabase
+      .from("unit_types")
+      .update({ name_ar: s(fd, "name_ar") ?? "", name_en: s(fd, "name_en"), kind: KINDS.includes(kind) ? kind : "room" })
+      .eq("id", s(fd, "id")!),
+  );
+}
+
+/** Only a type no unit uses can be removed (its seasonal prices go with it). */
+export async function deleteUnitType(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const id = s(fd, "id")!;
+  const { count } = await ctx.supabase.from("units").select("id", { count: "exact", head: true }).eq("unit_type_id", id);
+  if (count) return { error: t.type_has_units.replace("{n}", String(count)) };
+  const { error } = await ctx.supabase.from("unit_types").delete().eq("id", id);
+  if (error) return { error: errorMessage(t, error) };
+  revalidatePath("/settings");
+  return { ok: t.deleted };
+}
+
+/** A unit added by mistake (never booked, no expenses) can be removed; otherwise it is deactivated to keep its history. */
+export async function deleteUnit(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const id = s(fd, "id")!;
+  const [{ count: res }, { count: exp }] = await Promise.all([
+    ctx.supabase.from("reservations").select("id", { count: "exact", head: true }).eq("unit_id", id),
+    ctx.supabase.from("expenses").select("id", { count: "exact", head: true }).eq("unit_id", id),
+  ]);
+  if (res || exp) return { error: t.unit_used_deactivate };
+  const { error } = await ctx.supabase.from("units").delete().eq("id", id);
+  if (error) return { error: (error as { code?: string }).code === "23503" ? t.unit_used_deactivate : errorMessage(t, error) };
+  revalidatePath("/settings");
+  revalidatePath("/board");
+  return { ok: t.deleted };
+}
+
+/** Bulk add from the list the form previewed; numbers that already exist are skipped. */
+export async function bulkAddUnits(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const numbers = (s(fd, "numbers") ?? "").split(",").map((x) => x.trim()).filter((x) => /^[\p{L}\p{N}-]{1,20}$/u.test(x));
+  if (numbers.length === 0) return { error: t.bulk_none };
+  if (numbers.length > 500) return { error: t.bulk_too_many };
+  const { data, error } = await ctx.supabase.rpc("bulk_create_units", {
+    p_property: ctx.property.id, p_unit_type: s(fd, "unit_type")!, p_floor: s(fd, "floor"), p_spec: numbers.join(","),
+  });
+  if (error) return { error: errorMessage(t, error) };
+  revalidatePath("/settings");
+  revalidatePath("/board");
+  const added = Number(data ?? 0);
+  return { ok: t.bulk_done.replace("{n}", String(added)).replace("{skipped}", String(numbers.length - added)) };
+}
