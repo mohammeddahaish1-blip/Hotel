@@ -81,22 +81,22 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
         </div>
         <div className="space-y-4">
           <Section title={t.rep_by_source}>
-            <table className="table">
+            <div className="overflow-x-auto"><table className="table">
               <tbody>
                 {[...bySource.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => (
                   <tr key={k}><td>{t[`src_${k}` as DictKey]}</td><td className="num text-end">{omr(v, lang)}</td></tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </Section>
           <Section title={t.method}>
-            <table className="table">
+            <div className="overflow-x-auto"><table className="table">
               <tbody>
                 {[...byMethod.entries()].map(([k, v]) => (
                   <tr key={k}><td>{t[`pm_${k}` as DictKey]}</td><td className="num text-end">{omr(v, lang)}</td></tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </Section>
         </div>
       </div>

@@ -126,14 +126,14 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
                   <div className="rounded-xl bg-surface-2 p-2">{t.invoiced}: <b className="num">{omr(st.invoiced_revenue, lang)}</b></div>
                   <div className="rounded-xl bg-surface-2 p-2">{t.set_staff}: <b className="num">{st.employees}</b></div>
                 </div>
-                <table className="table">
+                <div className="overflow-x-auto"><table className="table">
                   <thead><tr><th>{t.nationality}</th><th>{t.guest}</th><th>{t.nightsLabel}</th></tr></thead>
                   <tbody>
                     {st.by_nationality.map((n) => (
                       <tr key={n.nationality}><td>{n.nationality}</td><td className="num">{n.guests}</td><td className="num">{n.nights}</td></tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
               </div>
             ) : null}
           </Section>
@@ -143,7 +143,7 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
             {(taxes ?? []).length === 0 ? (
               <Empty>{t.none}</Empty>
             ) : (
-              <table className="table">
+              <div className="overflow-x-auto"><table className="table">
                 <thead><tr><th>{t.taxes}</th><th>{t.invoiced}</th><th>{t.credited}</th><th>{t.net}</th></tr></thead>
                 <tbody>
                   {((taxes ?? []) as Tax[]).map((x) => (
@@ -155,7 +155,7 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </Section>
         </div>
@@ -164,7 +164,7 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
           {(history ?? []).length === 0 ? (
             <Empty>{t.none}</Empty>
           ) : (
-            <table className="table">
+            <div className="overflow-x-auto"><table className="table">
               <tbody>
                 {(history ?? []).map((h) => {
                   const p = parseRange(h.period as string);
@@ -187,7 +187,7 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           )}
         </Section>
       </div>

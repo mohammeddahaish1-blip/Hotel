@@ -69,37 +69,37 @@ export default async function OwnerPage({ params, searchParams }: PageProps<"/pr
             <div className="brand-word text-2xl text-brand">نُزُل</div>
           </div>
         </header>
-        <table className="table mb-4">
+        <div className="overflow-x-auto"><table className="table mb-4">
           <tbody>
             {rows.map(([k, v, c]) => (
               <tr key={k}><td>{d[k]}{k === "own_commission_amt" ? ` (${s.owner.commission_bp / 100}%)` : ""}</td><td className={`num text-end ${c ?? ""}`}>{omr(v, L)}</td></tr>
             ))}
             <tr className="font-bold"><td>{d.own_closing}</td><td className={`num text-end ${s.closing < 0 ? "text-danger" : "text-brand"}`}>{omr(s.closing, L)}</td></tr>
           </tbody>
-        </table>
+        </table></div>
         {s.units.length ? (
           <>
             <h3 className="mb-1 font-semibold">{d.own_units}</h3>
-            <table className="table mb-4">
+            <div className="overflow-x-auto"><table className="table mb-4">
               <thead><tr><th>{d.unit}</th><th>{d.own_revenue}</th><th>{d.own_expenses}</th></tr></thead>
               <tbody>{s.units.map((u) => <tr key={u.id}><td className="num">{u.number}</td><td className="num">{omr(u.revenue, L)}</td><td className="num">{omr(u.expenses, L)}</td></tr>)}</tbody>
-            </table>
+            </table></div>
           </>
         ) : null}
         {s.expense_lines.length ? (
           <>
             <h3 className="mb-1 font-semibold">{d.own_expenses}</h3>
-            <table className="table mb-4">
+            <div className="overflow-x-auto"><table className="table mb-4">
               <tbody>{s.expense_lines.map((e, i) => (
                 <tr key={i}><td className="text-xs">{gregorian(e.date, L)}</td><td className="num text-xs">{e.unit}</td><td>{e.description} <span className="text-xs text-muted">{d[`ec_${e.category}` as DictKey]}</span></td><td className="num text-end">{omr(e.amount, L)}</td></tr>
               ))}</tbody>
-            </table>
+            </table></div>
           </>
         ) : null}
         {s.payout_lines.length ? (
           <>
             <h3 className="mb-1 font-semibold">{d.own_payouts}</h3>
-            <table className="table">
+            <div className="overflow-x-auto"><table className="table">
               <tbody>{s.payout_lines.map((p, i) => (
                 <tr key={i}>
                   <td className="text-xs">{gregorian(p.date, L)}</td>
@@ -116,7 +116,7 @@ export default async function OwnerPage({ params, searchParams }: PageProps<"/pr
                   ) : null}
                 </tr>
               ))}</tbody>
-            </table>
+            </table></div>
           </>
         ) : null}
       </article>

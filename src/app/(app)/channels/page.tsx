@@ -48,7 +48,7 @@ export default async function ChannelsPage() {
           {(blocks ?? []).length === 0 ? (
             <Empty>{t.ch_no_blocks}</Empty>
           ) : (
-            <table className="table">
+            <div className="overflow-x-auto"><table className="table">
               <thead><tr><th>{t.unit}</th><th>{t.source}</th><th>{t.from}</th><th>{t.to}</th><th></th></tr></thead>
               <tbody>
                 {(blocks ?? []).map((b) => {
@@ -65,7 +65,7 @@ export default async function ChannelsPage() {
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           )}
         </Section>
 

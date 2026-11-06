@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* A grid without explicit columns gets one column that never grows past the screen because of a
+   wide child (table, long text, a native date field); grid-cols-* utilities still override it. */
+@layer base {
+  :where(.grid) { grid-template-columns: minmax(0, 1fr); }
+  :where(.grid) > * { min-width: 0; }
+}
+
 :root {
   --bg: #f6f4ef;
   --surface: #ffffff;
@@ -98,6 +105,29 @@ body {
   .btn-sm { @apply px-3 py-1.5 text-xs rounded-lg; }
   .input { @apply w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20; }
   .label { @apply mb-1 block text-xs font-semibold text-muted; }
+
+  /* Fields must never push their column wider than the grid gives them (all browsers). */
+  .input { min-width: 0; max-width: 100%; }
+  label:has(> .input), label:has(> * > .input) { min-width: 0; }
+
+  /* Safari (iPhone / iPad) gives native date & time fields a fixed intrinsic width and its own
+     height, so they overflow their column and cover the next field or button. Drop the native
+     box and keep the picker. */
+  input.input[type="date"], input.input[type="time"], input.input[type="datetime-local"], input.input[type="month"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    min-height: 2.625rem;
+    line-height: 1.25rem;
+    text-align: start;
+  }
+  input.input::-webkit-date-and-time-value { text-align: start; margin: 0; }
+  input.input::-webkit-datetime-edit { padding: 0; }
+
+  /* iPhone zooms the page into any field whose text is under 16px; keep it at 16px on phones. */
+  @media (max-width: 639px) {
+    .input { font-size: 16px; }
+  }
   .table { @apply w-full text-sm; }
   .table th { @apply border-b border-line px-3 py-2 text-start text-xs font-semibold text-muted; }
   .table td { @apply border-b border-line px-3 py-2.5 align-middle; }

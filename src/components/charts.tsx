@@ -114,7 +114,7 @@ function DataTable({ data, label, columns }: { data: Datum[]; label: string; col
   return (
     <details className="mt-3 text-xs">
       <summary className="cursor-pointer text-muted">{label}</summary>
-      <table className="table mt-2">
+      <div className="overflow-x-auto"><table className="table mt-2">
         <thead>
           <tr><th>{columns[0]}</th><th>{columns[1]}</th></tr>
         </thead>
@@ -123,7 +123,7 @@ function DataTable({ data, label, columns }: { data: Datum[]; label: string; col
             <tr key={d.key}><td>{d.label}</td><td dir="auto" className="num">{d.display}</td></tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
     </details>
   );
 }

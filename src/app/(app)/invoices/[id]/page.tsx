@@ -84,7 +84,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
           ) : null}
         </section>
 
-        <table className="table mt-2">
+        <div className="overflow-x-auto"><table className="table mt-2">
           <thead><tr><th>{L("date")}</th><th>{L("description")}</th><th className="text-end">{L("amount")}</th></tr></thead>
           <tbody>
             {s.lines.map((l) => (
@@ -95,7 +95,7 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
 
         <dl className="ms-auto mt-4 max-w-sm space-y-1.5 text-sm">
           <div className="flex justify-between"><dt>{L("subtotal")}</dt><dd className="num">{omr(inv.subtotal, docLang)}</dd></div>

@@ -158,7 +158,7 @@ export default async function SettingsPage() {
         </Section>
 
         <Section title={t.set_rate_plans}>
-          <table className="table mb-3">
+          <div className="overflow-x-auto"><table className="table mb-3">
             <tbody>
               {(plans ?? []).map((p) => {
                 const r = parseRange(p.period as string);
@@ -191,7 +191,7 @@ export default async function SettingsPage() {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
           <ActionForm action={addRatePlan} resetOnSuccess className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <Field label={t.set_season_name}><input name="name" required className="input" /></Field>
             <Field label={t.type}>

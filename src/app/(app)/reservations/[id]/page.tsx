@@ -432,7 +432,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
 
           {schedules.length ? (
             <Section title={t.res_schedule}>
-              <table className="table">
+              <div className="overflow-x-auto"><table className="table">
                 <thead><tr><th>{t.date}</th><th>{t.from} → {t.to}</th><th>{t.amount}</th><th>{t.status}</th></tr></thead>
                 <tbody>
                   {schedules.map((b) => {
@@ -447,7 +447,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
                     );
                   })}
                 </tbody>
-              </table>
+              </table></div>
             </Section>
           ) : null}
         </div>
