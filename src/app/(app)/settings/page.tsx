@@ -209,7 +209,7 @@ export default async function SettingsPage() {
 
         <Section title={`${t.set_units} (${(units ?? []).length})`}>
           <div className="mb-4 grid gap-4 sm:grid-cols-2">
-            <ActionForm action={addFloor} resetOnSuccess className="space-y-2">
+            <div className="space-y-2">
               <div className="label">{t.set_floors}</div>
               <div className="flex flex-wrap gap-1.5">
                 {(floors ?? []).map((f) => (
@@ -227,12 +227,13 @@ export default async function SettingsPage() {
                   </EditDetails>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <input name="name" required placeholder={t.floor} className="input" />
-                <input name="sort" type="number" defaultValue={(floors ?? []).length + 1} className="input w-20" />
+              {/* its own form: the floor editors above are forms too, and forms must not be nested */}
+              <ActionForm action={addFloor} resetOnSuccess className="flex gap-2">
+                <input name="name" required placeholder={t.floor} aria-label={t.floor} className="input" />
+                <input name="sort" type="number" defaultValue={(floors ?? []).length + 1} aria-label="#" className="input w-20" />
                 <SubmitButton className="btn-ghost">{t.add}</SubmitButton>
-              </div>
-            </ActionForm>
+              </ActionForm>
+            </div>
             {(types ?? []).length ? (
               <BulkUnitsForm
                 action={bulkAddUnits}

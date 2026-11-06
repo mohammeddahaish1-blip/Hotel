@@ -347,5 +347,7 @@ export async function bulkAddUnits(_: ActionResult, fd: FormData): Promise<Actio
   revalidatePath("/settings");
   revalidatePath("/board");
   const added = Number(data ?? 0);
-  return { ok: t.bulk_done.replace("{n}", String(added)).replace("{skipped}", String(numbers.length - added)) };
+  // numbers already in use were dropped in the browser; the RPC also skips any taken in the meantime
+  const preSkipped = Math.min(Math.max(Math.floor(Number(s(fd, "skipped")) || 0), 0), 500);
+  return { ok: t.bulk_done.replace("{n}", String(added)).replace("{skipped}", String(numbers.length - added + preSkipped)) };
 }

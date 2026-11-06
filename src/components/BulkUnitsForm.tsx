@@ -110,6 +110,7 @@ export function BulkUnitsForm({ action, types, floors, existing, labels }: {
       </div>
 
       <input type="hidden" name="numbers" value={fresh.join(",")} />
+      <input type="hidden" name="skipped" value={numbers.length - fresh.length} />
       <SubmitButton className="btn-primary w-full">{labels.add.replace("{n}", String(fresh.length))}</SubmitButton>
     </ActionForm>
   );
