@@ -41,14 +41,15 @@ export function LoginForm({ t, notice }: { t: T; notice?: string }) {
 
     if (mode === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      setPending(false);
       if (error) {
+        setPending(false);
         if (error.code === "invalid_credentials") return setError(t.invalid_login);
         if (error.code === "email_not_confirmed") return setError(t.email_not_confirmed);
         return setError(error.message);
       }
-      router.replace("/");
-      router.refresh();
+      // One full navigation: the server sends the user straight to their home page (one request
+      // instead of two client round trips), and the button keeps spinning until it opens.
+      window.location.replace("/");
     } else if (mode === "signup") {
       const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callback } });
       setPending(false);
