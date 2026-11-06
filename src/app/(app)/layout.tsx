@@ -1,3 +1,4 @@
+import { initial } from "@/lib/profile-link";
 import { getCtx, can, hasRole, AREAS } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
@@ -79,9 +80,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         ...(can(ctx, "settings") && hasRole(ctx, ["manager"]) ? [{ href: "/settings/automation", label: t.auto_title }] : []),
       ],
     },
-    { key: "activity", label: t.nav_activity, tabs: [{ href: "/activity", label: t.nav_activity }] },
-    { key: "profile", label: t.nav_profile, tabs: [{ href: "/profile", label: t.nav_profile }] },
-    { key: "audit", label: t.nav_audit, tabs: tab("audit") },
+    // one log: everyone's operations for owner/manager/accountant, your own for everyone else
+    { key: "audit", label: t.nav_activity, tabs: [{ href: "/audit", label: t.nav_activity }], also: ["/activity"] },
   ].filter((g) => g.tabs.length > 0);
   const alerts = await loadAlerts(ctx, t, lang);
   const roleLabel = ctx.jobTitle || t[`role_${ctx.role}` as DictKey];
@@ -97,8 +97,16 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <NavLinks groups={groups} variant="side" />
         </nav>
         <div className="mt-4 border-t border-line pt-3 text-xs text-muted">
-          <Link href="/profile" className="font-semibold text-ink hover:text-brand">{ctx.fullName || ctx.email}</Link>
-          <div>{roleLabel}</div>
+          {/* your name opens your account (the former "My account" menu item) */}
+          <Link href="/profile" title={t.nav_profile} className="-mx-2 flex items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-surface-2">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-soft text-base font-bold text-brand" aria-hidden>
+              {initial(ctx.fullName || ctx.email)}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-bold text-ink">{ctx.fullName || ctx.email}</span>
+              <span className="block truncate">{roleLabel}</span>
+            </span>
+          </Link>
           <div className="mt-3 flex gap-2">
             <LangToggle current={lang} />
             <SignOut label={t.signOut} />
@@ -108,9 +116,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <div className="min-w-0 flex-1">
         <header className="no-print sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between px-4 py-2">
-            <div>
+            <div className="min-w-0">
               <div className="brand-word text-2xl text-brand">{t.appName}</div>
-              <div className="text-xs text-muted">{propertyName} · {roleLabel}</div>
+              <Link href="/profile" title={t.nav_profile} className="flex items-center gap-1.5 text-xs text-muted hover:text-brand">
+                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-brand-soft text-[10px] font-bold text-brand" aria-hidden>
+                  {initial(ctx.fullName || ctx.email)}
+                </span>
+                <span className="truncate">{ctx.fullName || ctx.email} · {roleLabel}</span>
+              </Link>
             </div>
             <div className="flex gap-2">
               <LangToggle current={lang} />

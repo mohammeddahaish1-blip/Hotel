@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getCtx } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { errorMessage } from "@/lib/errors";
-import { toBaisa } from "@/lib/format";
+import { normalizePhone, parseBaisa, toBaisa } from "@/lib/format";
+import { hasRole } from "@/lib/auth";
 import type { ActionResult } from "@/components/ActionForm";
 import { moneyError } from "@/lib/money";
 
@@ -195,6 +196,63 @@ export async function updateStaffProfile(_: ActionResult, fd: FormData) {
   );
   revalidatePath(`/profile/${userId}`);
   return res;
+}
+
+/** Profile page: one field edited in place. Only that column is written, so other details stay as they are. */
+export async function updateProfileField(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const userId = s(fd, "user_id") ?? "";
+  const field = s(fd, "field") ?? "";
+  const raw = s(fd, "value");
+  if (!/^[0-9a-f-]{36}$/.test(userId) || !hasRole(ctx, ["manager"])) return { error: t.err_FORBIDDEN };
+  // same rule as the profile page: nobody but the owner edits the owner's details
+  const { data: target } = await ctx.supabase.from("memberships").select("role").eq("tenant_id", ctx.tenantId).eq("user_id", userId).maybeSingle();
+  if (!target || (target.role === "owner" && userId !== ctx.userId)) return { error: t.err_FORBIDDEN };
+  let patch: Record<string, string | number | null>;
+  let table: "staff_profiles" | "memberships" = "staff_profiles";
+  switch (field) {
+    case "phone": {
+      const p = normalizePhone(raw);
+      if (p === null) return { error: t.err_INVALID_PHONE };
+      patch = { phone: p || null };
+      break;
+    }
+    case "civil_id":
+      patch = { civil_id: raw?.replace(/\s/g, "").slice(0, 20) ?? null };
+      break;
+    case "salary": {
+      const bad = await moneyError(fd, { value: "min0" });
+      if (bad) return bad;
+      patch = { salary: raw ? parseBaisa(raw) : null };
+      break;
+    }
+    case "work_card_no":
+      patch = { work_card_no: raw?.slice(0, 30) ?? null };
+      break;
+    case "work_card_expiry":
+      if (raw && !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { error: t.err_invalid_value };
+      patch = { work_card_expiry: raw };
+      break;
+    case "full_name":
+      if (!raw) return { error: t.err_GUEST_NAME_REQUIRED };
+      table = "memberships";
+      patch = { full_name: raw.slice(0, 120) };
+      break;
+    case "job_title":
+      table = "memberships";
+      patch = { job_title: raw?.slice(0, 60) ?? null };
+      break;
+    default:
+      return { error: t.err_invalid_value };
+  }
+  const { error } = table === "memberships"
+    ? await ctx.supabase.from("memberships").update(patch).eq("tenant_id", ctx.tenantId).eq("user_id", userId)
+    : await ctx.supabase.from("staff_profiles").upsert({ tenant_id: ctx.tenantId, user_id: userId, ...patch });
+  if (error) return { error: errorMessage(t, error) };
+  ["/profile", `/profile/${userId}`, "/settings"].forEach((x) => revalidatePath(x));
+  if (table === "memberships") revalidatePath("/", "layout");
+  return { ok: t.saved };
 }
 
 export async function updateMember(_: ActionResult, fd: FormData) {

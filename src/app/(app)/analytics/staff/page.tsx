@@ -1,3 +1,5 @@
+import { profileHref } from "@/lib/profile-link";
+import Link from "next/link";
 import { Star } from "lucide-react";
 import { hasRole, requireArea, type Role } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -105,7 +107,7 @@ export default async function StaffPerformancePage({ searchParams }: PageProps<"
                         <div className="flex items-center gap-2">
                           {i === 0 && r.pts > 0 ? <Badge tone="warn"><Star className="size-3.5 shrink-0" fill="currentColor" /></Badge> : null}
                           <div>
-                            <div className="font-semibold">{name(r)}</div>
+                            <Link href={profileHref(ctx, r.user_id) ?? "#"} className="font-semibold hover:text-brand hover:underline">{name(r)}</Link>
                             <div className="text-xs text-muted">{title(r)}</div>
                           </div>
                         </div>

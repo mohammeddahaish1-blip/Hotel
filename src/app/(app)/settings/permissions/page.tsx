@@ -1,3 +1,4 @@
+import { initial, profileHref } from "@/lib/profile-link";
 import Link from "next/link";
 import { AREAS, ROLE_ACCESS, requireArea, type Role } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -59,7 +60,7 @@ export default async function PermissionsPage({ searchParams }: PageProps<"/sett
                       <span
                         className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold ${isSel ? "bg-white/20" : "bg-brand-soft text-brand"}`}
                       >
-                        {nameOf(m).trim().charAt(0)}
+                        {initial(nameOf(m))}
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-semibold">{nameOf(m)}</span>
@@ -84,10 +85,10 @@ export default async function PermissionsPage({ searchParams }: PageProps<"/sett
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                 <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-lg font-bold text-brand">
-                  {nameOf(selected).trim().charAt(0)}
+                  {initial(nameOf(selected))}
                 </span>
                 <div>
-                  <div className="text-lg font-bold">{nameOf(selected)}</div>
+                  <Link href={profileHref(ctx, selected.user_id) ?? "#"} className="text-lg font-bold hover:text-brand hover:underline">{nameOf(selected)}</Link>
                   <div className="text-sm text-muted">{selected.job_title || t[`role_${selected.role}` as DictKey]}</div>
                 </div>
               </div>
