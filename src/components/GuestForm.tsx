@@ -9,6 +9,7 @@ import type { Dict } from "@/lib/i18n/dict";
 import { errorMessage } from "@/lib/errors";
 import type { CardRead } from "@/lib/card-reader";
 import { CardReader } from "@/components/CardReader";
+import { normalizePhone } from "@/lib/format";
 
 type Source = "reader" | "camera";
 type Scanned = { before: GuestInput; beforeFile: File | null; data: CardRead; source: Source };
@@ -124,6 +125,9 @@ export function GuestForm({
     const fd = new FormData(e.currentTarget);
     const target = useMatch && match ? match.id : guest?.id;
     if (!target && fd.get("consent") !== "on") return setError(t.consent_required);
+    if (!String(values.full_name ?? "").trim()) return setError(t.err_GUEST_NAME_REQUIRED);
+    const phone = normalizePhone(String(values.phone ?? ""));
+    if (phone === null && (values.phone ?? "") !== (guest?.phone ?? "")) return setError(t.err_INVALID_PHONE);
     setPending(true);
     setError(null);
     const supabase = createClient();
@@ -137,7 +141,7 @@ export function GuestForm({
       doc_expiry: clean(values.doc_expiry),
       date_of_birth: clean(values.date_of_birth),
       gender: clean(values.gender),
-      phone: clean(values.phone),
+      phone: phone === null ? clean(values.phone) : phone || null,
       email: clean(values.email),
       preferred_language: values.preferred_language === "en" ? "en" : "ar",
       notes: clean(values.notes),
@@ -261,7 +265,12 @@ export function GuestForm({
         </L>
         <L label={t.doc_number}><input dir="ltr" className="input" value={values.doc_number ?? ""} onChange={set("doc_number")} /></L>
         <L label={t.nationality}><input dir="ltr" maxLength={3} className="input uppercase" value={values.nationality ?? ""} onChange={set("nationality")} /></L>
-        <L label={t.doc_expiry}><input type="date" className="input" value={values.doc_expiry ?? ""} onChange={set("doc_expiry")} /></L>
+        <L label={t.doc_expiry}>
+          <input type="date" className="input" value={values.doc_expiry ?? ""} onChange={set("doc_expiry")} />
+          {values.doc_expiry && values.doc_expiry < new Date().toISOString().slice(0, 10) ? (
+            <span role="alert" className="mt-1 block text-xs font-semibold text-danger">{t.doc_expired_warn}</span>
+          ) : null}
+        </L>
         <L label={t.dob}><input type="date" className="input" value={values.date_of_birth ?? ""} onChange={set("date_of_birth")} /></L>
         <L label={t.gender}>
           <select className="input" value={values.gender ?? ""} onChange={set("gender")}>

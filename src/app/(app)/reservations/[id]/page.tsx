@@ -42,7 +42,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
   const [{ data: r }, { data: folio }, { data: cheques }, { data: docs }, { data: units }, { data: contract }] = await Promise.all([
     db
       .from("reservations")
-      .select("*, guests(id, full_name, phone, preferred_language, doc_number, nationality), units(id, number, unit_types(name_ar))")
+      .select("*, guests(id, full_name, phone, preferred_language, doc_number, nationality, doc_expiry), units(id, number, unit_types(name_ar))")
       .eq("id", id)
       .maybeSingle(),
     db.from("folios").select("id, status").eq("reservation_id", id).maybeSingle(),
@@ -54,7 +54,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
     db.from("contracts").select("*, billing_schedules(*)").eq("reservation_id", id).maybeSingle(),
   ]);
   if (!r) notFound();
-  const guest = r.guests as unknown as { id: string; full_name: string; phone: string | null; preferred_language: string; doc_number: string | null; nationality: string | null };
+  const guest = r.guests as unknown as { id: string; full_name: string; phone: string | null; preferred_language: string; doc_number: string | null; nationality: string | null; doc_expiry: string | null };
   const unit = r.units as unknown as { id: string; number: string; unit_types: { name_ar: string } };
   const stay = parseRange(r.stay as string);
   const today = todayIn(ctx.property.timezone);
@@ -118,6 +118,9 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
               <div className="label">{t.guest}</div>
               <Link href={`/guests/${guest.id}`} className="font-semibold text-brand">{guest.full_name}</Link>
               <div dir="ltr" className="text-start text-xs text-muted">{guest.phone}</div>
+              {guest.doc_expiry && guest.doc_expiry < today ? (
+                <div role="alert" className="mt-1 text-xs font-semibold text-danger">{t.doc_expired_warn}</div>
+              ) : null}
             </div>
             <div>
               <div className="label">{t.unit}</div>

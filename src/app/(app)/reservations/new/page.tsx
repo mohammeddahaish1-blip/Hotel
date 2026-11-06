@@ -18,6 +18,7 @@ export default async function NewReservationPage({ searchParams }: PageProps<"/r
   const sp = await searchParams;
   const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : "");
   const today = todayIn(ctx.property.timezone);
+  const canBackdate = ctx.role === "owner" || ctx.role === "manager";
   const kind = str("kind") === "contract" ? "contract" : "nightly";
   const from = str("from") || today;
   const to = str("to") || addDays(from, kind === "contract" ? 30 : 1);
@@ -59,13 +60,16 @@ export default async function NewReservationPage({ searchParams }: PageProps<"/r
                   <option value="contract">{t.kind_contract}</option>
                 </select>
               </Field>
-              <Field label={t.res_check_in_date}><input type="date" name="from" defaultValue={from} min={today} required className="input" /></Field>
+              <Field label={t.res_check_in_date}><input type="date" name="from" defaultValue={from} min={canBackdate ? undefined : today} required className="input" /></Field>
               <Field label={t.res_check_out_date}><input type="date" name="to" defaultValue={to} required className="input" /></Field>
               {guestId ? <input type="hidden" name="guest" value={guestId} /> : null}
               <div className="flex items-end"><button className="btn-primary w-full">{t.search}</button></div>
             </form>
             {searched ? (
               <div className="mt-2 text-xs text-muted">{n} {t.nightsLabel} · {hijri(from, lang)} → {hijri(to, lang)}</div>
+            ) : null}
+            {searched && from < today ? (
+              <div role="alert" className="mt-2 text-xs font-semibold text-warn">{canBackdate ? t.res_past_warn : t.err_PAST_DATES}</div>
             ) : null}
             {error ? <div className="mt-3 text-sm text-danger">{error.message}</div> : null}
           </Section>

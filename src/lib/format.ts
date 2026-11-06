@@ -24,6 +24,18 @@ export function parseBaisa(raw: string | number | null | undefined): number | nu
   return Math.round(Number(v) * 1000);
 }
 
+/** Phone as stored: ASCII digits with an optional leading +; "" when empty; null when it cannot be a phone number. */
+export function normalizePhone(raw: string | null | undefined): string | null {
+  if (!raw) return "";
+  let v = raw
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x660))
+    .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x6f0))
+    .replace(/[\s\-.()\u200e\u200f]/g, "");
+  if (v.startsWith("00")) v = "+" + v.slice(2);
+  if (v === "") return "";
+  return /^\+?\d{7,15}$/.test(v) ? v : null;
+}
+
 /** Lenient conversion for display and already-validated input; invalid text counts as 0. */
 export function toBaisa(omr: string | number | null | undefined): number {
   return parseBaisa(omr) ?? 0;

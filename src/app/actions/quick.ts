@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { can, getCtx } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { errorMessage } from "@/lib/errors";
+import { normalizePhone } from "@/lib/format";
 
 export type SearchHit = { kind: "unit" | "reservation" | "guest"; id: string; title: string; subtitle: string; href: string };
 
@@ -69,7 +70,7 @@ export async function quickBook(input: {
       .insert({
         tenant_id: ctx.tenantId,
         full_name: g.full_name.trim(),
-        phone: g.phone?.trim() || null,
+        phone: normalizePhone(g.phone) || null,
         doc_type: g.doc_type || null,
         doc_number: g.doc_number?.trim() || null,
         nationality: g.nationality?.trim().toUpperCase() || null,

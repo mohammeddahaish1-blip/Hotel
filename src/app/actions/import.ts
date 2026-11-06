@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { can, getCtx, type Ctx } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { errorMessage } from "@/lib/errors";
-import { todayIn } from "@/lib/format";
+import { todayIn, normalizePhone } from "@/lib/format";
 import { counts, detect, IMPORT_TYPES, validate, type ImportRow, type ImportSheet, type ImportType, type Lookups } from "@/lib/import/detect";
 import { kindOf, readFile } from "@/lib/import/read";
 import { importLabels } from "@/lib/import/labels";
@@ -165,7 +165,7 @@ export async function commitImport(fd: FormData) {
 
     if (sheet.type === "guests") {
       await insertAll(rows, (r) => ({
-        tenant_id: ctx.tenantId, full_name: String(r.data.full_name), phone: r.data.phone as string | null,
+        tenant_id: ctx.tenantId, full_name: String(r.data.full_name), phone: normalizePhone(r.data.phone as string | null) || null,
         doc_type: (r.data.doc_type as never) ?? null, doc_number: r.data.doc_number as string | null,
         doc_expiry: r.data.doc_expiry as string | null, nationality: r.data.nationality as string | null,
         email: r.data.email as string | null,
@@ -188,7 +188,7 @@ export async function commitImport(fd: FormData) {
         let guest = (r.data.guest_id as string | undefined) ?? created.get(String(r.data.phone ?? r.data.guest_name));
         if (!guest) {
           const { data, error } = await db.from("guests")
-            .insert({ tenant_id: ctx.tenantId, full_name: String(r.data.guest_name), phone: r.data.phone as string | null, consent_at: new Date().toISOString(), consent_version: "import" })
+            .insert({ tenant_id: ctx.tenantId, full_name: String(r.data.guest_name), phone: normalizePhone(r.data.phone as string | null) || null, consent_at: new Date().toISOString(), consent_version: "import" })
             .select("id").single();
           if (error) { fail(r, error); continue; }
           guest = data.id as string;
