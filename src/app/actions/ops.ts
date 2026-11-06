@@ -53,14 +53,14 @@ export async function createReservation(_: ActionResult, fd: FormData): Promise<
 
 export async function checkIn(_: ActionResult, fd: FormData) {
   const id = s(fd, "id")!;
-  return run((c) => c.supabase.rpc("check_in", { p_res: id }), [`/reservations/${id}`, "/board"]);
+  return run((c) => c.supabase.rpc("check_in", { p_res: id }), [`/reservations/${id}`, "/board", "/night-audit"]);
 }
 
 export async function checkOut(_: ActionResult, fd: FormData) {
   const id = s(fd, "id")!;
   return run(
     (c) => c.supabase.rpc("check_out", { p_res: id, p_allow_balance: fd.get("allow_balance") === "1" }),
-    [`/reservations/${id}`, "/board", "/housekeeping"],
+    [`/reservations/${id}`, "/board", "/housekeeping", "/night-audit"],
   );
 }
 
@@ -68,7 +68,7 @@ export async function cancelReservation(_: ActionResult, fd: FormData) {
   const id = s(fd, "id")!;
   return run(
     (c) => c.supabase.rpc("cancel_reservation", { p_res: id, p_reason: s(fd, "reason"), p_no_show: fd.get("no_show") === "1" }),
-    [`/reservations/${id}`],
+    [`/reservations/${id}`, "/night-audit", "/board"],
   );
 }
 

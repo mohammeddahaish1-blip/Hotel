@@ -57,8 +57,10 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
                 .filter((r) => (r.floor_name ?? "—") === f)
                 .map((r) => {
                   const bookable = canBook && r.status === "available" && !r.reservation_id;
+                  const overdue = r.status === "occupied" && !!r.departure && r.departure < today;
+                  const leavingToday = r.status === "occupied" && r.departure === today;
                   const body = (
-                    <div className="card h-full p-3">
+                    <div className={`card h-full p-3 ${overdue ? "border-danger/60 bg-danger-soft/30" : ""}`}>
                       <div className="flex items-center justify-between">
                         <span className="num text-lg font-bold">{r.number}</span>
                         <Badge tone={UNIT_STATUS_TONE[r.status]}>
@@ -67,8 +69,13 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
                       </div>
                       <div className="mt-1 truncate text-xs text-muted">{r.type_name}</div>
                       {r.guest_name ? <div className="mt-2 truncate text-sm">{r.guest_name}</div> : null}
+                      {overdue ? (
+                        <div className="mt-1"><Badge tone="danger">{t.board_overdue}</Badge></div>
+                      ) : leavingToday ? (
+                        <div className="mt-1"><Badge tone="warn">{t.board_leaving_today}</Badge></div>
+                      ) : null}
                       {r.departure ? (
-                        <div className="text-xs text-muted">{t.to}: {gregorian(r.departure, lang)}</div>
+                        <div className={`text-xs ${overdue ? "font-semibold text-danger" : "text-muted"}`}>{t.to}: {gregorian(r.departure, lang)}</div>
                       ) : r.next_arrival ? (
                         <div className="text-xs text-muted">{t.res_upcoming}: {gregorian(r.next_arrival, lang)}</div>
                       ) : null}

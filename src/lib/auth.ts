@@ -146,7 +146,7 @@ export function hasRole(ctx: Pick<Ctx, "role" | "roles">, roles: Role[]) {
 
 export async function requireArea(area: Area): Promise<Ctx> {
   const ctx = await getCtx();
-  if (!can(ctx, area)) redirect(homeFor(ctx));
+  if (!can(ctx, area)) redirect(ctx.areas.length ? `/denied?area=${area}` : homeFor(ctx));
   return ctx;
 }
 

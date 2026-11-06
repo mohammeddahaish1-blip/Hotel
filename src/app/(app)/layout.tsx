@@ -39,6 +39,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         ...tab("reservations"),
         ...tab("guests"),
         ...(can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"]) ? [{ href: "/messages", label: t.msg_title }] : []),
+        ...(can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"]) ? [{ href: "/night-audit", label: t.na_title }] : []),
       ],
       also: ["/invoices"],
     },
