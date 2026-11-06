@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import type { Dict, DictKey } from "@/lib/i18n/dict";
 import { addDays, nights, omr } from "@/lib/format";
 import { findGuests, quickBook, quoteUnit, type GuestLite } from "@/app/actions/quick";
+import { PhoneInput } from "@/components/PhoneInput";
 
 const SOURCES = ["direct", "walk_in", "phone", "whatsapp", "booking", "agoda", "expedia", "airbnb", "corporate", "other"];
 
@@ -149,7 +150,9 @@ export function QuickBook({ target, today, t, lang, onClose }: { target: QuickBo
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   <input value={ng.full_name} onChange={(e) => setNg({ ...ng, full_name: e.target.value })} placeholder={t.full_name} className="input col-span-2" />
-                  <input value={ng.phone} onChange={(e) => setNg({ ...ng, phone: e.target.value })} placeholder={`${t.phone} +968`} dir="ltr" className="input" />
+                  <div className="col-span-2">
+                    <PhoneInput value={ng.phone} onChange={(v) => setNg((x) => ({ ...x, phone: v }))} nationality={ng.nationality || null} label={t.phone} labels={{ country: t.phone_country, search: t.phone_search, none: t.phone_none }} />
+                  </div>
                   <input value={ng.nationality} onChange={(e) => setNg({ ...ng, nationality: e.target.value })} placeholder="OMN" maxLength={3} dir="ltr" className="input uppercase" />
                   <select value={ng.doc_type} onChange={(e) => setNg({ ...ng, doc_type: e.target.value })} className="input">
                     <option value="">{t.doc_type}</option>

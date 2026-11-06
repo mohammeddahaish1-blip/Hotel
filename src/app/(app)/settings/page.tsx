@@ -1,3 +1,4 @@
+import { PhoneInput } from "@/components/PhoneInput";
 import { Lock, ShieldCheck, FileSpreadsheet, FolderArchive } from "lucide-react";
 import Link from "next/link";
 import { AREAS, requireArea } from "@/lib/auth";
@@ -352,7 +353,7 @@ export default async function SettingsPage() {
                     </summary>
                     <ActionForm action={updateStaffProfile} className="mt-2 grid gap-2 sm:grid-cols-3">
                       <input type="hidden" name="user_id" value={m.user_id} />
-                      <input name="phone" defaultValue={pr?.phone ?? ""} placeholder={t.staff_phone} aria-label={t.staff_phone} dir="ltr" inputMode="tel" className="input py-2" />
+                      <PhoneInput name="phone" defaultValue={pr?.phone ?? ""} lang={lang} label={t.staff_phone} labels={{ country: t.phone_country, search: t.phone_search, none: t.phone_none }} />
                       <input name="civil_id" defaultValue={pr?.civil_id ?? ""} placeholder={t.staff_civil_id} aria-label={t.staff_civil_id} dir="ltr" inputMode="numeric" className="input py-2" />
                       <input name="salary" defaultValue={pr?.salary != null ? (pr.salary / 1000).toFixed(3) : ""} placeholder={t.staff_salary} aria-label={t.staff_salary} inputMode="decimal" className="input py-2" />
                       <input name="work_card_no" defaultValue={pr?.work_card_no ?? ""} placeholder={t.staff_card_no} aria-label={t.staff_card_no} dir="ltr" className="input py-2" />
@@ -390,7 +391,7 @@ export default async function SettingsPage() {
               <Field label={t.job_title}>
                 <input name="job_title" list="job-titles" required placeholder={t.job_title_hint} className="input" />
               </Field>
-              <Field label={t.staff_phone}><input name="phone" dir="ltr" inputMode="tel" placeholder="+968" className="input" /></Field>
+              <div><span className="label">{t.staff_phone}</span><PhoneInput name="phone" lang={lang} label={t.staff_phone} labels={{ country: t.phone_country, search: t.phone_search, none: t.phone_none }} /></div>
               <Field label={t.staff_civil_id}><input name="civil_id" dir="ltr" inputMode="numeric" className="input" /></Field>
               <Field label={t.staff_salary}><input name="salary" inputMode="decimal" placeholder="0.000" className="input" /></Field>
               <Field label={t.staff_card_no}><input name="work_card_no" dir="ltr" className="input" /></Field>

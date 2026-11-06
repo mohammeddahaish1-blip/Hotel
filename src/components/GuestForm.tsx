@@ -10,6 +10,7 @@ import { errorMessage } from "@/lib/errors";
 import type { CardRead } from "@/lib/card-reader";
 import { CardReader } from "@/components/CardReader";
 import { normalizePhone } from "@/lib/format";
+import { PhoneInput } from "@/components/PhoneInput";
 
 type Source = "reader" | "camera";
 type Scanned = { before: GuestInput; beforeFile: File | null; data: CardRead; source: Source };
@@ -279,7 +280,10 @@ export function GuestForm({
             <option value="F">{t.female}</option>
           </select>
         </L>
-        <L label={t.phone}><input dir="ltr" type="tel" placeholder="+968" className="input" value={values.phone ?? ""} onChange={set("phone")} /></L>
+        <div>
+          <span className="label">{t.phone}</span>
+          <PhoneInput value={values.phone ?? ""} onChange={(v) => setValues((x) => ({ ...x, phone: v }))} nationality={values.nationality ?? null} label={t.phone} labels={{ country: t.phone_country, search: t.phone_search, none: t.phone_none }} />
+        </div>
         <L label={t.email}><input dir="ltr" type="email" className="input" value={values.email ?? ""} onChange={set("email")} /></L>
         <L label={t.pref_lang}>
           <select className="input" value={values.preferred_language ?? "ar"} onChange={set("preferred_language")}>

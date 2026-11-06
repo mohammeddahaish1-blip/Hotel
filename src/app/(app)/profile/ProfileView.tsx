@@ -1,3 +1,4 @@
+import { PhoneInput } from "@/components/PhoneInput";
 import { BriefcaseBusiness, CalendarClock, CalendarDays, CreditCard, History, IdCard, Lock, Mail, Phone, UserRound, Wallet } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -83,7 +84,7 @@ export function ProfileView({ ctx, p, t, lang }: { ctx: Ctx; p: StaffProfile; t:
           <h2 className="h2 mb-3">{t.prof_edit}</h2>
           <ActionForm action={updateStaffProfile} className="grid gap-3 sm:grid-cols-3">
             <input type="hidden" name="user_id" value={p.user_id} />
-            <Field label={t.staff_phone}><input name="phone" defaultValue={p.phone ?? ""} dir="ltr" inputMode="tel" placeholder="+968" className="input" /></Field>
+            <div><span className="label">{t.staff_phone}</span><PhoneInput name="phone" defaultValue={p.phone ?? ""} lang={lang} label={t.staff_phone} labels={{ country: t.phone_country, search: t.phone_search, none: t.phone_none }} /></div>
             <Field label={t.staff_civil_id}><input name="civil_id" defaultValue={p.civil_id ?? ""} dir="ltr" inputMode="numeric" className="input" /></Field>
             <Field label={t.staff_salary}><input name="salary" defaultValue={p.salary != null ? (p.salary / 1000).toFixed(3) : ""} inputMode="decimal" placeholder="0.000" className="input" /></Field>
             <Field label={t.staff_card_no}><input name="work_card_no" defaultValue={p.work_card_no ?? ""} dir="ltr" className="input" /></Field>
