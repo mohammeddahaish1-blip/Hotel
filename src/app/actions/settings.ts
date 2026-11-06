@@ -6,6 +6,7 @@ import { getDict } from "@/lib/i18n/server";
 import { errorMessage } from "@/lib/errors";
 import { toBaisa } from "@/lib/format";
 import type { ActionResult } from "@/components/ActionForm";
+import { moneyError } from "@/lib/money";
 
 const s = (fd: FormData, k: string) => {
   const v = fd.get(k);
@@ -52,6 +53,8 @@ export async function updateTenantPolicy(_: ActionResult, fd: FormData) {
 }
 
 export async function addUnitType(_: ActionResult, fd: FormData) {
+  const badMoney = await moneyError(fd, { nightly: "pos", monthly: "min0" });
+  if (badMoney) return badMoney;
   return run((c) =>
     c.supabase.from("unit_types").insert({
       tenant_id: c.tenantId,
@@ -67,6 +70,8 @@ export async function addUnitType(_: ActionResult, fd: FormData) {
 }
 
 export async function updateUnitType(_: ActionResult, fd: FormData) {
+  const badMoney = await moneyError(fd, { nightly: "pos", monthly: "min0" });
+  if (badMoney) return badMoney;
   return run((c) =>
     c.supabase
       .from("unit_types")
@@ -99,6 +104,8 @@ export async function setUnitService(_: ActionResult, fd: FormData) {
 }
 
 export async function addRatePlan(_: ActionResult, fd: FormData) {
+  const badMoney = await moneyError(fd, { nightly: "posOpt", monthly: "posOpt" });
+  if (badMoney) return badMoney;
   return run((c) =>
     c.supabase.from("rate_plans").insert({
       tenant_id: c.tenantId,
@@ -139,6 +146,8 @@ function baseRoleFor(areas: string[]): "manager" | "accountant" | "reception" | 
 }
 
 export async function inviteUser(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const badMoney = await moneyError(fd, { salary: "min0" });
+  if (badMoney) return badMoney;
   const ctx = await getCtx();
   const { t } = await getDict();
   const jobTitle = s(fd, "job_title");
@@ -178,6 +187,8 @@ function staffDetails(fd: FormData) {
 }
 
 export async function updateStaffProfile(_: ActionResult, fd: FormData) {
+  const badMoney = await moneyError(fd, { salary: "min0" });
+  if (badMoney) return badMoney;
   const userId = s(fd, "user_id")!;
   const res = await run((c) =>
     c.supabase.from("staff_profiles").upsert({ tenant_id: c.tenantId, user_id: userId, ...staffDetails(fd) }),
@@ -270,6 +281,8 @@ export async function setUnitActive(_: ActionResult, fd: FormData): Promise<Acti
 }
 
 export async function updateRatePlan(_: ActionResult, fd: FormData) {
+  const badMoney = await moneyError(fd, { nightly: "posOpt", monthly: "posOpt" });
+  if (badMoney) return badMoney;
   const nightly = s(fd, "nightly");
   const monthly = s(fd, "monthly");
   return run((c) =>

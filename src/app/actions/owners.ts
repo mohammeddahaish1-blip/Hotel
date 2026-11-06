@@ -7,6 +7,7 @@ import { getDict } from "@/lib/i18n/server";
 import { errorMessage } from "@/lib/errors";
 import { toBaisa } from "@/lib/format";
 import type { ActionResult } from "@/components/ActionForm";
+import { moneyError } from "@/lib/money";
 
 const s = (fd: FormData, k: string) => {
   const v = fd.get(k);
@@ -60,6 +61,8 @@ export async function assignUnits(_: ActionResult, fd: FormData): Promise<Action
 }
 
 export async function recordPayout(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const badMoney = await moneyError(fd, { amount: "pos" });
+  if (badMoney) return badMoney;
   const ctx = await getCtx();
   const { t } = await getDict();
   const id = s(fd, "id")!;

@@ -8,6 +8,7 @@ import { errorMessage } from "@/lib/errors";
 import { toBaisa } from "@/lib/format";
 import { uploadTo } from "@/lib/storage";
 import type { ActionResult } from "@/components/ActionForm";
+import { moneyError } from "@/lib/money";
 
 const s = (fd: FormData, k: string) => {
   const v = fd.get(k);
@@ -25,6 +26,8 @@ async function run(fn: (ctx: Awaited<ReturnType<typeof getCtx>>) => PromiseLike<
 
 // ---------------------------------------------------------------- reservations
 export async function createReservation(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const badMoney = await moneyError(fd, { discount: "min0", deposit: "min0", monthly_rent: "min0" });
+  if (badMoney) return badMoney;
   const ctx = await getCtx();
   const { t } = await getDict();
   const kind = s(fd, "kind") ?? "nightly";
@@ -86,6 +89,8 @@ export async function moveReservation(id: string, unit: string, from: string, to
 
 // ---------------------------------------------------------------- folio
 export async function addCharge(_: ActionResult, fd: FormData) {
+  const badMoney = await moneyError(fd, { amount: "pos" });
+  if (badMoney) return badMoney;
   const folio = s(fd, "folio")!;
   return run(
     (c) =>
@@ -109,6 +114,8 @@ export async function voidCharge(_: ActionResult, fd: FormData) {
 }
 
 export async function addPayment(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const badMoney = await moneyError(fd, { amount: "pos" });
+  if (badMoney) return badMoney;
   const ctx = await getCtx();
   const { t } = await getDict();
   const proof = await uploadTo(ctx, "payment-proofs", fd.get("proof"));
@@ -144,6 +151,8 @@ export async function issueInvoice(_: ActionResult, fd: FormData): Promise<Actio
 }
 
 export async function issueCreditNote(_: ActionResult, fd: FormData) {
+  const badMoney = await moneyError(fd, { amount: "pos" });
+  if (badMoney) return badMoney;
   return run(
     (c) => c.supabase.rpc("issue_credit_note", { p_invoice: s(fd, "invoice")!, p_subtotal: toBaisa(s(fd, "amount")), p_reason: s(fd, "reason") ?? "" }),
     [`/invoices/${s(fd, "invoice")}`],
@@ -152,6 +161,8 @@ export async function issueCreditNote(_: ActionResult, fd: FormData) {
 
 // ---------------------------------------------------------------- finance
 export async function openShift(_: ActionResult, fd: FormData) {
+  const badMoney = await moneyError(fd, { float: "min0" });
+  if (badMoney) return badMoney;
   return run(
     (c) => c.supabase.from("cash_shifts").insert({ tenant_id: c.tenantId, property_id: c.property.id, opening_float: toBaisa(s(fd, "float")) }),
     ["/finance"],
@@ -159,6 +170,8 @@ export async function openShift(_: ActionResult, fd: FormData) {
 }
 
 export async function closeShift(_: ActionResult, fd: FormData) {
+  const badMoney = await moneyError(fd, { counted: "min0" });
+  if (badMoney) return badMoney;
   return run(
     (c) => c.supabase.rpc("close_shift", { p_shift: s(fd, "shift")!, p_counted: toBaisa(s(fd, "counted")), p_notes: s(fd, "notes") }),
     ["/finance"],
@@ -178,6 +191,8 @@ async function attachReceipt(ctx: Awaited<ReturnType<typeof getCtx>>, expenseId:
 }
 
 export async function addExpense(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const badMoney = await moneyError(fd, { amount: "pos" });
+  if (badMoney) return badMoney;
   const ctx = await getCtx();
   const { t } = await getDict();
   const { data, error } = await ctx.supabase
@@ -203,6 +218,8 @@ export async function addExpense(_: ActionResult, fd: FormData): Promise<ActionR
 }
 
 export async function updateExpense(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const badMoney = await moneyError(fd, { amount: "pos" });
+  if (badMoney) return badMoney;
   const ctx = await getCtx();
   const { t } = await getDict();
   const { data, error } = await ctx.supabase

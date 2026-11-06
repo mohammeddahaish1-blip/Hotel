@@ -10,5 +10,7 @@ export function errorMessage(t: Dict, err: { message?: string } | string | null 
   }
   if (msg.includes("consent_at")) return t.err_consent;
   if (msg.includes("row-level security") || msg.includes("permission denied")) return t.err_FORBIDDEN;
+  // never show raw database wording to staff
+  if (/violates (check|not-null|foreign key) constraint|invalid input syntax|out of range/.test(msg)) return t.err_invalid_value;
   return msg || t.err_generic;
 }

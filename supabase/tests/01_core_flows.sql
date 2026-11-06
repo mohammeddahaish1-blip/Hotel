@@ -131,7 +131,7 @@ select pg_temp.expect_error($$select public.check_in((select v from ctx where k 
 update public.guests set doc_type = 'oman_id', doc_number = '12345678', nationality = 'OMN'
  where id = (select v from ctx where k = 'guest1');
 update public.units set status = 'dirty' where id = (select v from ctx where k = 'u101');
-select pg_temp.expect_error($$select public.check_in((select v from ctx where k = 'res1'))$$, 'UNIT_NOT_READY');
+select pg_temp.expect_error($$select public.check_in((select v from ctx where k = 'res1'))$$, 'UNIT_DIRTY');   -- 0031: the message now says why
 update public.units set status = 'available' where id = (select v from ctx where k = 'u101');
 select public.check_in((select v from ctx where k = 'res1'));
 select pg_temp.ok((select status from public.units where id = (select v from ctx where k = 'u101')) = 'occupied', 'unit occupied');

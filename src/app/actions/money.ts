@@ -7,6 +7,7 @@ import { errorMessage } from "@/lib/errors";
 import { toBaisa } from "@/lib/format";
 import { uploadTo } from "@/lib/storage";
 import type { ActionResult } from "@/components/ActionForm";
+import { moneyError } from "@/lib/money";
 
 const s = (fd: FormData, k: string) => {
   const v = fd.get(k);
@@ -30,6 +31,8 @@ export async function attachPaymentProof(_: ActionResult, fd: FormData): Promise
 // ---------------------------------------------------------------- correction requests
 /** Staff who may not change money ask the owner/manager instead (void a payment/charge, fix or archive an expense). */
 export async function requestCorrection(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const badMoney = await moneyError(fd, { amount: "min0" });
+  if (badMoney) return badMoney;
   const ctx = await getCtx();
   const { t } = await getDict();
   const target = s(fd, "target");
@@ -71,6 +74,8 @@ export async function decideCorrection(_: ActionResult, fd: FormData): Promise<A
 
 // ---------------------------------------------------------------- cheques
 export async function addCheque(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const badMoney = await moneyError(fd, { amount: "pos" });
+  if (badMoney) return badMoney;
   const ctx = await getCtx();
   const { t } = await getDict();
   const photo = await uploadTo(ctx, "cheque-photos", fd.get("photo"));
@@ -113,6 +118,8 @@ export async function setChequeStatus(_: ActionResult, fd: FormData): Promise<Ac
 
 /** Fix a cheque's details while it is still with us (not yet deposited). */
 export async function updateCheque(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const badMoney = await moneyError(fd, { amount: "pos" });
+  if (badMoney) return badMoney;
   const ctx = await getCtx();
   const { t } = await getDict();
   const { data, error } = await ctx.supabase
@@ -135,6 +142,8 @@ export async function updateCheque(_: ActionResult, fd: FormData): Promise<Actio
 
 // ---------------------------------------------------------------- payment links
 export async function createPaymentLink(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const badMoney = await moneyError(fd, { amount: "posOpt" });
+  if (badMoney) return badMoney;
   const ctx = await getCtx();
   const { t } = await getDict();
   const res = s(fd, "res")!;
@@ -148,6 +157,8 @@ export async function createPaymentLink(_: ActionResult, fd: FormData): Promise<
 }
 
 export async function confirmPaymentLink(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const badMoney = await moneyError(fd, { amount: "posOpt" });
+  if (badMoney) return badMoney;
   const ctx = await getCtx();
   const { t } = await getDict();
   const amount = s(fd, "amount");

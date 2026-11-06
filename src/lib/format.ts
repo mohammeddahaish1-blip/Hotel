@@ -1,10 +1,32 @@
 import { intlLocale } from "./i18n/dict";
 // Money is stored as integer baisa (1 OMR = 1000 baisa) — NFR-11.
+
+/** Arabic-Indic / Persian digits and the Arabic decimal mark become plain ASCII; spaces, thousands marks and a currency word are dropped. */
+export function normalizeAmount(raw: string): string {
+  let v = raw
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x660))
+    .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x6f0))
+    .replace(/\u066b/g, ".")
+    .replace(/(ر\.?\s?ع\.?|ريال|omr)/gi, "")
+    .replace(/[\s\u066c\u00a0]/g, "");
+  // a lone comma followed by 1–3 digits is a decimal comma ("25,5"); otherwise commas are thousands marks
+  if (!v.includes(".") && /^-?\d+,\d{1,3}$/.test(v) && !/^-?\d{1,3},\d{3}$/.test(v)) v = v.replace(",", ".");
+  return v.replace(/,/g, "");
+}
+
+/** Strict: integer baisa, 0 for an empty field, or null when the text is not a plain amount ("abc", "1.2.3", "25.1234"). */
+export function parseBaisa(raw: string | number | null | undefined): number | null {
+  if (raw === null || raw === undefined) return 0;
+  if (typeof raw === "number") return Number.isFinite(raw) ? Math.round(raw * 1000) : null;
+  const v = normalizeAmount(raw);
+  if (v === "") return 0;
+  if (!/^-?(\d+(\.\d{0,3})?|\.\d{1,3})$/.test(v)) return null;
+  return Math.round(Number(v) * 1000);
+}
+
+/** Lenient conversion for display and already-validated input; invalid text counts as 0. */
 export function toBaisa(omr: string | number | null | undefined): number {
-  if (omr === null || omr === undefined || omr === "") return 0;
-  const n = typeof omr === "number" ? omr : Number(String(omr).replace(/[^\d.-]/g, ""));
-  if (!Number.isFinite(n)) return 0;
-  return Math.round(n * 1000);
+  return parseBaisa(omr) ?? 0;
 }
 
 export function omr(baisa: number | string | null | undefined, lang: "ar" | "en" | "ur" = "ar"): string {
