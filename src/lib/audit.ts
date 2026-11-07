@@ -29,6 +29,7 @@ export type AuditView = { summary: string; changes: AuditChange[]; href: string 
 export const AUDIT_TABLES = [
   "reservations", "payments", "charges", "invoices", "credit_notes", "expenses", "cash_shifts",
   "unit_types", "rate_plans", "tax_rules", "maintenance_tickets", "compliance_submissions", "memberships", "invitations", "feedback", "cheques", "correction_requests", "unit_owners", "owner_payouts",
+  "contract_documents", "payment_links", "automation_rules", "ical_feeds", "night_audits",
 ] as const;
 
 const L = {
@@ -40,6 +41,7 @@ const L = {
       maintenance_tickets: "الصيانة", compliance_submissions: "الامتثال", memberships: "الموظفون", invitations: "الدعوات",
       feedback: "المقترحات والشكاوي", cheques: "الشيكات", correction_requests: "طلبات التصحيح",
       unit_owners: "ملاك الوحدات", owner_payouts: "دفعات الملاك",
+      contract_documents: "العقود", payment_links: "روابط الدفع", automation_rules: "الأتمتة", ical_feeds: "ربط القنوات", night_audits: "الإغلاق اليومي",
     } as Record<string, string>,
     actions: { insert: "إضافة", update: "تعديل", delete: "حذف" } as Record<string, string>,
     fields: {
@@ -58,11 +60,17 @@ const L = {
       effective_to: "يسري إلى", active: "فعّال", title: "العنوان", blocks_availability: "يحجب الوحدة", photo_path: "الصورة",
       assigned_to: "المسؤول", authority: "الجهة", record_count: "عدد السجلات", submitted_at: "وقت الرفع",
       email: "البريد", role: "الدور", full_name: "الاسم", job_title: "المسمى الوظيفي", permissions: "الأقسام المسموحة",
+      archived_at: "وقت الأرشفة", archived_by: "أرشفه", archive_reason: "سبب الأرشفة", voided_by: "ألغاه", guest_signed_at: "وقت توقيع النزيل",
+      hotel_signed_at: "وقت توقيع الفندق", signer_name: "اسم الموقّع", body_hash: "بصمة العقد", expires_at: "ينتهي في", paid_at: "وقت الدفع",
+      proof_submitted_at: "وقت رفع الإثبات", payer_note: "ملاحظة الدافع", purpose: "الغرض", note: "ملاحظة", business_date: "يوم العمل", pending: "بنود مفتوحة",
+      trigger: "عند", action_kind: "الإجراء", enabled: "مفعّلة", channel: "القناة", url: "الرابط", last_synced_at: "آخر مزامنة", last_error: "آخر خطأ",
+      due_date: "تاريخ الاستحقاق", cheque_no: "رقم الشيك", bank: "البنك", deposited_at: "وقت الإيداع", cleared_at: "وقت التحصيل", bounced_at: "وقت الارتجاع",
+      work_card_no: "رقم بطاقة العمل", work_card_expiry: "انتهاء بطاقة العمل", phone: "الهاتف", civil_id: "الرقم المدني", salary: "الراتب",
       ui_language: "لغة الواجهة", accepted_at: "وقت القبول", discount_approved_by: "اعتمد الخصم",
       message: "الرسالة", rating: "التقييم", guest_name: "اسم النزيل", contact: "التواصل", room: "الغرفة",
       staff_notes: "ملاحظات الإدارة", handled_by: "عالجها", handled_at: "وقت المعالجة",
     } as Record<string, string>,
-    empty: "(فارغ)", yes: "نعم", no: "لا", system: "النظام (تلقائي)", defaults: "حسب الدور",
+    empty: "(فارغ)", someone: "موظف", linked: "(مرتبط)", yes: "نعم", no: "لا", system: "النظام (تلقائي)", defaults: "حسب الدور",
     // summaries
     res_new: (c: string) => `أنشأ الحجز ${c}`,
     res_status: (c: string, a: string, b: string) => `غيّر حالة الحجز ${c}: ${a} ← ${b}`,
@@ -103,10 +111,11 @@ const L = {
       maintenance_tickets: "Maintenance", compliance_submissions: "Compliance", memberships: "Staff", invitations: "Invitations",
       feedback: "Suggestions & complaints", cheques: "Cheques", correction_requests: "Correction requests",
       unit_owners: "Unit owners", owner_payouts: "Owner payouts",
+      contract_documents: "Contracts", payment_links: "Payment links", automation_rules: "Automation", ical_feeds: "Channels", night_audits: "Daily close",
     } as Record<string, string>,
     actions: { insert: "Added", update: "Edited", delete: "Deleted" } as Record<string, string>,
     fields: {} as Record<string, string>,
-    empty: "(empty)", yes: "Yes", no: "No", system: "System (automatic)", defaults: "Role defaults",
+    empty: "(empty)", someone: "a staff member", linked: "(linked)", yes: "Yes", no: "No", system: "System (automatic)", defaults: "Role defaults",
     res_new: (c: string) => `Created reservation ${c}`,
     res_status: (c: string, a: string, b: string) => `Reservation ${c}: ${a} → ${b}`,
     res_edit: (c: string) => `Edited reservation ${c}`,
@@ -150,7 +159,7 @@ const HIDDEN = new Set([
 ]);
 const MONEY = new Set([
   "amount", "room_total", "discount_amount", "subtotal", "tax_total", "total", "nightly_rate", "monthly_rate",
-  "opening_float", "expected_cash", "counted_cash", "difference",
+  "opening_float", "expected_cash", "counted_cash", "difference", "salary", "monthly_rent", "deposit_amount",
 ]);
 const TIMES = new Set(["handled_at", "checked_in_at", "checked_out_at", "cancelled_at", "received_at", "voided_at", "issued_at", "opened_at", "closed_at", "submitted_at", "accepted_at"]);
 const DATES = new Set(["service_date", "expense_date", "effective_from", "effective_to"]);
@@ -184,7 +193,7 @@ function formatValue(table: string, field: string, v: unknown, t: Dict, lang: Au
   const s = String(v);
   if (MONEY.has(field)) return omr(Number(v), lang);
   if (field === "rate_bp") return pct(Number(v));
-  if (TIMES.has(field)) return dateTime(s, lk.tz, lang);
+  if (TIMES.has(field) || (field.endsWith("_at") && /^\d{4}-\d{2}-\d{2}T/.test(s))) return dateTime(s, lk.tz, lang);
   if (DATES.has(field)) return gregorian(s, lang);
   if ((field === "stay" || field === "period") && s.includes(",")) {
     const r = parseRange(s);
@@ -192,8 +201,9 @@ function formatValue(table: string, field: string, v: unknown, t: Dict, lang: Au
   }
   if (field === "unit_id") return lk.units.get(s) ?? s.slice(0, 8);
   if (field === "guest_id") return lk.guests.get(s) ?? s.slice(0, 8);
-  if (PEOPLE.has(field)) return lk.staff.get(s) ?? s.slice(0, 8);
+  if (PEOPLE.has(field) || field.endsWith("_by")) return lk.staff.get(s) ?? x.someone;
   if (field === "invoice_id") return "#" + s.slice(0, 8);
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(s)) return x.linked;   // an internal reference, never a raw id
   if (field === "method") return dictOr(t, `pm_${s}`, s);
   if (field === "source") return dictOr(t, `src_${s}`, s);
   if (field === "category") return dictOr(t, `ec_${s}`, s);
@@ -369,4 +379,83 @@ export function describeAudit(r: AuditRow, t: Dict, lang: AuditLang, lk: AuditLo
       summary = x.generic(x.verb[r.action] ?? r.action, r.table_name, "");
   }
   return { summary, changes, href, sensitive };
+}
+
+// ---------------------------------------------------------------- one-word tag per operation
+export type AuditTag = { label: string; tone: "ok" | "info" | "warn" | "danger" | "brand" | "violet" | "gray" };
+
+const TAGS = {
+  ar: {
+    res_new: "حجز جديد", check_in: "تسجيل دخول", check_out: "تسجيل خروج", res_cancel: "إلغاء حجز", no_show: "لم يحضر", res_edit: "تعديل حجز",
+    receipt: "سند قبض", refund: "استرداد", deposit: "تأمين", receipt_void: "إلغاء سند", charge: "رسوم", discount: "خصم", charge_void: "إلغاء رسوم",
+    invoice: "فاتورة", credit: "إشعار دائن", expense: "مصروف", expense_archive: "أرشفة مصروف", expense_restore: "استرجاع مصروف", shift_open: "فتح وردية", shift_close: "إغلاق وردية",
+    shortage: "عجز صندوق", prices: "أسعار", settings: "إعدادات", maintenance: "صيانة", compliance: "امتثال", staff: "موظفين",
+    feedback: "شكوى / اقتراح", cheque: "شيك", correction: "طلب تصحيح", owners: "ملاك", night_audit: "إغلاق يومي", delete: "حذف", edit: "تعديل",
+    contract: "عقد", contract_signed: "توقيع عقد", contract_void: "إلغاء عقد", pay_link: "رابط دفع", pay_link_paid: "دفع عبر رابط", automation: "أتمتة", channels: "قنوات", staff_invite: "دعوة موظف",
+  },
+  en: {
+    res_new: "New booking", check_in: "Check-in", check_out: "Check-out", res_cancel: "Cancelled", no_show: "No-show", res_edit: "Booking edit",
+    receipt: "Receipt", refund: "Refund", deposit: "Deposit", receipt_void: "Receipt voided", charge: "Charge", discount: "Discount", charge_void: "Charge voided",
+    invoice: "Invoice", credit: "Credit note", expense: "Expense", expense_archive: "Expense archived", expense_restore: "Expense restored", shift_open: "Shift opened", shift_close: "Shift closed",
+    shortage: "Cash shortage", prices: "Prices", settings: "Settings", maintenance: "Maintenance", compliance: "Compliance", staff: "Staff",
+    feedback: "Feedback", cheque: "Cheque", correction: "Correction request", owners: "Owners", night_audit: "Daily close", delete: "Deleted", edit: "Edit",
+    contract: "Contract", contract_signed: "Contract signed", contract_void: "Contract voided", pay_link: "Payment link", pay_link_paid: "Paid by link", automation: "Automation", channels: "Channels", staff_invite: "Staff invite",
+  },
+};
+
+/** Short coloured tag that says what kind of operation a log line is ("Check-in", "Receipt", "Cancelled"…). */
+export function auditTag(r: AuditRow, lang: AuditLang): AuditTag {
+  const x = TAGS[lang === "ur" ? "en" : lang];
+  const b = r.old_data ?? {};
+  const a = r.new_data ?? {};
+  const set = (f: string) => r.action === "update" && b[f] == null && a[f] != null;
+  const became = (f: string, v: string) => r.action === "update" && b[f] !== v && a[f] === v;
+  if (r.action === "delete") return { label: r.table_name === "invitations" ? x.staff_invite : x.delete, tone: r.table_name === "invitations" ? "gray" : "danger" };
+  switch (r.table_name) {
+    case "reservations":
+      if (r.action === "insert") return { label: x.res_new, tone: "ok" };
+      if (became("status", "checked_in")) return { label: x.check_in, tone: "info" };
+      if (became("status", "checked_out")) return { label: x.check_out, tone: "info" };
+      if (became("status", "cancelled")) return { label: x.res_cancel, tone: "danger" };
+      if (became("status", "no_show")) return { label: x.no_show, tone: "warn" };
+      return { label: x.res_edit, tone: "gray" };
+    case "payments":
+      if (set("voided_at")) return { label: x.receipt_void, tone: "danger" };
+      if (a.kind === "refund" || a.kind === "deposit_refund") return { label: x.refund, tone: "warn" };
+      if (a.kind === "deposit") return { label: x.deposit, tone: "brand" };
+      return { label: x.receipt, tone: "ok" };
+    case "charges":
+      if (set("voided_at")) return { label: x.charge_void, tone: "gray" };
+      return a.kind === "discount" ? { label: x.discount, tone: "warn" } : { label: x.charge, tone: "brand" };
+    case "invoices": return { label: x.invoice, tone: "brand" };
+    case "credit_notes": return { label: x.credit, tone: "warn" };
+    case "expenses":
+      if (set("archived_at")) return { label: x.expense_archive, tone: "gray" };
+      if (r.action === "update" && b.archived_at != null && a.archived_at == null) return { label: x.expense_restore, tone: "info" };
+      return { label: x.expense, tone: "violet" };
+    case "cash_shifts":
+      if (r.action === "insert") return { label: x.shift_open, tone: "info" };
+      return Number(a.difference) < 0 ? { label: x.shortage, tone: "danger" } : { label: x.shift_close, tone: "info" };
+    case "unit_types": case "rate_plans": return { label: x.prices, tone: "warn" };
+    case "tax_rules": return { label: x.settings, tone: "gray" };
+    case "maintenance_tickets": return { label: x.maintenance, tone: "warn" };
+    case "compliance_submissions": return { label: x.compliance, tone: "info" };
+    case "invitations": return { label: x.staff_invite, tone: "violet" };
+    case "memberships": case "staff_profiles": return { label: x.staff, tone: "violet" };
+    case "contract_documents":
+      if (set("voided_at")) return { label: x.contract_void, tone: "danger" };
+      if (set("guest_signed_at") || became("status", "signed")) return { label: x.contract_signed, tone: "ok" };
+      return { label: x.contract, tone: "brand" };
+    case "payment_links":
+      if (became("status", "paid")) return { label: x.pay_link_paid, tone: "ok" };
+      return { label: x.pay_link, tone: "brand" };
+    case "automation_rules": return { label: x.automation, tone: "gray" };
+    case "ical_feeds": return { label: x.channels, tone: "info" };
+    case "feedback": return { label: x.feedback, tone: "info" };
+    case "cheques": return { label: x.cheque, tone: "brand" };
+    case "correction_requests": return { label: x.correction, tone: "warn" };
+    case "unit_owners": case "owner_payouts": return { label: x.owners, tone: "brand" };
+    case "night_audits": return { label: x.night_audit, tone: "ok" };
+    default: return { label: r.action === "insert" ? tableLabel(r.table_name, lang) : x.edit, tone: "gray" };
+  }
 }
