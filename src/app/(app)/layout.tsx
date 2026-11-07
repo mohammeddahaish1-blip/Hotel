@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-react";
 import { initial } from "@/lib/profile-link";
 import { getCtx, can, hasRole, AREAS } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -68,7 +69,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           ]
         : [],
     },
-    { key: "assistant", label: t.ai_title, tabs: hasRole(ctx, ["manager"]) ? [{ href: "/assistant", label: t.ai_title }] : [] },
     { key: "feedback", label: t.nav_feedback, tabs: tab("feedback") },
     { key: "import", label: t.nav_import, tabs: tab("import") },
     {
@@ -138,7 +138,19 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             <GlobalSearch
               labels={{ search: t.search, placeholder: t.search_ph, none: t.search_none, unit: t.sk_unit, reservation: t.sk_reservation, guest: t.sk_guest }}
             />
-            <div className="ms-auto">
+            <div className="ms-auto flex items-center gap-2">
+              {/* the assistant sits in the top bar, next to the alerts, on every page (owner and managers) */}
+              {hasRole(ctx, ["manager"]) ? (
+                <Link
+                  href="/assistant"
+                  title={t.ai_title}
+                  className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-brand hover:bg-surface-2"
+                >
+                  <Sparkles className="size-4 shrink-0" aria-hidden />
+                  <span className="hidden sm:inline">{t.ai_title}</span>
+                  <span className="sr-only sm:hidden">{t.ai_title}</span>
+                </Link>
+              ) : null}
               <AlertsBell alerts={alerts} labels={{ title: t.alerts_title, none: t.alerts_none }} />
             </div>
           </div>
