@@ -1,3 +1,4 @@
+import { requireFeature } from "@/lib/plan";
 import { profileHref } from "@/lib/profile-link";
 import Link from "next/link";
 import { Star } from "lucide-react";
@@ -32,6 +33,7 @@ const points = (r: Row) =>
 
 export default async function StaffPerformancePage({ searchParams }: PageProps<"/analytics/staff">) {
   const ctx = await requireArea("reports");
+  await requireFeature(ctx, "analytics");
   const { t, lang } = await getDict();
   if (!hasRole(ctx, ["manager"])) {
     return (

@@ -1,3 +1,4 @@
+import { getPlan, planHas } from "@/lib/plan";
 import { FileSignature, Link2 as LinkIcon, MessageCircle, Paperclip, Receipt } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -30,13 +31,14 @@ const METHODS = ["cash", "card", "transfer", "link"];
 
 export default async function ReservationPage({ params }: PageProps<"/reservations/[id]">) {
   const ctx = await requireArea("reservations");
+  const plan = await getPlan(ctx);
   const { t, lang } = await getDict();
   const { id } = await params;
   const db = ctx.supabase;
 
   const canVoidPay = hasRole(ctx, ["manager", "accountant"]);
-  const canLinks = hasRole(ctx, ["manager", "reception", "accountant"]);
-  const canContracts = hasRole(ctx, ["manager", "reception"]);
+  const canLinks = planHas(plan, "payment_links") && (hasRole(ctx, ["manager", "reception", "accountant"]));
+  const canContracts = planHas(plan, "contracts") && (hasRole(ctx, ["manager", "reception"]));
   const canOperate = hasRole(ctx, ["manager", "reception"]);
   // Everything that only needs the booking id, in one round trip
   const [{ data: r }, { data: folio }, { data: cheques }, { data: docs }, { data: units }, { data: contract }] = await Promise.all([

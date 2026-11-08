@@ -1,3 +1,4 @@
+import { getPlan } from "@/lib/plan";
 import { PhoneInput } from "@/components/PhoneInput";
 import { Lock, ShieldCheck, FileSpreadsheet, FolderArchive } from "lucide-react";
 import Link from "next/link";
@@ -20,6 +21,12 @@ export default async function SettingsPage() {
   const ctx = await requireArea("settings");
   const { t, lang } = await getDict();
   const db = ctx.supabase;
+  const [plan, { data: subPays }] = await Promise.all([
+    getPlan(ctx),
+    ctx.role === "owner"
+      ? ctx.supabase.from("subscription_payments").select("id, amount, period_start, period_end, paid_on, voided_at").eq("tenant_id", ctx.tenantId).order("paid_on", { ascending: false }).limit(24)
+      : Promise.resolve({ data: [] as { id: string; amount: number; period_start: string; period_end: string; paid_on: string; voided_at: string | null }[] }),
+  ]);
   const [{ data: prop }, { data: tenant }, { data: types }, { data: floors }, { data: units }, { data: plans }, { data: taxes }, { data: members }, { data: invites }] =
     await Promise.all([
       db.from("properties").select("*").eq("id", ctx.property.id).single(),
@@ -43,6 +50,37 @@ export default async function SettingsPage() {
   return (
     <>
       <PageHeader title={t.set_title} />
+      {ctx.role === "owner" && plan.code ? (
+        <section className="card mb-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="h2">{t.sub_title}</h2>
+            <Link href="/upgrade" className="btn-ghost btn-sm">{t.sub_compare}</Link>
+          </div>
+          <div className="grid gap-3 text-sm sm:grid-cols-4">
+            <div><div className="label">{t.sub_plan}</div><div className="font-bold">{lang === "en" && plan.nameEn ? plan.nameEn : plan.name}</div></div>
+            <div><div className="label">{t.sub_status}</div><Badge tone={plan.status === "active" ? "ok" : plan.status === "trial" ? "info" : "danger"}>{t[`sub_st_${plan.status}` as DictKey]}</Badge></div>
+            <div>
+              <div className="label">{plan.status === "trial" ? t.sub_trial_until : t.sub_until}</div>
+              <div className="font-semibold">{gregorian(plan.status === "trial" ? plan.trialEndsAt : plan.periodEnd, lang)}</div>
+            </div>
+            <div><div className="label">{t.sub_price}</div><div className="num font-semibold">{plan.price != null ? omr(plan.price, lang) : "—"}</div></div>
+          </div>
+          <details className="mt-3 text-sm">
+            <summary className="cursor-pointer text-xs font-semibold text-muted">{t.sub_payments} ({(subPays ?? []).length})</summary>
+            {(subPays ?? []).length === 0 ? <p className="mt-2 text-xs text-muted">{t.sub_no_payments}</p> : (
+              <ul className="mt-2 divide-y divide-line">
+                {(subPays ?? []).map((x) => (
+                  <li key={x.id} className={`flex flex-wrap justify-between gap-2 py-1.5 ${x.voided_at ? "text-muted line-through" : ""}`}>
+                    <span>{gregorian(x.paid_on, lang)}</span>
+                    <span className="text-muted">{gregorian(x.period_start, lang)} → {gregorian(x.period_end, lang)}</span>
+                    <span className="num font-semibold">{omr(x.amount, lang)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </details>
+        </section>
+      ) : null}
       {ctx.role === "owner" || ctx.role === "manager" ? (
         <section className="card mb-4 flex flex-wrap items-center gap-3">
           <div className="flex-1">

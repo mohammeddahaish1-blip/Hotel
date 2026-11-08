@@ -1,3 +1,4 @@
+import { requireFeature } from "@/lib/plan";
 import { Info, FileSpreadsheet, FileText } from "lucide-react";
 import Link from "next/link";
 import { requireArea } from "@/lib/auth";
@@ -10,6 +11,7 @@ const TONE: Record<string, Tone> = { validated: "warn", saved: "ok", partial: "i
 
 export default async function ImportPage() {
   const ctx = await requireArea("import");
+  await requireFeature(ctx, "import");
   const { lang } = await getDict();
   const L = importLabels[lang];
   const { data: jobs } = await ctx.supabase

@@ -1,3 +1,4 @@
+import { requireFeature } from "@/lib/plan";
 import { CreditCard } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,6 +13,7 @@ import { Crumb, PageHeader, Section } from "@/components/ui";
 /** Turn nights sold on a channel into a real booking: pick (or register) the guest, then confirm. */
 export default async function ConvertBlockPage({ params, searchParams }: PageProps<"/channels/convert/[id]">) {
   const ctx = await requireArea("reservations");
+  await requireFeature(ctx, "channels");
   if (!hasRole(ctx, ["manager", "reception"])) notFound();
   const { t, lang } = await getDict();
   const { id } = await params;

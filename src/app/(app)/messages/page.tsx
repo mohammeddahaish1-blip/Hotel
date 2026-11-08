@@ -1,3 +1,4 @@
+import { requireFeature } from "@/lib/plan";
 import { BellRing, Check, Settings2, Zap } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -13,6 +14,7 @@ import { Badge, Empty, PageHeader, Section } from "@/components/ui";
 /** Guest messages waiting to be sent (from automation rules or queued by hand), and notices for the owner/manager. */
 export default async function MessagesPage() {
   const ctx = await requireArea("reservations");
+  await requireFeature(ctx, "messages");
   if (!hasRole(ctx, ["manager", "reception"])) redirect("/reservations");
   const { t, lang } = await getDict();
   const isManager = hasRole(ctx, ["manager"]);

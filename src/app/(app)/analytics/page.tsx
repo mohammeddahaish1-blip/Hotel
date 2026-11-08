@@ -1,3 +1,4 @@
+import { requireFeature } from "@/lib/plan";
 import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { intlLocale, type DictKey } from "@/lib/i18n/dict";
@@ -16,6 +17,7 @@ function niceMax(v: number) {
 
 export default async function AnalyticsPage() {
   const ctx = await requireArea("reports");
+  await requireFeature(ctx, "analytics");
   const { t, lang } = await getDict();
   const db = ctx.supabase;
   const today = todayIn(ctx.property.timezone);

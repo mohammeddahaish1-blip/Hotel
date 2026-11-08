@@ -1,3 +1,4 @@
+import { requireFeature } from "@/lib/plan";
 import { redirect } from "next/navigation";
 import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -9,6 +10,7 @@ import { Empty, PageHeader, Section, Stat } from "@/components/ui";
 /** Every payment link of the property: proofs waiting for confirmation first. */
 export default async function PaymentLinksPage() {
   const ctx = await requireArea("finance");
+  await requireFeature(ctx, "payment_links");
   if (!hasRole(ctx, ["manager", "reception", "accountant"])) redirect("/finance");
   const { t, lang } = await getDict();
   const links = await loadPaymentLinks(ctx, {});

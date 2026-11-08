@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { ShieldCheck, Sparkles } from "lucide-react";
 import { initial } from "@/lib/profile-link";
 import { getCtx, can, hasRole, AREAS } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -12,12 +12,16 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { AlertsBell } from "@/components/AlertsBell";
 import { BackButton } from "@/components/BackButton";
 import { loadAlerts } from "@/lib/alerts";
+import { getPlan, planHas } from "@/lib/plan";
+import { todayIn } from "@/lib/format";
 import Link from "next/link";
 
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await getCtx();
   const { t, lang } = await getDict();
+  const plan = await getPlan(ctx);
+  const has = (f: Parameters<typeof planHas>[1]) => planHas(plan, f);
   // Merged menu: each group shows only the parts this user may open (permissions stay per section)
   const tab = (area: (typeof AREAS)[number], label?: string) =>
     can(ctx, area) ? [{ href: `/${area}`, label: label ?? t[`nav_${area}` as DictKey] }] : [];
@@ -30,8 +34,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         ...(can(ctx, "board") ? [{ href: "/properties", label: t.nav_properties }] : []),
         ...tab("board"),
         ...tab("calendar"),
-        ...(can(ctx, "board") && hasRole(ctx, ["manager", "reception"]) ? [{ href: "/channels", label: t.ch_title }] : []),
-        ...(hasRole(ctx, ["manager", "accountant"]) ? [{ href: "/properties/owners", label: t.nav_owners }] : []),
+        ...(has("channels") && can(ctx, "board") && hasRole(ctx, ["manager", "reception"]) ? [{ href: "/channels", label: t.ch_title }] : []),
+        ...(has("owners") && hasRole(ctx, ["manager", "accountant"]) ? [{ href: "/properties/owners", label: t.nav_owners }] : []),
       ],
     },
     {
@@ -40,7 +44,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       tabs: [
         ...tab("reservations"),
         ...tab("guests"),
-        ...(can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"]) ? [{ href: "/messages", label: t.msg_title }] : []),
+        ...(has("messages") && can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"]) ? [{ href: "/messages", label: t.msg_title }] : []),
         ...(can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"]) ? [{ href: "/night-audit", label: t.na_title }] : []),
       ],
       also: ["/invoices"],
@@ -53,7 +57,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         ? [
             { href: "/finance", label: t.nav_finance },
             ...(hasRole(ctx, ["manager", "reception", "accountant"]) ? [{ href: "/finance/cheques", label: t.nav_cheques }] : []),
-            ...(hasRole(ctx, ["manager", "reception", "accountant"]) ? [{ href: "/finance/links", label: t.pl_title }] : []),
+            ...(has("payment_links") && hasRole(ctx, ["manager", "reception", "accountant"]) ? [{ href: "/finance/links", label: t.pl_title }] : []),
             ...(hasRole(ctx, ["manager"]) ? [{ href: "/finance/corrections", label: t.cr_title }] : []),
           ]
         : [],
@@ -62,7 +66,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     {
       key: "analytics",
       label: t.nav_grp_analytics,
-      tabs: can(ctx, "reports")
+      tabs: can(ctx, "reports") && has("analytics")
         ? [
             { href: "/analytics", label: t.an_charts },
             ...(hasRole(ctx, ["manager"]) ? [{ href: "/analytics/staff", label: t.an_staff }] : []),
@@ -70,14 +74,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         : [],
     },
     { key: "feedback", label: t.nav_feedback, tabs: tab("feedback") },
-    { key: "import", label: t.nav_import, tabs: tab("import") },
+    { key: "import", label: t.nav_import, tabs: has("import") ? tab("import") : [] },
     {
       key: "settings",
       label: t.nav_settings,
       tabs: [
         ...tab("settings", t.nav_settings_general),
         ...(ctx.role === "owner" ? [{ href: "/settings/permissions", label: t.nav_permissions }] : []),
-        ...(can(ctx, "settings") && hasRole(ctx, ["manager"]) ? [{ href: "/settings/automation", label: t.auto_title }] : []),
+        ...(has("automation") && can(ctx, "settings") && hasRole(ctx, ["manager"]) ? [{ href: "/settings/automation", label: t.auto_title }] : []),
       ],
     },
     // one log: everyone's operations for owner/manager/accountant, your own for everyone else
@@ -85,6 +89,16 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   ].filter((g) => g.tabs.length > 0);
   const alerts = await loadAlerts(ctx, t, lang);
   const roleLabel = ctx.jobTitle || t[`role_${ctx.role}` as DictKey];
+  // subscription notice for the owner and managers: trial ending, unpaid, suspended
+  let banner: { tone: "warn" | "danger"; text: string } | null = null;
+  if (hasRole(ctx, ["manager"])) {
+    const today = todayIn(ctx.property.timezone);
+    const daysTo = (d: string | null) => (d ? Math.round((Date.parse(d) - Date.parse(today)) / 86_400_000) : null);
+    const trialLeft = plan.status === "trial" ? daysTo(plan.trialEndsAt) : null;
+    if (plan.status === "suspended") banner = { tone: "danger", text: t.sub_banner_suspended };
+    else if (plan.status === "past_due") banner = { tone: "danger", text: t.sub_banner_past_due };
+    else if (trialLeft !== null && trialLeft <= 7) banner = { tone: "warn", text: trialLeft < 0 ? t.sub_banner_trial_over : t.sub_banner_trial.replace("{n}", String(trialLeft)) };
+  }
   const propertyName = lang === "en" && ctx.property.name_en ? ctx.property.name_en : ctx.property.name_ar;
 
   return (
@@ -107,6 +121,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               <span className="block truncate">{roleLabel}</span>
             </span>
           </Link>
+          {plan.isAdmin ? (
+            <Link href="/admin" className="mt-2 flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-surface-2">
+              <ShieldCheck className="size-4 shrink-0" aria-hidden /> {t.adm_portal}
+            </Link>
+          ) : null}
           <div className="mt-3 flex gap-2">
             <LangToggle current={lang} />
             <SignOut label={t.signOut} />
@@ -140,7 +159,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             />
             <div className="ms-auto flex items-center gap-2">
               {/* the assistant sits in the top bar, next to the alerts, on every page (owner and managers) */}
-              {hasRole(ctx, ["manager"]) ? (
+              {has("assistant") && hasRole(ctx, ["manager"]) ? (
                 <Link
                   href="/assistant"
                   title={t.ai_title}
@@ -156,6 +175,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </div>
         </div>
         <main className="mx-auto max-w-6xl p-4 lg:p-8">
+          {banner ? (
+            <div role="status" className={`mb-4 rounded-xl px-4 py-2.5 text-sm font-semibold ${banner.tone === "danger" ? "bg-danger-soft text-danger" : "bg-warn-soft text-warn"}`}>
+              {banner.text}
+            </div>
+          ) : null}
           <GroupTabs groups={groups} />
           {children}
         </main>

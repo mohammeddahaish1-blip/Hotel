@@ -1,3 +1,4 @@
+import { requireFeature } from "@/lib/plan";
 import { Sparkles, Trash2, Zap } from "lucide-react";
 import { redirect } from "next/navigation";
 import { hasRole, requireArea } from "@/lib/auth";
@@ -21,6 +22,7 @@ type Rule = { id: string; name: string; trigger: string; offset_days: number; ac
 /** Owner/manager: "when this happens, do that" rules, and the wording of every guest message. */
 export default async function AutomationPage() {
   const ctx = await requireArea("settings");
+  await requireFeature(ctx, "automation");
   if (!hasRole(ctx, ["manager"])) redirect("/settings");
   const { t, lang } = await getDict();
   const [{ data }, templates, { data: tenant }] = await Promise.all([

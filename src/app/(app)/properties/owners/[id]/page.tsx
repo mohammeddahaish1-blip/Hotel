@@ -1,3 +1,4 @@
+import { requireFeature } from "@/lib/plan";
 import { notFound, redirect } from "next/navigation";
 import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -19,6 +20,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function OwnerPage({ params, searchParams }: PageProps<"/properties/owners/[id]">) {
   const ctx = await requireArea("board");
+  await requireFeature(ctx, "owners");
   if (!hasRole(ctx, ["manager", "accountant"])) redirect("/properties");
   const { t } = await getDict();
   const { id } = await params;

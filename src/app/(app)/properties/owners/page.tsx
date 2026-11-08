@@ -1,3 +1,4 @@
+import { requireFeature } from "@/lib/plan";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { hasRole, requireArea } from "@/lib/auth";
@@ -8,6 +9,7 @@ import { Crumb, Empty, Field, PageHeader, Section } from "@/components/ui";
 
 export default async function OwnersPage() {
   const ctx = await requireArea("board");
+  await requireFeature(ctx, "owners");
   if (!hasRole(ctx, ["manager", "accountant"])) redirect("/properties");
   const { t } = await getDict();
   const [{ data: owners }, { data: units }] = await Promise.all([

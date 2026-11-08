@@ -1,3 +1,4 @@
+import { requireFeature } from "@/lib/plan";
 import { KeyRound } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCtx, hasRole } from "@/lib/auth";
@@ -10,6 +11,7 @@ import { PageHeader } from "@/components/ui";
 /** Owner/manager: ask questions about the hotel in plain language. */
 export default async function AssistantPage() {
   const ctx = await getCtx();
+  await requireFeature(ctx, "assistant");
   if (!hasRole(ctx, ["manager"])) redirect("/dashboard");
   const { t } = await getDict();
   return (

@@ -1,3 +1,4 @@
+import { requireFeature } from "@/lib/plan";
 import { Pause, Play, RefreshCw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -17,6 +18,7 @@ type Feed = { id: string; unit_id: string; channel: string; url: string; active:
 /** Calendar sync with Airbnb / Booking.com / Agoda / Expedia by iCal links, per unit. */
 export default async function ChannelsPage() {
   const ctx = await requireArea("board");
+  await requireFeature(ctx, "channels");
   if (!hasRole(ctx, ["manager", "reception"])) redirect("/board");
   const { t, lang } = await getDict();
   const isManager = hasRole(ctx, ["manager"]);

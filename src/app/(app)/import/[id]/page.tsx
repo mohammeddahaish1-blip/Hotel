@@ -1,3 +1,4 @@
+import { requireFeature } from "@/lib/plan";
 import { Info, CircleCheck, CircleX, FileSpreadsheet, Save, SkipForward, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -24,6 +25,7 @@ const STATUS: Record<ImportRow["status"], { icon: React.ReactNode; tone: Tone }>
 
 export default async function ImportReviewPage({ params }: PageProps<"/import/[id]">) {
   const ctx = await requireArea("import");
+  await requireFeature(ctx, "import");
   const { t, lang } = await getDict();
   const L = importLabels[lang];
   const { id } = await params;
