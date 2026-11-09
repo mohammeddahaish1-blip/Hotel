@@ -55,6 +55,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             link_other_device: t.link_other_device,
           }}
           notice={typeof sp.notice === "string" ? sp.notice : undefined}
+          initialMode={sp.mode === "signup" ? "signup" : "login"}
         />
         </section>
     </main>

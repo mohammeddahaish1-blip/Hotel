@@ -68,7 +68,7 @@ export function MfaForm({ t }: { t: T }) {
         type="button"
         className="w-full text-center text-sm text-muted"
         onClick={async () => {
-          await createClient().auth.signOut();
+          await createClient().auth.signOut({ scope: "local" });
           router.replace("/login");
         }}
       >

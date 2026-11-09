@@ -13,9 +13,9 @@ type T = Record<
 
 type Mode = "login" | "signup" | "reset";
 
-export function LoginForm({ t, notice }: { t: T; notice?: string }) {
+export function LoginForm({ t, notice, initialMode = "login" }: { t: T; notice?: string; initialMode?: Mode }) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("login");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(notice === "link" ? t.link_other_device : null);
   const [pending, setPending] = useState(false);

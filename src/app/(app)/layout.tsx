@@ -18,6 +18,7 @@ import Link from "next/link";
 import { dateTime } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { adminEndSession } from "@/app/actions/support";
+import { DEMO_EMAIL } from "@/lib/demo";
 
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -185,6 +186,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </div>
         </div>
         <main className="mx-auto max-w-6xl p-4 lg:p-8">
+          {ctx.email === DEMO_EMAIL ? (
+            <div role="status" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-brand-soft px-4 py-2.5 text-sm font-semibold text-brand">
+              <span className="flex-1">{t.demo_banner}</span>
+              <SignOut label={t.demo_signup} to="/login?mode=signup" />
+            </div>
+          ) : null}
           {ctx.supportUntil ? (
             <ActionForm action={adminEndSession} className="mb-4 rounded-xl border border-warn bg-warn-soft px-4 py-3 text-sm text-warn">
               <input type="hidden" name="tenant" value={ctx.tenantId} />

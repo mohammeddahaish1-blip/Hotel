@@ -35,7 +35,8 @@ export async function updateSession(request: NextRequest) {
 
   // Do not run code between createServerClient and getClaims().
   const { data } = await supabase.auth.getClaims();
-  const isPublic = PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));
+  // "/" is the public landing page for visitors (signed-in users are sent on to their home page)
+  const isPublic = request.nextUrl.pathname === "/" || PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));
 
   if (!data?.claims && !isPublic) {
     const url = request.nextUrl.clone();

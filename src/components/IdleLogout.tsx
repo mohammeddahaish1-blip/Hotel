@@ -10,7 +10,7 @@ export function IdleLogout({ minutes }: { minutes: number }) {
     const reset = () => {
       clearTimeout(timer);
       timer = setTimeout(async () => {
-        await createClient().auth.signOut();
+        await createClient().auth.signOut({ scope: "local" });
         window.location.replace("/login?reason=idle"); // full reload clears in-memory state
       }, minutes * 60_000);
     };
