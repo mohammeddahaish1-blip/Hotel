@@ -4,6 +4,7 @@ import { gregorian, omr, plainOmr } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { Badge, Crumb, Field, PageHeader, Section } from "@/components/ui";
 import { adminRecordPayment, adminSetSubscription, adminVoidPayment } from "@/app/actions/admin";
+import { adminCreateMaintenance } from "@/app/actions/support";
 
 type Row = {
   id: string; name: string; created_at: string; owner_name: string | null; owner_email: string | null;
@@ -95,6 +96,22 @@ export default async function AdminTenant({ params }: PageProps<"/admin/[id]">) 
               ))}
             </ul>
           )}
+        </Section>
+
+        <Section title="جدولة صيانة دورية">
+          <p className="mb-3 text-xs text-muted">تصل للفندق كطلب موافقة. بعد موافقته يُسمح بالدخول من موعد الزيارة للمدة المحددة فقط، ثم يُغلق تلقائياً.</p>
+          <ActionForm action={adminCreateMaintenance} resetOnSuccess className="grid gap-3 sm:grid-cols-2">
+            <input type="hidden" name="tenant" value={r.id} />
+            <Field label="العنوان" className="sm:col-span-2"><input name="title" required minLength={2} maxLength={120} defaultValue="صيانة دورية شهرية" className="input" /></Field>
+            <Field label="ما الذي سنفعله" className="sm:col-span-2"><textarea name="details" rows={3} maxLength={2000} className="input" placeholder="فحص النسخ الاحتياطية، تحديثات، مراجعة الإعدادات…" /></Field>
+            <Field label="موعد الزيارة (بتوقيت مسقط)"><input type="datetime-local" name="scheduled_for" required className="input" /></Field>
+            <Field label="مدة الدخول">
+              <select name="hours" defaultValue="2" className="input">
+                {[1, 2, 4, 8, 24].map((h) => <option key={h} value={h}>{h} ساعة</option>)}
+              </select>
+            </Field>
+            <SubmitButton className="btn-primary sm:col-span-2">إرسال للفندق للموافقة</SubmitButton>
+          </ActionForm>
         </Section>
 
         <Section title={`العقارات (${d.properties.length})`}>

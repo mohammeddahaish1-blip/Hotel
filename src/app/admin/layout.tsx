@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Building2, Layers3 } from "lucide-react";
+import { ArrowRight, Building2, Layers3, LifeBuoy } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
 
 /** System owners' portal (the Nuzul team): separate from any hotel, only for platform admins. */
@@ -16,6 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <nav className="flex flex-1 gap-1.5 text-sm">
             <Link href="/admin" className="btn-ghost btn-sm inline-flex items-center gap-1.5"><Building2 className="size-4 shrink-0" /> الشركات</Link>
             <Link href="/admin/plans" className="btn-ghost btn-sm inline-flex items-center gap-1.5"><Layers3 className="size-4 shrink-0" /> الباقات</Link>
+            <Link href="/admin/support" className="btn-ghost btn-sm inline-flex items-center gap-1.5"><LifeBuoy className="size-4 shrink-0" /> الدعم والصيانة</Link>
           </nav>
           <Link href="/" className="btn-ghost btn-sm inline-flex items-center gap-1.5"><ArrowRight className="size-4 shrink-0" /> العودة للنظام</Link>
         </div>

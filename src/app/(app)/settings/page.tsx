@@ -36,7 +36,7 @@ export default async function SettingsPage() {
       db.from("units").select("id, number, status, unit_type_id, floor_id, active").eq("property_id", ctx.property.id).order("number"),
       db.from("rate_plans").select("*, unit_types!inner(property_id, name_ar)").eq("unit_types.property_id", ctx.property.id).order("period"),
       db.from("tax_rules").select("*").eq("tenant_id", ctx.tenantId).order("sort"),
-      db.from("memberships").select("*").eq("tenant_id", ctx.tenantId).order("created_at"),
+      db.from("memberships").select("*").eq("tenant_id", ctx.tenantId).is("support_until", null).order("created_at"),
       db.from("invitations").select("*").eq("tenant_id", ctx.tenantId).is("accepted_at", null),
     ]);
   const { data: profiles } = await db.from("staff_profiles").select("*").eq("tenant_id", ctx.tenantId);

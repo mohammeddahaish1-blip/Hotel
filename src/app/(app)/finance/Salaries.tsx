@@ -13,7 +13,7 @@ type Payment = { id: string; user_id: string; amount: number; method: string; pa
 export async function Salaries({ ctx, month, monthLabel, t, lang }: { ctx: Ctx; month: string; monthLabel: string; t: Dict; lang: Lang }) {
   const monthStart = `${month}-01`;
   const [{ data: members }, { data: profiles }, { data: payments, error }] = await Promise.all([
-    ctx.supabase.from("memberships").select("user_id, full_name, job_title, role, active").eq("tenant_id", ctx.tenantId).order("created_at"),
+    ctx.supabase.from("memberships").select("user_id, full_name, job_title, role, active").eq("tenant_id", ctx.tenantId).is("support_until", null).order("created_at"),
     ctx.supabase.from("staff_profiles").select("user_id, salary").eq("tenant_id", ctx.tenantId),
     ctx.supabase.from("salary_payments").select("id, user_id, amount, method, paid_at").eq("tenant_id", ctx.tenantId).eq("month", monthStart),
   ]);

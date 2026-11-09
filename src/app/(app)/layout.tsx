@@ -1,4 +1,4 @@
-import { ShieldCheck, Sparkles } from "lucide-react";
+import { LogOut, ShieldCheck, Sparkles } from "lucide-react";
 import { initial } from "@/lib/profile-link";
 import { getCtx, can, hasRole, AREAS } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -15,6 +15,9 @@ import { loadAlerts } from "@/lib/alerts";
 import { getPlan, planHas } from "@/lib/plan";
 import { todayIn } from "@/lib/format";
 import Link from "next/link";
+import { dateTime } from "@/lib/format";
+import { ActionForm, SubmitButton } from "@/components/ActionForm";
+import { adminEndSession } from "@/app/actions/support";
 
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -82,12 +85,19 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         ...tab("settings", t.nav_settings_general),
         ...(ctx.role === "owner" ? [{ href: "/settings/permissions", label: t.nav_permissions }] : []),
         ...(has("automation") && can(ctx, "settings") && hasRole(ctx, ["manager"]) ? [{ href: "/settings/automation", label: t.auto_title }] : []),
+        ...(hasRole(ctx, ["manager"]) ? [{ href: "/support", label: t.sup_title }] : []),
       ],
     },
     // one log: everyone's operations for owner/manager/accountant, your own for everyone else
     { key: "audit", label: t.nav_activity, tabs: [{ href: "/audit", label: t.nav_activity }], also: ["/activity"] },
   ].filter((g) => g.tabs.length > 0);
-  const alerts = await loadAlerts(ctx, t, lang);
+  const [alerts, supportWaiting] = await Promise.all([
+    loadAlerts(ctx, t, lang),
+    // the Nuzul team waiting for this hotel's approval (maintenance visit or access)
+    hasRole(ctx, ["manager"]) && !ctx.supportUntil
+      ? ctx.supabase.from("support_requests").select("id", { count: "exact", head: true }).eq("tenant_id", ctx.tenantId).eq("status", "awaiting_hotel").then((r) => r.count ?? 0)
+      : Promise.resolve(0),
+  ]);
   const roleLabel = ctx.jobTitle || t[`role_${ctx.role}` as DictKey];
   // subscription notice for the owner and managers: trial ending, unpaid, suspended
   let banner: { tone: "warn" | "danger"; text: string } | null = null;
@@ -175,6 +185,21 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </div>
         </div>
         <main className="mx-auto max-w-6xl p-4 lg:p-8">
+          {ctx.supportUntil ? (
+            <ActionForm action={adminEndSession} className="mb-4 rounded-xl border border-warn bg-warn-soft px-4 py-3 text-sm text-warn">
+              <input type="hidden" name="tenant" value={ctx.tenantId} />
+              <p className="font-semibold">{t.sup_in_banner.replace("{t}", dateTime(ctx.supportUntil, ctx.property.timezone, lang))}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <input name="summary" placeholder={t.sup_summary} aria-label={t.sup_summary} maxLength={2000} className="input min-w-0 flex-1 py-2" />
+                <SubmitButton className="btn-primary btn-sm"><LogOut className="size-4 shrink-0" aria-hidden /> {t.sup_end}</SubmitButton>
+              </div>
+            </ActionForm>
+          ) : null}
+          {supportWaiting > 0 ? (
+            <Link href="/support" role="status" className="mb-4 block rounded-xl bg-info-soft px-4 py-2.5 text-sm font-semibold text-info">
+              {t.sup_pending_banner.replace("{n}", String(supportWaiting))}
+            </Link>
+          ) : null}
           {banner ? (
             <div role="status" className={`mb-4 rounded-xl px-4 py-2.5 text-sm font-semibold ${banner.tone === "danger" ? "bg-danger-soft text-danger" : "bg-warn-soft text-warn"}`}>
               {banner.text}

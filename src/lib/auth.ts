@@ -36,6 +36,8 @@ export type Ctx = {
   /** Database roles in effect (mirrors private.has_role) */
   roles: Role[];
   tenantId: string;
+  /** Set when this user is inside the hotel as Nuzul support: access ends at this moment */
+  supportUntil: string | null;
   property: Property;
   properties: Property[];
 };
@@ -48,7 +50,10 @@ export const getCtx = cache(async (): Promise<Ctx> => {
   if (!claims) redirect("/login");
 
   const loadMemberships = () =>
-    supabase.from("memberships").select("tenant_id, role, full_name, permissions, job_title").eq("user_id", claims.sub).eq("active", true);
+    supabase.from("memberships").select("tenant_id, role, full_name, permissions, job_title, support_until")
+      .eq("user_id", claims.sub).eq("active", true)
+      // a Nuzul support membership counts only while the hotel's grant runs
+      .or(`support_until.is.null,support_until.gt."${new Date().toISOString()}"`);
   const loadProperties = () =>
     supabase
       .from("properties")
@@ -88,6 +93,7 @@ export const getCtx = cache(async (): Promise<Ctx> => {
     areas,
     roles,
     tenantId: property.tenant_id,
+    supportUntil: (membership.support_until as string | null) ?? null,
     property,
     properties: properties as Property[],
   };
