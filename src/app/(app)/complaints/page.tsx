@@ -67,7 +67,7 @@ export default async function ComplaintsPage() {
 
   return (
     <>
-      <PageHeader title={owner ? t.sc_title_owner : t.sc_title_staff} sub={owner ? t.sc_sub_owner : t.sc_sub_staff} />
+      <PageHeader title={owner ? t.sc_title_owner : t.sc_title_staff} />
       <p className="mb-4 flex items-start gap-2 rounded-xl bg-surface-2 px-3 py-2.5 text-sm text-muted">
         <Lock className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden /> {owner ? t.sc_sub_owner : t.sc_sub_staff}
       </p>
