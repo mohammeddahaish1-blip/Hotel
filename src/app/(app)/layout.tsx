@@ -91,6 +91,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         ...(hasRole(ctx, ["manager"]) ? [{ href: "/support", label: t.sup_title }] : []),
       ],
     },
+    // complaint box: employees write to the owner, the owner reads; managers have no access at all
+    ...(ctx.role === "owner" || (!hasRole(ctx, ["manager"]) && !ctx.supportUntil)
+      ? [{ key: "complaints", label: ctx.role === "owner" ? t.sc_title_owner : t.nav_complaints, tabs: [{ href: "/complaints", label: ctx.role === "owner" ? t.sc_title_owner : t.nav_complaints }] }]
+      : []),
     // one log: everyone's operations for owner/manager/accountant, your own for everyone else
     { key: "audit", label: t.nav_activity, tabs: [{ href: "/audit", label: t.nav_activity }], also: ["/activity"] },
   ].filter((g) => g.tabs.length > 0);

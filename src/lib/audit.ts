@@ -45,6 +45,7 @@ const L = {
       contract_documents: "العقود", payment_links: "روابط الدفع", automation_rules: "الأتمتة", ical_feeds: "ربط القنوات", night_audits: "الإغلاق اليومي",
       support_requests: "طلبات الدعم", shops: "المحلات", shop_members: "أشخاص المحلات", shop_items: "أصناف المحلات",
       shop_sales: "مبيعات المحلات", shop_rent_payments: "إيجارات المحلات",
+      subscriptions: "الاشتراك", subscription_payments: "دفعات الاشتراك",
     } as Record<string, string>,
     actions: { insert: "إضافة", update: "تعديل", delete: "حذف" } as Record<string, string>,
     fields: {
@@ -72,6 +73,20 @@ const L = {
       ui_language: "لغة الواجهة", accepted_at: "وقت القبول", discount_approved_by: "اعتمد الخصم",
       message: "الرسالة", rating: "التقييم", guest_name: "اسم النزيل", contact: "التواصل", room: "الغرفة",
       staff_notes: "ملاحظات الإدارة", handled_by: "عالجها", handled_at: "وقت المعالجة",
+      access: "الصلاحية", access_from: "الدخول من", access_hours: "مدة الدخول (ساعات)", access_until: "الدخول حتى",
+      action: "الإجراء", bounce_reason: "سبب الارتجاع", cancelled_by: "ألغاه", commission_bp: "نسبة العمولة",
+      completed_at: "وقت الإنجاز", completed_by: "أنجزه", contract_start: "بداية العقد", contract_end: "نهاية العقد",
+      current_period_end: "مدفوع حتى", decided_at: "وقت القرار", decided_by: "صاحب القرار", decision_note: "ملاحظة القرار",
+      deposit: "التأمين", details: "التفاصيل", from_team: "من فريق نُزُل", guest_ip: "عنوان جهاز النزيل",
+      guest_sign_name: "اسم النزيل الموقّع", hk_kind: "نوع التنظيف", hotel_signed_by: "وقّعه عن الفندق",
+      hotel_signer_name: "اسم موقّع الفندق", monthly_rent: "الإيجار الشهري", months: "عدد الأشهر", offset_days: "عدد الأيام",
+      paid_on: "تاريخ الدفع", period_end: "نهاية الفترة", period_start: "بداية الفترة", plan_code: "الباقة",
+      price: "السعر", price_override: "سعر خاص", proof_path: "صورة الإثبات", provider: "مزود الدفع", receipt_no: "رقم السند",
+      recorded_by: "سجّله", renter_activity: "نشاط المحل", renter_cr: "السجل التجاري", renter_name: "المستأجر",
+      renter_phone: "هاتف المستأجر", report: "التقرير", requested_at: "وقت الطلب", requested_by: "طلبه",
+      scheduled_for: "الموعد", sold_at: "وقت البيع", sold_by: "البائع", support_until: "دخول الدعم حتى",
+      target: "نوع العملية", template_key: "نص الرسالة", trial_ends_at: "نهاية التجربة",
+      pending_request: "طلب مزامنة", last_event_count: "عدد الحجوزات المقروءة",
     } as Record<string, string>,
     empty: "(فارغ)", someone: "موظف", linked: "(مرتبط)", yes: "نعم", no: "لا", system: "النظام (تلقائي)", defaults: "حسب الدور",
     // summaries
@@ -98,11 +113,28 @@ const L = {
     member_new: (n: string) => `انضم ${n} إلى الفريق`,
     invite_new: (n: string, e: string) => `دعا ${n} (${e})`,
     generic: (a: string, what: string, name: string) => `${a} ${what}${name ? ` «${name}»` : ""}`,
+    ct_new: (c: string) => `أصدر عقداً إلكترونياً${c ? ` للحجز ${c}` : ""}`,
+    ct_signed: (n: string) => `وقّع النزيل${n ? ` ${n}` : ""} العقد الإلكتروني`,
+    ct_void: (r: string) => `ألغى العقد الإلكتروني${r ? ` — السبب: ${r}` : ""}`,
+    pl_new: (a: string) => `أنشأ رابط دفع بقيمة ${a}`,
+    pl_status: (a: string, st: string) => `رابط الدفع (${a}): ${st}`,
+    na_close: (d: string) => `أغلق يوم ${d}`,
+    sale_new: (code: string, a: string, m: string) => `باع ${code} بقيمة ${a} (${m})`,
+    sale_void: (code: string, a: string) => `ألغى البيع ${code} بقيمة ${a}`,
+    rent_new: (a: string, p: string) => `سجّل دفعة إيجار محل ${a}${p ? ` عن ${p}` : ""}`,
+    rent_void: (a: string) => `ألغى دفعة إيجار محل ${a}`,
+    shop_member: (n: string, a: string) => `أضاف ${n} إلى المحل بصلاحية ${a}`,
+    shop_member_del: (n: string) => `أزال ${n} من المحل`,
+    sup_new: (t2: string) => `أرسل طلب دعم «${t2}»`,
+    sup_status: (t2: string, st: string) => `طلب الدعم «${t2}»: ${st}`,
     what: {
       unit_types: "نوع وحدة", rate_plans: "خطة سعر", tax_rules: "ضريبة", compliance_submissions: "سجل امتثال",
       memberships: "بيانات موظف", invitations: "دعوة", maintenance_tickets: "بلاغ صيانة", invoices: "فاتورة",
       reservations: "حجز", payments: "دفعة", charges: "رسوم", expenses: "مصروف", cash_shifts: "وردية صندوق", credit_notes: "إشعار دائن",
       feedback: "ملاحظة نزيل", cheques: "شيك", correction_requests: "طلب تصحيح", unit_owners: "مالك وحدة", owner_payouts: "دفعة لمالك",
+      contract_documents: "عقداً إلكترونياً", payment_links: "رابط دفع", automation_rules: "قاعدة أتمتة", ical_feeds: "ربط قناة",
+      night_audits: "إغلاق يوم", support_requests: "طلب دعم", shops: "محلاً", shop_members: "شخصاً في محل", shop_items: "صنفاً في محل",
+      shop_sales: "عملية بيع", shop_rent_payments: "دفعة إيجار محل", subscriptions: "الاشتراك", subscription_payments: "دفعة اشتراك",
     } as Record<string, string>,
     verb: { insert: "أضاف", update: "عدّل", delete: "حذف" } as Record<string, string>,
   },
@@ -144,11 +176,28 @@ const L = {
     member_new: (n: string) => `${n} joined the team`,
     invite_new: (n: string, e: string) => `Invited ${n} (${e})`,
     generic: (a: string, what: string, name: string) => `${a} ${what}${name ? ` “${name}”` : ""}`,
+    ct_new: (c: string) => `Issued an e-contract${c ? ` for booking ${c}` : ""}`,
+    ct_signed: (n: string) => `Guest${n ? ` ${n}` : ""} signed the e-contract`,
+    ct_void: (r: string) => `Voided the e-contract${r ? ` — reason: ${r}` : ""}`,
+    pl_new: (a: string) => `Created a payment link for ${a}`,
+    pl_status: (a: string, st: string) => `Payment link (${a}): ${st}`,
+    na_close: (d: string) => `Closed the day ${d}`,
+    sale_new: (code: string, a: string, m: string) => `Sold ${code} for ${a} (${m})`,
+    sale_void: (code: string, a: string) => `Voided sale ${code} of ${a}`,
+    rent_new: (a: string, p: string) => `Recorded shop rent ${a}${p ? ` for ${p}` : ""}`,
+    rent_void: (a: string) => `Voided shop rent ${a}`,
+    shop_member: (n: string, a: string) => `Added ${n} to the shop as ${a}`,
+    shop_member_del: (n: string) => `Removed ${n} from the shop`,
+    sup_new: (t2: string) => `Sent support request “${t2}”`,
+    sup_status: (t2: string, st: string) => `Support request “${t2}”: ${st}`,
     what: {
       unit_types: "unit type", rate_plans: "rate plan", tax_rules: "tax", compliance_submissions: "compliance record",
       memberships: "staff details", invitations: "invitation", maintenance_tickets: "maintenance ticket", invoices: "invoice",
       reservations: "reservation", payments: "payment", charges: "charge", expenses: "expense", cash_shifts: "cash shift", credit_notes: "credit note",
       feedback: "guest feedback", cheques: "cheque", correction_requests: "correction request", unit_owners: "unit owner", owner_payouts: "owner payout",
+      contract_documents: "e-contract", payment_links: "payment link", automation_rules: "automation rule", ical_feeds: "channel link",
+      night_audits: "daily close", support_requests: "support request", shops: "shop", shop_members: "shop person", shop_items: "shop item",
+      shop_sales: "sale", shop_rent_payments: "shop rent payment", subscriptions: "subscription", subscription_payments: "subscription payment",
     } as Record<string, string>,
     verb: { insert: "Added", update: "Edited", delete: "Deleted" } as Record<string, string>,
   },
@@ -161,11 +210,13 @@ const LL = (lang: AuditLang) => L[lang === "ar" ? "ar" : "en"];
 const HIDDEN = new Set([
   "id", "tenant_id", "property_id", "folio_id", "cash_shift_id", "created_at", "updated_at", "created_by", "received_by",
   "issued_by", "invited_by", "opened_by", "reported_by", "user_id", "unit_type_id", "snapshot", "payload", "response", "sort",
+  "token", "receipt_token", "guest_signature", "guest_ua", "body", "body_hash", "summary", "proposed", "target_id", "payment_id",
+  "charge_id", "shop_id", "owner_id", "reservation_id", "provider_ref", "folio_id", "invoice_id",
 ]);
 const MONEY = new Set([
   "amount", "room_total", "discount_amount", "subtotal", "tax_total", "total", "nightly_rate", "monthly_rate",
   "opening_float", "expected_cash", "counted_cash", "difference", "salary", "monthly_rent", "deposit_amount",
-  "price", "unit_price", "deposit",
+  "price", "unit_price", "deposit", "price_override",
 ]);
 const TIMES = new Set(["handled_at", "checked_in_at", "checked_out_at", "cancelled_at", "received_at", "voided_at", "issued_at", "opened_at", "closed_at", "submitted_at", "accepted_at"]);
 const DATES = new Set(["service_date", "expense_date", "effective_from", "effective_to"]);
@@ -192,13 +243,13 @@ function dictOr(t: Dict, key: string, fallback: string) {
 }
 
 /** One stored value → what a person would write ("28.500 ر.ع", "تحويل بنكي", "مقيم"). */
-function formatValue(table: string, field: string, v: unknown, t: Dict, lang: AuditLang, lk: AuditLookups): string {
+function formatValue(table: string, field: string, v: unknown, t: Dict, lang: AuditLang, lk: AuditLookups, row: Record<string, unknown> = {}): string {
   const x = LL(lang);
   if (v === null || v === undefined || v === "") return x.empty;
   if (typeof v === "boolean") return v ? x.yes : x.no;
   const s = String(v);
   if (MONEY.has(field)) return omr(Number(v), lang);
-  if (field === "rate_bp") return pct(Number(v));
+  if (field === "rate_bp" || field === "commission_bp") return pct(Number(v));
   if (TIMES.has(field) || (field.endsWith("_at") && /^\d{4}-\d{2}-\d{2}T/.test(s))) return dateTime(s, lk.tz, lang);
   if (DATES.has(field)) return gregorian(s, lang);
   if ((field === "stay" || field === "period") && s.includes(",")) {
@@ -210,9 +261,20 @@ function formatValue(table: string, field: string, v: unknown, t: Dict, lang: Au
   if (PEOPLE.has(field) || field.endsWith("_by")) return lk.staff.get(s) ?? x.someone;
   if (field === "invoice_id") return "#" + s.slice(0, 8);
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(s)) return x.linked;   // an internal reference, never a raw id
-  if (field === "method") return dictOr(t, `pm_${s}`, s);
-  if (field === "source") return dictOr(t, `src_${s}`, s);
-  if (field === "category") return dictOr(t, `ec_${s}`, s);
+  if (field === "method") return table === "shop_sales" ? dictOr(t, `shp_m_${s}`, s) : dictOr(t, `pm_${s}`, s);
+  if (field === "source" || field === "channel") return dictOr(t, `src_${s}`, s);
+  if (field === "category") return table === "shops" ? dictOr(t, `shp_cat_${s}`, s) : dictOr(t, `ec_${s}`, s);
+  if (field === "language" || field === "ui_language") return s === "en" ? "English" : s === "ar" ? "العربية" : s;
+  if (field === "priority" && table === "maintenance_tickets") return dictOr(t, `pr_${s}`, s);
+  if (field === "access") return dictOr(t, `shp_acc_${s}`, s);
+  if (field === "purpose") return dictOr(t, `pl_purpose_${s}`, s);
+  if (field === "hk_kind") return dictOr(t, `hk_kind_${s}`, s);
+  if (field === "plan_code") return s;
+  if (field === "template_key") return (lang === "ar" ? TEMPLATE_AR : TEMPLATE_EN)[s] ?? s;
+  if (field === "trigger") return dictOr(t, `auto_tr_${s}`, s).replace("{n}", String(row.offset_days ?? ""));
+  if (field === "action" && table === "automation_rules") return dictOr(t, `auto_ac_${s}`, s);
+  if (field === "action" && table === "correction_requests") return dictOr(t, `cr_action_${s}`, s);
+  if (field === "target") return dictOr(t, `cr_target_${s}`, s);
   if (field === "role") return dictOr(t, `role_${s}`, s);
   if (field === "permissions") return Array.isArray(v) ? v.map((a) => dictOr(t, `nav_${a}`, String(a))).join("، ") : s;
   if (field === "kind") {
@@ -220,15 +282,34 @@ function formatValue(table: string, field: string, v: unknown, t: Dict, lang: Au
     if (table === "charges") return dictOr(t, `ck_${s}`, s);
     if (table === "reservations") return dictOr(t, `kind_${s}`, s);
     if (table === "feedback") return dictOr(t, `fb_${s}`, s);
+    if (table === "shops") return dictOr(t, `shp_kind_${s}`, s);
+    if (table === "support_requests") return dictOr(t, `sup_k_${s}`, s);
+    if (table === "unit_types") return dictOr(t, `ukind_${s}`, s);
   }
   if (field === "status") {
     if (table === "reservations") return dictOr(t, `rs_${s}`, s);
     if (table === "maintenance_tickets") return dictOr(t, `mt_${s}`, s);
     if (table === "feedback") return dictOr(t, `fb_status_${s}`, s);
+    if (table === "contract_documents") return dictOr(t, `ct_st_${s}`, s);
+    if (table === "payment_links") return dictOr(t, `pl_st_${s}`, s);
+    if (table === "cheques") return dictOr(t, `chq_st_${s}`, s);
+    if (table === "support_requests") return dictOr(t, `sup_st_${s}`, s);
+    if (table === "correction_requests") return dictOr(t, `cr_${s}`, s);
+    if (table === "subscriptions") return dictOr(t, `sub_st_${s}`, s);
   }
   if (Array.isArray(v) || typeof v === "object") return JSON.stringify(v);
   return s;
 }
+
+// built-in WhatsApp message templates (owners may add their own codes, shown as typed)
+const TEMPLATE_AR: Record<string, string> = {
+  booking_confirmed: "تأكيد الحجز", pre_arrival: "تذكير قبل الوصول", checkout_thanks: "شكر بعد المغادرة",
+  payment_request: "طلب سداد الإيجار", contract_renewal: "تذكير بانتهاء العقد", contract_sign: "رابط توقيع العقد",
+};
+const TEMPLATE_EN: Record<string, string> = {
+  booking_confirmed: "Booking confirmation", pre_arrival: "Pre-arrival reminder", checkout_thanks: "Thank you after check-out",
+  payment_request: "Rent payment request", contract_renewal: "Contract ending reminder", contract_sign: "Contract signing link",
+};
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
@@ -238,7 +319,7 @@ export function describeAudit(r: AuditRow, t: Dict, lang: AuditLang, lk: AuditLo
   const before = r.old_data ?? {};
   const after = r.new_data ?? {};
   const data = r.action === "delete" ? before : after;
-  const fv = (f: string, v: unknown) => formatValue(r.table_name, f, v, t, lang, lk);
+  const fv = (f: string, v: unknown) => formatValue(r.table_name, f, v, t, lang, lk, data);
   const changed = (f: string) => r.action === "update" && !same(before[f], after[f]);
 
   // Diff: every visible field that changed (insert/delete: the values that were set)
@@ -246,6 +327,7 @@ export function describeAudit(r: AuditRow, t: Dict, lang: AuditLang, lk: AuditLo
   const changes: AuditChange[] = [];
   for (const k of keys) {
     if (r.action === "update" && same(before[k], after[k])) continue;
+    if (lang === "ar" && !(k in L.ar.fields)) continue;   // a column without an Arabic name is a technical one
     const v = r.action === "delete" ? before[k] : after[k];
     if (r.action !== "update" && (v === null || v === undefined || v === "" || v === false)) continue;
     changes.push({
@@ -381,8 +463,56 @@ export function describeAudit(r: AuditRow, t: Dict, lang: AuditLang, lk: AuditLo
       summary = x.generic(x.verb[r.action] ?? r.action, x.what.compliance_submissions, str("authority").toUpperCase());
       href = "/compliance";
       break;
+    case "contract_documents":
+      if (r.action === "insert") summary = x.ct_new(lk.reservations.get(str("reservation_id")) ?? "");
+      else if (changed("voided_at") && after.voided_at) { summary = x.ct_void(str("void_reason")); sensitive = true; }
+      else if (changed("guest_signed_at") && after.guest_signed_at) summary = x.ct_signed(str("guest_sign_name"));
+      else summary = x.generic(x.verb[r.action] ?? r.action, x.what.contract_documents, str("title"));
+      if (data.reservation_id) href = `/reservations/${data.reservation_id}`;
+      break;
+    case "payment_links":
+      summary = r.action === "insert" ? x.pl_new(money("amount"))
+        : changed("status") ? x.pl_status(money("amount"), fv("status", after.status))
+        : x.generic(x.verb[r.action] ?? r.action, x.what.payment_links, money("amount"));
+      href = data.reservation_id ? `/reservations/${data.reservation_id}` : "/finance/links";
+      break;
+    case "night_audits":
+      summary = x.na_close(fv("business_date", data.business_date));
+      if (Number(data.pending) > 0) sensitive = true;
+      href = "/night-audit";
+      break;
+    case "shop_sales":
+      if (changed("voided_at") && after.voided_at) { summary = x.sale_void(str("code"), money("total")); sensitive = true; }
+      else summary = x.sale_new(str("code"), money("total"), fv("method", data.method));
+      if (data.shop_id) href = `/shops/${data.shop_id}`;
+      break;
+    case "shop_rent_payments":
+      if (changed("voided_at") && after.voided_at) { summary = x.rent_void(money("amount")); sensitive = true; }
+      else summary = x.rent_new(money("amount"), str("period"));
+      if (data.shop_id) href = `/shops/${data.shop_id}`;
+      break;
+    case "shop_members": {
+      const n = lk.staff.get(str("user_id")) ?? x.someone;
+      summary = r.action === "delete" ? x.shop_member_del(n) : x.shop_member(n, fv("access", data.access));
+      sensitive = true;
+      if (data.shop_id) href = `/shops/${data.shop_id}`;
+      break;
+    }
+    case "shops":
+    case "shop_items":
+      summary = x.generic(x.verb[r.action] ?? r.action, x.what[r.table_name], str("name"));
+      if (changed("price") || changed("monthly_rent")) sensitive = true;
+      href = r.table_name === "shops" ? (r.action !== "delete" && r.record_id ? `/shops/${r.record_id}` : "/shops") : data.shop_id ? `/shops/${data.shop_id}` : "/shops";
+      break;
+    case "support_requests":
+      summary = r.action === "insert" ? x.sup_new(str("title"))
+        : changed("status") ? x.sup_status(str("title"), fv("status", after.status))
+        : x.generic(x.verb[r.action] ?? r.action, x.what.support_requests, str("title"));
+      if (changed("access_until") || (changed("status") && after.status === "approved")) sensitive = true;
+      href = "/support";
+      break;
     default:
-      summary = x.generic(x.verb[r.action] ?? r.action, r.table_name, "");
+      summary = x.generic(x.verb[r.action] ?? r.action, x.what[r.table_name] ?? x.tables[r.table_name] ?? x.what.memberships, str("title") || str("name"));
   }
   return { summary, changes, href, sensitive };
 }

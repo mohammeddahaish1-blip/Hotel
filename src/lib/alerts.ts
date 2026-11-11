@@ -14,8 +14,17 @@ type Row = { kind: string; severity: number; ref_id: string; unit: string | null
 
 /** Today's alerts for the current user, translated and linked to where they're handled (once per request). */
 export const loadAlerts = cache(async (ctx: Ctx, t: Dict, lang: "ar" | "en" | "ur" | "bn"): Promise<AlertItem[]> => {
-  const { data } = await ctx.supabase.rpc("alerts", { p_property: ctx.property.id });
-  return ((data ?? []) as Row[]).map((r, i) => {
+  const [{ data }, complaints] = await Promise.all([
+    ctx.supabase.rpc("alerts", { p_property: ctx.property.id }),
+    // new staff complaints, for the owner only (managers never see them)
+    ctx.role === "owner"
+      ? ctx.supabase.from("staff_complaints").select("id", { count: "exact", head: true }).eq("tenant_id", ctx.tenantId).eq("status", "new").then((r) => r.count ?? 0)
+      : Promise.resolve(0),
+  ]);
+  const extraAlerts: AlertItem[] = complaints > 0
+    ? [{ key: "staff-complaints", severity: 1, title: t.al_staff_complaint, detail: String(complaints), href: "/complaints" }]
+    : [];
+  return extraAlerts.concat(((data ?? []) as Row[]).map((r, i) => {
     const unit = r.unit ? `${t.unit} ${r.unit}` : "";
     const who = r.guest ?? "";
     let extra: string | null = null;
@@ -88,5 +97,5 @@ export const loadAlerts = cache(async (ctx: Ctx, t: Dict, lang: "ar" | "en" | "u
     }
     const detail = r.kind === "urgent_maintenance" ? join([unit, extra]) : join([unit, who, extra]);
     return { key: `${r.kind}-${r.ref_id}-${i}`, severity: r.severity, title: t[`al_${r.kind}` as DictKey] ?? r.kind, detail, href };
-  });
+  }));
 });
