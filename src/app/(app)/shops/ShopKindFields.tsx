@@ -4,7 +4,7 @@ import { useState } from "react";
 
 /** Shop type and activity; a rented shop also asks for the renter, the rent and the contract dates. */
 export function ShopKindFields({ t, categories }: {
-  t: { kind: string; service: string; rental: string; category: string; renterName: string; renterPhone: string; rent: string; start: string; end: string };
+  t: { kind: string; service: string; rental: string; category: string; renterName: string; renterPhone: string; rent: string; start: string; end: string; daily: string };
   categories: { value: string; label: string }[];
 }) {
   const [kind, setKind] = useState<"service" | "rental">("service");
@@ -27,6 +27,11 @@ export function ShopKindFields({ t, categories }: {
           {categories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </select>
       </label>
+      {kind === "service" ? (
+        <label className="flex items-start gap-2 rounded-xl bg-surface-2 px-3 py-2 text-sm">
+          <input type="checkbox" name="daily_photos" className="mt-1" /> {t.daily}
+        </label>
+      ) : null}
       {kind === "rental" ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block sm:col-span-2"><span className="label">{t.renterName}</span><input name="renter_name" maxLength={120} className="input" /></label>

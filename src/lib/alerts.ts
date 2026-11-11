@@ -5,6 +5,8 @@ import { can } from "./auth";
 import type { Dict, DictKey } from "./i18n/dict";
 import { gregorian, omr } from "./format";
 import type { AlertItem } from "@/components/AlertsBell";
+import { hasRole } from "./auth";
+import { expiringWorkers, missingPhotoDays, type ShopRow } from "./shop-books";
 
 // Isolate each part so Latin names and dates don't reorder inside Arabic text
 const iso = (x: string) => `\u2068${x}\u2069`;
@@ -24,6 +26,28 @@ export const loadAlerts = cache(async (ctx: Ctx, t: Dict, lang: "ar" | "en" | "u
   const extraAlerts: AlertItem[] = complaints > 0
     ? [{ key: "staff-complaints", severity: 1, title: t.al_staff_complaint, detail: String(complaints), href: "/complaints" }]
     : [];
+  // shops: missing invoice photos and residence cards running out — for the owner, managers and each shop's cashier
+  const cashierOf = new Set(ctx.shops.filter((x) => x.access === "manager").map((x) => x.id));
+  if (hasRole(ctx, ["manager"]) || cashierOf.size) {
+    const { data: shopRows } = await ctx.supabase.from("shops")
+      .select("id, name, kind, daily_photos, photos_since, created_at, active").eq("tenant_id", ctx.tenantId);
+    const mine = ((shopRows ?? []) as (ShopRow & { name: string })[]).filter((x) => hasRole(ctx, ["manager"]) || cashierOf.has(x.id));
+    const [missing, workers] = await Promise.all([missingPhotoDays(ctx, mine), expiringWorkers(ctx)]);
+    for (const x of mine) {
+      const days = missing.get(x.id);
+      if (days?.length) extraAlerts.push({
+        key: `shop-photos-${x.id}`, severity: 1, title: t.al_shop_photos_missing,
+        detail: join([x.name, days.map((d) => gregorian(d, lang)).join("، ")]), href: `/shops/${x.id}`,
+      });
+    }
+    const names = new Map(mine.map((x) => [x.id, x.name]));
+    for (const w of workers) {
+      extraAlerts.push({
+        key: `iqama-${w.id}`, severity: 2, title: t.al_iqama_expiring,
+        detail: join([w.full_name, names.get(w.shop_id) ?? null, gregorian(w.iqama_expiry, lang)]), href: `/shops/${w.shop_id}`,
+      });
+    }
+  }
   return extraAlerts.concat(((data ?? []) as Row[]).map((r, i) => {
     const unit = r.unit ? `${t.unit} ${r.unit}` : "";
     const who = r.guest ?? "";

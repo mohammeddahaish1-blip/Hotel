@@ -9,11 +9,13 @@ import {
   addShopMember, recordShopRent, recordShopSale, removeShopMember, saveShopItem, updateShop, voidShopRent, voidShopSale,
 } from "@/app/actions/shops";
 import { ShopSale } from "./ShopSale";
+import { ShopBooks } from "./ShopBooks";
 
 type Shop = {
   id: string; kind: "service" | "rental"; category: string; name: string; number: string | null; active: boolean; notes: string | null;
   renter_name: string | null; renter_phone: string | null; renter_cr: string | null; renter_activity: string | null;
   monthly_rent: number; deposit: number; contract_start: string | null; contract_end: string | null;
+  daily_photos: boolean; photos_since: string | null; created_at: string;
 };
 type Item = { id: string; name: string; price: number; active: boolean };
 type Sale = {
@@ -107,11 +109,18 @@ export default async function ShopPage({ params, searchParams }: PageProps<"/sho
               ) : null}
               <Field label={t.shp_notes}><textarea name="notes" rows={2} maxLength={1000} defaultValue={x.notes ?? ""} className="input" /></Field>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked={x.active} /> {t.shp_active}</label>
+              {x.kind === "service" ? (
+                <label className="flex items-start gap-2 text-sm"><input type="checkbox" name="daily_photos" defaultChecked={x.daily_photos} className="mt-1" /> {t.bk_daily_photos}</label>
+              ) : null}
               <SubmitButton className="btn-primary w-full">{t.save}</SubmitButton>
             </ActionForm>
           </EditDetails>
         ) : null}
       />
+
+      {x.kind === "service" && manages ? (
+        <ShopBooks ctx={ctx} shop={{ ...x, kind: "service" }} day={day} admin={admin} t={t} lang={lang} names={names} />
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">

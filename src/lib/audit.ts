@@ -30,7 +30,7 @@ export const AUDIT_TABLES = [
   "reservations", "payments", "charges", "invoices", "credit_notes", "expenses", "cash_shifts",
   "unit_types", "rate_plans", "tax_rules", "maintenance_tickets", "compliance_submissions", "memberships", "invitations", "feedback", "cheques", "correction_requests", "unit_owners", "owner_payouts",
   "contract_documents", "payment_links", "automation_rules", "ical_feeds", "night_audits",
-  "support_requests", "shops", "shop_members", "shop_items", "shop_sales", "shop_rent_payments",
+  "support_requests", "shops", "shop_members", "shop_items", "shop_sales", "shop_rent_payments", "shop_workers", "shop_receipts",
 ] as const;
 
 const L = {
@@ -46,6 +46,7 @@ const L = {
       support_requests: "طلبات الدعم", shops: "المحلات", shop_members: "أشخاص المحلات", shop_items: "أصناف المحلات",
       shop_sales: "مبيعات المحلات", shop_rent_payments: "إيجارات المحلات",
       subscriptions: "الاشتراك", subscription_payments: "دفعات الاشتراك",
+      shop_workers: "عمال المحلات", shop_receipts: "فواتير المحلات المصوّرة",
     } as Record<string, string>,
     actions: { insert: "إضافة", update: "تعديل", delete: "حذف" } as Record<string, string>,
     fields: {
@@ -87,6 +88,8 @@ const L = {
       scheduled_for: "الموعد", sold_at: "وقت البيع", sold_by: "البائع", support_until: "دخول الدعم حتى",
       target: "نوع العملية", template_key: "نص الرسالة", trial_ends_at: "نهاية التجربة",
       pending_request: "طلب مزامنة", last_event_count: "عدد الحجوزات المقروءة",
+      nationality: "الجنسية", iqama_no: "رقم الإقامة", iqama_expiry: "انتهاء الإقامة", joined_on: "تاريخ الالتحاق",
+      vendor: "الجهة", read_status: "طريقة إدخال المبلغ", daily_photos: "تصوير الفواتير يومياً", photos_since: "التصوير مطلوب منذ",
     } as Record<string, string>,
     empty: "(فارغ)", someone: "موظف", linked: "(مرتبط)", yes: "نعم", no: "لا", system: "النظام (تلقائي)", defaults: "حسب الدور",
     // summaries
@@ -135,6 +138,7 @@ const L = {
       contract_documents: "عقداً إلكترونياً", payment_links: "رابط دفع", automation_rules: "قاعدة أتمتة", ical_feeds: "ربط قناة",
       night_audits: "إغلاق يوم", support_requests: "طلب دعم", shops: "محلاً", shop_members: "شخصاً في محل", shop_items: "صنفاً في محل",
       shop_sales: "عملية بيع", shop_rent_payments: "دفعة إيجار محل", subscriptions: "الاشتراك", subscription_payments: "دفعة اشتراك",
+      shop_workers: "عاملاً في محل", shop_receipts: "فاتورة مصوّرة لمحل",
     } as Record<string, string>,
     verb: { insert: "أضاف", update: "عدّل", delete: "حذف" } as Record<string, string>,
   },
@@ -198,6 +202,7 @@ const L = {
       contract_documents: "e-contract", payment_links: "payment link", automation_rules: "automation rule", ical_feeds: "channel link",
       night_audits: "daily close", support_requests: "support request", shops: "shop", shop_members: "shop person", shop_items: "shop item",
       shop_sales: "sale", shop_rent_payments: "shop rent payment", subscriptions: "subscription", subscription_payments: "subscription payment",
+      shop_workers: "shop worker", shop_receipts: "shop invoice photo",
     } as Record<string, string>,
     verb: { insert: "Added", update: "Edited", delete: "Deleted" } as Record<string, string>,
   },
@@ -211,7 +216,7 @@ const HIDDEN = new Set([
   "id", "tenant_id", "property_id", "folio_id", "cash_shift_id", "created_at", "updated_at", "created_by", "received_by",
   "issued_by", "invited_by", "opened_by", "reported_by", "user_id", "unit_type_id", "snapshot", "payload", "response", "sort",
   "token", "receipt_token", "guest_signature", "guest_ua", "body", "body_hash", "summary", "proposed", "target_id", "payment_id",
-  "charge_id", "shop_id", "owner_id", "reservation_id", "provider_ref", "folio_id", "invoice_id",
+  "charge_id", "shop_id", "owner_id", "reservation_id", "provider_ref", "folio_id", "invoice_id", "photo_path",
 ]);
 const MONEY = new Set([
   "amount", "room_total", "discount_amount", "subtotal", "tax_total", "total", "nightly_rate", "monthly_rate",
@@ -219,7 +224,7 @@ const MONEY = new Set([
   "price", "unit_price", "deposit", "price_override",
 ]);
 const TIMES = new Set(["handled_at", "checked_in_at", "checked_out_at", "cancelled_at", "received_at", "voided_at", "issued_at", "opened_at", "closed_at", "submitted_at", "accepted_at"]);
-const DATES = new Set(["service_date", "expense_date", "effective_from", "effective_to"]);
+const DATES = new Set(["service_date", "expense_date", "effective_from", "effective_to", "iqama_expiry", "joined_on", "business_date", "photos_since", "paid_on"]);
 const PEOPLE = new Set(["closed_by", "assigned_to", "discount_approved_by", "handled_by"]);
 
 export function tableLabel(table: string, lang: AuditLang) {
@@ -268,6 +273,7 @@ function formatValue(table: string, field: string, v: unknown, t: Dict, lang: Au
   if (field === "priority" && table === "maintenance_tickets") return dictOr(t, `pr_${s}`, s);
   if (field === "access") return dictOr(t, `shp_acc_${s}`, s);
   if (field === "purpose") return dictOr(t, `pl_purpose_${s}`, s);
+  if (field === "read_status") return dictOr(t, `bk_st_${s}`, s);
   if (field === "hk_kind") return dictOr(t, `hk_kind_${s}`, s);
   if (field === "plan_code") return s;
   if (field === "template_key") return (lang === "ar" ? TEMPLATE_AR : TEMPLATE_EN)[s] ?? s;
@@ -283,6 +289,7 @@ function formatValue(table: string, field: string, v: unknown, t: Dict, lang: Au
     if (table === "reservations") return dictOr(t, `kind_${s}`, s);
     if (table === "feedback") return dictOr(t, `fb_${s}`, s);
     if (table === "shops") return dictOr(t, `shp_kind_${s}`, s);
+    if (table === "shop_receipts") return dictOr(t, `bk_k_${s}`, s);
     if (table === "support_requests") return dictOr(t, `sup_k_${s}`, s);
     if (table === "unit_types") return dictOr(t, `ukind_${s}`, s);
   }
@@ -498,6 +505,16 @@ export function describeAudit(r: AuditRow, t: Dict, lang: AuditLang, lk: AuditLo
       if (data.shop_id) href = `/shops/${data.shop_id}`;
       break;
     }
+    case "shop_workers":
+      summary = x.generic(x.verb[r.action] ?? r.action, x.what.shop_workers, str("full_name"));
+      if (changed("salary")) sensitive = true;
+      if (data.shop_id) href = `/shops/${data.shop_id}`;
+      break;
+    case "shop_receipts":
+      summary = x.generic(x.verb[r.action] ?? r.action, x.what.shop_receipts, `${fv("kind", data.kind)} · ${money("amount")}`);
+      if (changed("amount") || (changed("voided_at") && after.voided_at)) sensitive = true;
+      if (data.shop_id) href = `/shops/${data.shop_id}?d=${str("business_date")}`;
+      break;
     case "shops":
     case "shop_items":
       summary = x.generic(x.verb[r.action] ?? r.action, x.what[r.table_name], str("name"));

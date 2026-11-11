@@ -61,7 +61,12 @@ export async function createShop(_: ActionResult, fd: FormData): Promise<ActionR
   const kind = s(fd, "kind") ?? "service";
   if (!KINDS.has(kind)) return done({ message: "INVALID_VALUE: kind" }, []);
   const { data, error } = await ctx.supabase.from("shops")
-    .insert({ tenant_id: ctx.tenantId, property_id: ctx.property.id, kind, ...shopFields(fd, kind) })
+    .insert({
+      tenant_id: ctx.tenantId, property_id: ctx.property.id, kind, ...shopFields(fd, kind),
+      ...(kind === "service" && fd.get("daily_photos") === "on"
+        ? { daily_photos: true, photos_since: new Intl.DateTimeFormat("en-CA", { timeZone: ctx.property.timezone }).format(new Date()) }
+        : {}),
+    })
     .select("id").single();
   if (error) return done(error, []);
   revalidatePath("/shops");
@@ -73,9 +78,15 @@ export async function updateShop(_: ActionResult, fd: FormData): Promise<ActionR
   if (bad) return bad;
   const ctx = await admin();
   const id = s(fd, "id")!;
+  const daily = fd.get("daily_photos") === "on";
   const { error } = await ctx.supabase.from("shops")
-    .update({ ...shopFields(fd, s(fd, "kind") ?? "service"), active: fd.get("active") === "on" })
+    .update({ ...shopFields(fd, s(fd, "kind") ?? "service"), active: fd.get("active") === "on", daily_photos: daily })
     .eq("id", id).eq("tenant_id", ctx.tenantId);
+  // photos are required from the day the owner switches it on (earlier days are never flagged)
+  if (!error && daily) {
+    await ctx.supabase.from("shops").update({ photos_since: new Intl.DateTimeFormat("en-CA", { timeZone: ctx.property.timezone }).format(new Date()) })
+      .eq("id", id).is("photos_since", null);
+  }
   return done(error, ["/shops", `/shops/${id}`]);
 }
 
@@ -159,5 +170,93 @@ export async function voidShopRent(_: ActionResult, fd: FormData): Promise<Actio
   }
   const { error } = await ctx.supabase.from("shop_rent_payments")
     .update({ voided_at: new Date().toISOString(), void_reason: reason }).eq("id", s(fd, "id")!).is("voided_at", null);
+  return done(error, [`/shops/${shop}`, "/shops"]);
+}
+
+// ---------------------------------------------------------------- shop books: workers and invoice photos
+export async function saveShopWorker(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const bad = await moneyError(fd, { salary: "min0" });
+  if (bad) return bad;
+  const ctx = await getCtx();
+  const shop = s(fd, "shop")!;
+  const id = s(fd, "id");
+  const row = {
+    full_name: s(fd, "full_name") ?? "", job_title: s(fd, "job_title"), phone: s(fd, "phone"), nationality: s(fd, "nationality"),
+    salary: parseBaisa(s(fd, "salary")) ?? 0, iqama_no: s(fd, "iqama_no"), iqama_expiry: date(s(fd, "iqama_expiry")),
+    joined_on: date(s(fd, "joined_on")), notes: s(fd, "notes"),
+    ...(id ? { active: fd.get("active") === "on" } : {}),
+  };
+  const { error } = id
+    ? await ctx.supabase.from("shop_workers").update(row).eq("id", id).eq("shop_id", shop)
+    : await ctx.supabase.from("shop_workers").insert({ ...row, tenant_id: ctx.tenantId, shop_id: shop });
+  return done(error, [`/shops/${shop}`, "/shops"]);
+}
+
+/** The cashier photographs an invoice; its amount is typed or read from the photo by Claude. */
+export async function uploadShopReceipt(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const bad = await moneyError(fd, { amount: "posOpt" });
+  if (bad) return bad;
+  const ctx = await getCtx();
+  const { t, lang } = await getDict();
+  const shop = s(fd, "shop")!;
+  const file = fd.get("photo");
+  if (!(file instanceof File) || file.size === 0) return { error: t.bk_need_photo };
+  const typed = s(fd, "amount") ? parseBaisa(s(fd, "amount")) : null;
+  const { readReceipt, receiptReaderEnabled } = await import("@/lib/receipt-reader");
+  if (typed == null && !receiptReaderEnabled()) return { error: t.bk_need_amount };
+  const kind = ["sales", "purchase", "expense"].includes(s(fd, "kind") ?? "") ? s(fd, "kind")! : "sales";
+  const day = date(s(fd, "day")) ?? new Intl.DateTimeFormat("en-CA", { timeZone: ctx.property.timezone }).format(new Date());
+
+  const ext = file.type === "application/pdf" ? "pdf" : file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `${ctx.tenantId}/${shop}/${crypto.randomUUID()}.${ext}`;
+  const up = await ctx.supabase.storage.from("shop-receipts").upload(path, file, { contentType: file.type || "image/jpeg" });
+  if (up.error) return { error: errorMessage(t, up.error) };
+
+  let amount = typed;
+  let status = typed != null ? "manual" : "pending";
+  let vendor: string | null = null;
+  if (typed == null) {
+    const reading = await readReceipt(Buffer.from(await file.arrayBuffer()), file.type || "image/jpeg");
+    amount = reading?.total ?? null;
+    vendor = reading?.vendor ?? null;
+    status = amount != null ? "read" : "failed";
+  }
+  const { error } = await ctx.supabase.from("shop_receipts").insert({
+    tenant_id: ctx.tenantId, shop_id: shop, business_date: day, kind, amount, vendor, photo_path: path, read_status: status,
+    note: s(fd, "note"),
+  });
+  if (error) return { error: errorMessage(t, error) };
+  revalidatePath(`/shops/${shop}`);
+  revalidatePath("/shops");
+  if (status === "failed") return { error: t.bk_read_fail };
+  if (status === "read") {
+    const { omr } = await import("@/lib/format");
+    return { ok: t.bk_read_ok.replace("{a}", omr(amount!, lang)) };
+  }
+  return { ok: t.saved };
+}
+
+export async function fixShopReceipt(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const bad = await moneyError(fd, { amount: "min0" });
+  if (bad) return bad;
+  const ctx = await getCtx();
+  const shop = s(fd, "shop")!;
+  const kind = s(fd, "kind");
+  const { error } = await ctx.supabase.from("shop_receipts")
+    .update({ amount: parseBaisa(s(fd, "amount")) ?? 0, read_status: "manual", ...(kind && ["sales", "purchase", "expense"].includes(kind) ? { kind } : {}) })
+    .eq("id", s(fd, "id")!).eq("shop_id", shop);
+  return done(error, [`/shops/${shop}`, "/shops"]);
+}
+
+export async function voidShopReceipt(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const shop = s(fd, "shop")!;
+  const reason = s(fd, "reason");
+  if (!reason) {
+    const { t } = await getDict();
+    return { error: t.err_REASON_REQUIRED };
+  }
+  const { error } = await ctx.supabase.from("shop_receipts")
+    .update({ voided_at: new Date().toISOString(), void_reason: reason }).eq("id", s(fd, "id")!).eq("shop_id", shop).is("voided_at", null);
   return done(error, [`/shops/${shop}`, "/shops"]);
 }
