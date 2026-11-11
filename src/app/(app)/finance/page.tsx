@@ -348,7 +348,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                 </select>
               </Field>
               <Field label={t.description}><input name="description" required className="input" /></Field>
-              <Field label={`${t.amount} (${lang === "en" ? "OMR" : "ر.ع"})`}><AmountInput {...amountProps} /></Field>
+              <Field label={`${t.amount} (${lang === "en" || lang === "bn" ? "OMR" : "ر.ع"})`}><AmountInput {...amountProps} /></Field>
               <div className="grid grid-cols-2 gap-2">
                 <Field label={t.method}>
                   <select name="method" className="input">

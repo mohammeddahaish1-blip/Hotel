@@ -118,7 +118,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     redirect(homeFor(ctx));
   }
   const { lang } = await getDict();
-  const en = lang === "en";
+  const en = lang === "en" || lang === "bn";   // Bengali visitors read the English page
   const c = en ? COPY.en : COPY.ar;
   const sp = await searchParams;
   const { data } = await supabase.from("plans").select("code, name_ar, name_en, monthly_price, max_units, max_properties, features").eq("active", true).order("sort");

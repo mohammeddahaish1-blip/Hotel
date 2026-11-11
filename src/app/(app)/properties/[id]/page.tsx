@@ -27,7 +27,7 @@ export default async function PropertyPage({ params }: PageProps<"/properties/[i
   const p = data as PropertyRow;
   const [stats, photos] = await Promise.all([propertyStats(ctx, [p]), photoUrls(ctx, [p])]);
   const st = stats.get(p.id)!;
-  const name = lang === "en" && p.name_en ? p.name_en : p.name_ar;
+  const name = (lang === "en" || lang === "bn") && p.name_en ? p.name_en : p.name_ar;
   const isCurrent = p.id === ctx.property.id;
   const canEdit = hasRole(ctx, ["manager"]);
   const pct = st.units ? Math.round((st.occupied / st.units) * 100) : 0;

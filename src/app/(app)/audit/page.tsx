@@ -2,7 +2,7 @@ import { ChevronDown, Download, ExternalLink, Filter, TriangleAlert } from "luci
 import Link from "next/link";
 import { can, getCtx } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
-import { isRtl, type DictKey } from "@/lib/i18n/dict";
+import { intlLocale, isRtl, type DictKey } from "@/lib/i18n/dict";
 import { addDays, todayIn, zonedStart } from "@/lib/format";
 import { AUDIT_TABLES, actionLabel, actorLabel, auditTag, tableLabel, type AuditTag } from "@/lib/audit";
 import { auditStats, filtersToQuery, loadAudit, parseAuditFilters } from "@/lib/audit-query";
@@ -48,7 +48,7 @@ export default async function LogPage({ searchParams }: PageProps<"/audit">) {
   const dayKey = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date(iso));
   const today = todayIn(tz);
   const yesterday = addDays(today, -1);
-  const loc = lang === "en" ? "en-GB" : lang === "ur" ? "ur-PK-u-nu-latn" : "ar-OM-u-nu-latn";
+  const loc = intlLocale(lang);
   const dayTitle = (key: string) => {
     const d = new Date(`${key}T12:00:00Z`);
     const weekday = new Intl.DateTimeFormat(loc, { weekday: "long", timeZone: "UTC" }).format(d);

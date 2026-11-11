@@ -30,6 +30,7 @@ export const AUDIT_TABLES = [
   "reservations", "payments", "charges", "invoices", "credit_notes", "expenses", "cash_shifts",
   "unit_types", "rate_plans", "tax_rules", "maintenance_tickets", "compliance_submissions", "memberships", "invitations", "feedback", "cheques", "correction_requests", "unit_owners", "owner_payouts",
   "contract_documents", "payment_links", "automation_rules", "ical_feeds", "night_audits",
+  "support_requests", "shops", "shop_members", "shop_items", "shop_sales", "shop_rent_payments",
 ] as const;
 
 const L = {
@@ -42,6 +43,8 @@ const L = {
       feedback: "المقترحات والشكاوي", cheques: "الشيكات", correction_requests: "طلبات التصحيح",
       unit_owners: "ملاك الوحدات", owner_payouts: "دفعات الملاك",
       contract_documents: "العقود", payment_links: "روابط الدفع", automation_rules: "الأتمتة", ical_feeds: "ربط القنوات", night_audits: "الإغلاق اليومي",
+      support_requests: "طلبات الدعم", shops: "المحلات", shop_members: "أشخاص المحلات", shop_items: "أصناف المحلات",
+      shop_sales: "مبيعات المحلات", shop_rent_payments: "إيجارات المحلات",
     } as Record<string, string>,
     actions: { insert: "إضافة", update: "تعديل", delete: "حذف" } as Record<string, string>,
     fields: {
@@ -112,6 +115,8 @@ const L = {
       feedback: "Suggestions & complaints", cheques: "Cheques", correction_requests: "Correction requests",
       unit_owners: "Unit owners", owner_payouts: "Owner payouts",
       contract_documents: "Contracts", payment_links: "Payment links", automation_rules: "Automation", ical_feeds: "Channels", night_audits: "Daily close",
+      support_requests: "Support requests", shops: "Shops", shop_members: "Shop people", shop_items: "Shop items",
+      shop_sales: "Shop sales", shop_rent_payments: "Shop rent",
     } as Record<string, string>,
     actions: { insert: "Added", update: "Edited", delete: "Deleted" } as Record<string, string>,
     fields: {} as Record<string, string>,
@@ -148,9 +153,9 @@ const L = {
     verb: { insert: "Added", update: "Edited", delete: "Deleted" } as Record<string, string>,
   },
 };
-export type AuditLang = keyof typeof L | "ur";
+export type AuditLang = keyof typeof L | "ur" | "bn";
 // Urdu users (front-line staff) rarely open the audit log: English wording is used for them.
-const LL = (lang: AuditLang) => L[lang === "ur" ? "en" : lang];
+const LL = (lang: AuditLang) => L[lang === "ar" ? "ar" : "en"];
 
 // Technical columns nobody needs to read
 const HIDDEN = new Set([
@@ -160,6 +165,7 @@ const HIDDEN = new Set([
 const MONEY = new Set([
   "amount", "room_total", "discount_amount", "subtotal", "tax_total", "total", "nightly_rate", "monthly_rate",
   "opening_float", "expected_cash", "counted_cash", "difference", "salary", "monthly_rent", "deposit_amount",
+  "price", "unit_price", "deposit",
 ]);
 const TIMES = new Set(["handled_at", "checked_in_at", "checked_out_at", "cancelled_at", "received_at", "voided_at", "issued_at", "opened_at", "closed_at", "submitted_at", "accepted_at"]);
 const DATES = new Set(["service_date", "expense_date", "effective_from", "effective_to"]);
@@ -405,7 +411,7 @@ const TAGS = {
 
 /** Short coloured tag that says what kind of operation a log line is ("Check-in", "Receipt", "Cancelled"…). */
 export function auditTag(r: AuditRow, lang: AuditLang): AuditTag {
-  const x = TAGS[lang === "ur" ? "en" : lang];
+  const x = TAGS[lang === "ar" ? "ar" : "en"];
   const b = r.old_data ?? {};
   const a = r.new_data ?? {};
   const set = (f: string) => r.action === "update" && b[f] == null && a[f] != null;

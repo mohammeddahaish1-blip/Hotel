@@ -4,7 +4,7 @@ import { ChevronDown, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { COUNTRIES, PRIORITY, byIso2, byIso3, flag, splitInternational, type Country } from "@/lib/countries";
 
-type Lang = "ar" | "en" | "ur";
+type Lang = "ar" | "en" | "ur" | "bn";
 
 /** Arabic-Indic and Persian digits typed on an Arabic keyboard become 0-9. */
 const ascii = (v: string) =>

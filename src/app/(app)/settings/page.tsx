@@ -57,7 +57,7 @@ export default async function SettingsPage() {
             <Link href="/upgrade" className="btn-ghost btn-sm">{t.sub_compare}</Link>
           </div>
           <div className="grid gap-3 text-sm sm:grid-cols-4">
-            <div><div className="label">{t.sub_plan}</div><div className="font-bold">{lang === "en" && plan.nameEn ? plan.nameEn : plan.name}</div></div>
+            <div><div className="label">{t.sub_plan}</div><div className="font-bold">{(lang === "en" || lang === "bn") && plan.nameEn ? plan.nameEn : plan.name}</div></div>
             <div><div className="label">{t.sub_status}</div><Badge tone={plan.status === "active" ? "ok" : plan.status === "trial" ? "info" : "danger"}>{t[`sub_st_${plan.status}` as DictKey]}</Badge></div>
             <div>
               <div className="label">{plan.status === "trial" ? t.sub_trial_until : t.sub_until}</div>
@@ -449,6 +449,10 @@ export default async function SettingsPage() {
                     </label>
                   ))}
                 </div>
+                <label className="mt-2 flex items-start gap-2 rounded-xl bg-surface-2 px-3 py-2 text-xs">
+                  <input type="checkbox" name="shop_only" className="mt-0.5" />
+                  <span><span className="block text-sm font-semibold">{t.invite_shop_only}</span><span className="text-muted">{t.invite_shop_only_hint}</span></span>
+                </label>
               </div>
             ) : (
               <Field label={t.role}>

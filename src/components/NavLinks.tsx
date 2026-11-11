@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   Activity, Building2, CircleUserRound, Sparkles, CalendarCheck, ChartColumn, FileText, FileUp, LayoutGrid,
-  MessageSquareText, Settings, ShieldCheck, SprayCan, Wallet, type LucideIcon,
+  MessageSquareText, Settings, ShieldCheck, SprayCan, Store, Wallet, type LucideIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -11,7 +11,7 @@ export type NavTab = { href: string; label: string };
 export type NavGroup = { key: string; label: string; tabs: NavTab[]; also?: string[] };
 
 const ICONS: Record<string, LucideIcon> = {
-  dashboard: LayoutGrid, units: Building2, reservations: CalendarCheck, ops: SprayCan, finance: Wallet,
+  dashboard: LayoutGrid, units: Building2, reservations: CalendarCheck, ops: SprayCan, shops: Store, finance: Wallet,
   reports: FileText, analytics: ChartColumn, assistant: Sparkles, feedback: MessageSquareText, import: FileUp,
   settings: Settings, activity: Activity, profile: CircleUserRound, audit: ShieldCheck,
 };

@@ -74,7 +74,7 @@ export default async function AnalyticsPage() {
             max={incomeTop}
             ticks={[0, incomeTop / 2, incomeTop].map((v) => ({
               value: v,
-              label: `${(v / 1000).toLocaleString("en", { maximumFractionDigits: 0 })}${v === incomeTop ? (lang === "en" ? " OMR" : " ر.ع") : ""}`,
+              label: `${(v / 1000).toLocaleString("en", { maximumFractionDigits: 0 })}${v === incomeTop ? (lang === "en" || lang === "bn" ? " OMR" : " ر.ع") : ""}`,
             }))}
             tableLabel={t.an_show_table}
             columns={[t.date, t.amount]}

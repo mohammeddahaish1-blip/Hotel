@@ -13,7 +13,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <div>
             <div className="brand-word text-7xl text-brand lg:text-8xl">{t.appName}</div>
             <div className="mt-2 text-lg text-[#66706c]">
-              {{ ar: "لإدارة الفنادق والشقق الفندقية", en: "Hotels & serviced apartments", ur: "ہوٹلوں اور سروسڈ اپارٹمنٹس کے لیے" }[lang]}
+              {{ ar: "لإدارة الفنادق والشقق الفندقية", en: "Hotels & serviced apartments", ur: "ہوٹلوں اور سروسڈ اپارٹمنٹس کے لیے", bn: "হোটেল ও সার্ভিসড অ্যাপার্টমেন্টের জন্য" }[lang]}
             </div>
           </div>
           <div className="flex flex-1 items-end justify-center pb-6">

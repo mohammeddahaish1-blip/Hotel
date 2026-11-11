@@ -20,7 +20,7 @@ export default async function UpgradePage({ searchParams }: PageProps<"/upgrade"
   ]);
   const plans = (data ?? []) as PlanRow[];
   const fname = (k: string) => t[`feat_${k}` as DictKey] ?? k;
-  const pname = (p: { name_ar: string; name_en: string | null }) => (lang === "en" && p.name_en ? p.name_en : p.name_ar);
+  const pname = (p: { name_ar: string; name_en: string | null }) => ((lang === "en" || lang === "bn") && p.name_en ? p.name_en : p.name_ar);
 
   return (
     <>

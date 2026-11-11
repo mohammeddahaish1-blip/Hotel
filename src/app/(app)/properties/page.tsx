@@ -26,7 +26,7 @@ export default async function PropertiesPage() {
         {props.map((p) => {
           const st = stats.get(p.id)!;
           const pct = st.units ? Math.round((st.occupied / st.units) * 100) : 0;
-          const name = lang === "en" && p.name_en ? p.name_en : p.name_ar;
+          const name = (lang === "en" || lang === "bn") && p.name_en ? p.name_en : p.name_ar;
           return (
             <Link key={p.id} href={`/properties/${p.id}`} className="card group overflow-hidden p-0 transition hover:-translate-y-0.5 hover:shadow-md">
               <div className="relative">

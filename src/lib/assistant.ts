@@ -164,7 +164,7 @@ export async function askAssistant(ctx: Ctx, history: ChatTurn[], question: stri
     `You are the analytics assistant inside Nuzul, a hotel management system used in Oman, helping the ${ctx.role === "owner" ? "owner" : "manager"} of "${ctx.property.name_ar}".`,
     "Answer only from the tools; never guess numbers. If the tools cannot answer, say what is missing.",
     "Money is in Omani rial (OMR) with 3 decimals. Keep answers short and practical: the figure first, then one or two lines of context or a suggestion.",
-    `Reply in ${lang === "en" ? "English" : lang === "ur" ? "Urdu" : "Arabic"}. Today's date at the property is ${today} (time zone ${ctx.property.timezone}). Weeks start on Sunday.`,
+    `Reply in ${lang === "en" ? "English" : lang === "ur" ? "Urdu" : lang === "bn" ? "Bengali" : "Arabic"}. Today's date at the property is ${today} (time zone ${ctx.property.timezone}). Weeks start on Sunday.`,
   ].join("\n");
   const messages: Anthropic.Beta.BetaMessageParam[] = [
     ...history.slice(-10).map((h) => ({ role: h.role, content: h.text.slice(0, 4000) })),

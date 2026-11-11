@@ -86,13 +86,13 @@
   --color-gray-soft: var(--gray-soft);
   --color-chart: var(--chart);
   --color-grid: var(--grid);
-  --font-sans: var(--font-arabic), system-ui, sans-serif;
+  --font-sans: var(--font-arabic), var(--font-bengali), system-ui, sans-serif;
 }
 
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-arabic), system-ui, sans-serif;
+  font-family: var(--font-arabic), var(--font-bengali), system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 

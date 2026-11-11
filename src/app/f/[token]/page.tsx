@@ -11,17 +11,17 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export default async function GuestFeedbackPage({ params, searchParams }: PageProps<"/f/[token]">) {
   const { token } = await params;
   const q = (await searchParams).lang;
-  const lang = q === "en" || q === "ur" ? q : "ar";
+  const lang = q === "en" || q === "ur" || q === "bn" ? q : "ar";
   let property: { name_ar: string; name_en: string | null } | undefined;
   if (UUID.test(token)) {
     const supabase = await createClient();
     const { data } = await supabase.rpc("feedback_property", { p_token: token });
     property = (data as { name_ar: string; name_en: string | null }[] | null)?.[0];
   }
-  const name = property ? (lang === "en" && property.name_en ? property.name_en : property.name_ar) : null;
+  const name = property ? ((lang === "en" || lang === "bn") && property.name_en ? property.name_en : property.name_ar) : null;
 
   return (
-    <div dir={lang === "en" ? "ltr" : "rtl"} lang={lang} className="min-h-screen bg-bg px-4 py-8">
+    <div dir={lang === "en" || lang === "bn" ? "ltr" : "rtl"} lang={lang} className="min-h-screen bg-bg px-4 py-8">
       <div className="mx-auto max-w-md">
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
@@ -29,8 +29,8 @@ export default async function GuestFeedbackPage({ params, searchParams }: PagePr
             {name ? <h1 className="mt-1 text-lg font-bold">{name}</h1> : null}
           </div>
           <div className="flex gap-1">
-            {(["ar", "en", "ur"] as const).filter((l) => l !== lang).map((l) => (
-              <Link key={l} href={`/f/${token}${l === "ar" ? "" : `?lang=${l}`}`} className="btn-ghost btn-sm">{{ ar: "العربية", en: "English", ur: "اردو" }[l]}</Link>
+            {(["ar", "en", "ur", "bn"] as const).filter((l) => l !== lang).map((l) => (
+              <Link key={l} href={`/f/${token}${l === "ar" ? "" : `?lang=${l}`}`} className="btn-ghost btn-sm">{{ ar: "العربية", en: "English", ur: "اردو", bn: "বাংলা" }[l]}</Link>
             ))}
           </div>
         </div>
@@ -39,7 +39,7 @@ export default async function GuestFeedbackPage({ params, searchParams }: PagePr
             <GuestFeedbackForm token={token} lang={lang} />
           ) : (
             <p className="py-6 text-center text-muted">
-              {{ ar: "الرابط غير صحيح. اطلب من الاستقبال الباركود الصحيح.", en: "This link is not valid. Please ask reception for the correct QR code.", ur: "یہ لنک درست نہیں۔ استقبالیہ سے درست QR کوڈ مانگیں۔" }[lang]}
+              {{ ar: "الرابط غير صحيح. اطلب من الاستقبال الباركود الصحيح.", en: "This link is not valid. Please ask reception for the correct QR code.", ur: "یہ لنک درست نہیں۔ استقبالیہ سے درست QR کوڈ مانگیں۔", bn: "লিংকটি সঠিক নয়। রিসেপশন থেকে সঠিক QR কোড চেয়ে নিন।" }[lang]}
             </p>
           )}
         </div>

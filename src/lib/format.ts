@@ -41,13 +41,13 @@ export function toBaisa(omr: string | number | null | undefined): number {
   return parseBaisa(omr) ?? 0;
 }
 
-export function omr(baisa: number | string | null | undefined, lang: "ar" | "en" | "ur" = "ar"): string {
+export function omr(baisa: number | string | null | undefined, lang: "ar" | "en" | "ur" | "bn" = "ar"): string {
   const v = Number(baisa ?? 0) / 1000;
   const s = new Intl.NumberFormat(lang === "ar" ? "ar-OM" : lang === "ur" ? "ur-PK-u-nu-latn" : "en-OM", {
     minimumFractionDigits: 3,
     maximumFractionDigits: 3,
   }).format(v);
-  return lang === "en" ? `OMR ${s}` : `${s} ر.ع.`;
+  return lang === "en" || lang === "bn" ? `OMR ${s}` : `${s} ر.ع.`;
 }
 
 export function plainOmr(baisa: number | string | null | undefined): string {
@@ -58,7 +58,7 @@ export function pct(bp: number | null | undefined): string {
   return `${((bp ?? 0) / 100).toFixed(1)}%`;
 }
 
-export function gregorian(d: string | Date | null | undefined, lang: "ar" | "en" | "ur" = "ar"): string {
+export function gregorian(d: string | Date | null | undefined, lang: "ar" | "en" | "ur" | "bn" = "ar"): string {
   if (!d) return "—";
   const date = typeof d === "string" ? new Date(d.length === 10 ? `${d}T00:00:00` : d) : d;
   return new Intl.DateTimeFormat(intlLocale(lang), {
@@ -68,17 +68,17 @@ export function gregorian(d: string | Date | null | undefined, lang: "ar" | "en"
   }).format(date);
 }
 
-export function hijri(d: string | Date | null | undefined, lang: "ar" | "en" | "ur" = "ar"): string {
+export function hijri(d: string | Date | null | undefined, lang: "ar" | "en" | "ur" | "bn" = "ar"): string {
   if (!d) return "";
   const date = typeof d === "string" ? new Date(d.length === 10 ? `${d}T00:00:00` : d) : d;
-  return new Intl.DateTimeFormat(`${lang === "ar" ? "ar-SA" : lang === "ur" ? "ur-PK" : "en"}-u-ca-islamic-umalqura-nu-latn`, {
+  return new Intl.DateTimeFormat(`${lang === "ar" ? "ar-SA" : lang === "ur" ? "ur-PK" : lang === "bn" ? "bn-BD" : "en"}-u-ca-islamic-umalqura-nu-latn`, {
     day: "numeric",
     month: "long",
     year: "numeric",
   }).format(date);
 }
 
-export function dateTime(d: string | null | undefined, tz = "Asia/Muscat", lang: "ar" | "en" | "ur" = "ar"): string {
+export function dateTime(d: string | null | undefined, tz = "Asia/Muscat", lang: "ar" | "en" | "ur" | "bn" = "ar"): string {
   if (!d) return "—";
   return new Intl.DateTimeFormat(intlLocale(lang), {
     dateStyle: "medium",

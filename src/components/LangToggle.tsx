@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { LANGS } from "@/lib/i18n/dict";
 
-/** Interface language: Arabic, English or Urdu (saved in a cookie). */
+/** Interface language: Arabic, English, Urdu or Bengali (saved in a cookie). */
 export function LangToggle({ current }: { current: string }) {
   const router = useRouter();
   return (
     <select
-      aria-label="Language / اللغة / زبان"
+      aria-label="Language / اللغة / زبان / ভাষা"
       className="input w-auto py-1.5 text-sm"
       defaultValue={current}
       onChange={(e) => {

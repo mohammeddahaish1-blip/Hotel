@@ -36,6 +36,8 @@ export type Ctx = {
   /** Database roles in effect (mirrors private.has_role) */
   roles: Role[];
   tenantId: string;
+  /** Shops this person works in (seller / shop manager / renter); owner and managers manage every shop */
+  shops: { id: string; access: "seller" | "manager" | "renter" }[];
   /** Set when this user is inside the hotel as Nuzul support: access ends at this moment */
   supportUntil: string | null;
   property: Property;
@@ -60,6 +62,7 @@ export const getCtx = cache(async (): Promise<Ctx> => {
       .select("id, tenant_id, name_ar, name_en, timezone, currency, kind, phone, whatsapp, address, vat_no, license_no")
       .order("created_at");
   // One round trip for both: they don't depend on each other
+  const shopsP = supabase.from("shop_members").select("shop_id, tenant_id, access").eq("user_id", claims.sub);
   let [{ data: memberships }, { data: properties }] = await Promise.all([loadMemberships(), loadProperties()]);
   if (!memberships || memberships.length === 0) {
     // First sign-in of invited staff: attach pending invitations for this email
@@ -79,6 +82,11 @@ export const getCtx = cache(async (): Promise<Ctx> => {
     ? [...new Set(permissions.map((a) => AREA_ROLE[a]).filter((r): r is Role => r !== null))]
     : [role];
 
+  const { data: shopRows } = await shopsP;
+  const shops = (shopRows ?? [])
+    .filter((r) => r.tenant_id === property.tenant_id)
+    .map((r) => ({ id: r.shop_id as string, access: r.access as "seller" | "manager" | "renter" }));
+
   // NFR-02 (2FA for owners/managers) is switched off at the owner's request.
   // To re-enable: if ((role === "owner" || role === "manager") && claims.aal !== "aal2") redirect("/mfa");
 
@@ -93,6 +101,7 @@ export const getCtx = cache(async (): Promise<Ctx> => {
     areas,
     roles,
     tenantId: property.tenant_id,
+    shops,
     supportUntil: (membership.support_until as string | null) ?? null,
     property,
     properties: properties as Property[],
@@ -156,7 +165,9 @@ export async function requireArea(area: Area): Promise<Ctx> {
   return ctx;
 }
 
-export function homeFor(ctx: Pick<Ctx, "areas">): string {
+export function homeFor(ctx: Pick<Ctx, "areas"> & { shops?: Ctx["shops"] }): string {
+  // someone who only works in a shop starts in their shop
+  if (ctx.areas.length === 0 && ctx.shops?.length) return "/shops";
   const order: Area[] = ["dashboard", "board", "housekeeping", "maintenance", "reservations", "finance", "reports"];
   const first = order.find((a) => ctx.areas.includes(a)) ?? ctx.areas[0];
   return first ? `/${first}` : "/no-access";

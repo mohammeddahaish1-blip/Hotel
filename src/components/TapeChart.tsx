@@ -20,7 +20,7 @@ const BAR_TONE: Record<string, string> = {
 export function TapeChart({
   start, days, today, lang, units, bars, labels, t, canBook,
 }: {
-  start: string; days: number; today: string; lang: "ar" | "en" | "ur";
+  start: string; days: number; today: string; lang: "ar" | "en" | "ur" | "bn";
   units: { id: string; number: string; status: string }[];
   bars: Bar[];
   labels: { moved: string; unit: string };

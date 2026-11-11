@@ -54,6 +54,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       also: ["/invoices"],
     },
     { key: "ops", label: t.nav_grp_ops, tabs: [...tab("housekeeping"), ...tab("maintenance")] },
+    // shops: owner and managers manage all; a seller, shop manager or renter sees their own shops
+    { key: "shops", label: t.nav_shops, tabs: hasRole(ctx, ["manager"]) || ctx.shops.length ? [{ href: "/shops", label: t.nav_shops }] : [] },
     {
       key: "finance",
       label: t.nav_finance,
@@ -110,7 +112,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     else if (plan.status === "past_due") banner = { tone: "danger", text: t.sub_banner_past_due };
     else if (trialLeft !== null && trialLeft <= 7) banner = { tone: "warn", text: trialLeft < 0 ? t.sub_banner_trial_over : t.sub_banner_trial.replace("{n}", String(trialLeft)) };
   }
-  const propertyName = lang === "en" && ctx.property.name_en ? ctx.property.name_en : ctx.property.name_ar;
+  const propertyName = (lang === "en" || lang === "bn") && ctx.property.name_en ? ctx.property.name_en : ctx.property.name_ar;
 
   return (
     <div className="min-h-screen lg:flex">

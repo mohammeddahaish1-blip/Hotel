@@ -13,7 +13,7 @@ const join = (parts: (string | null | undefined)[]) => parts.filter(Boolean).map
 type Row = { kind: string; severity: number; ref_id: string; unit: string | null; guest: string | null; info: string | null };
 
 /** Today's alerts for the current user, translated and linked to where they're handled (once per request). */
-export const loadAlerts = cache(async (ctx: Ctx, t: Dict, lang: "ar" | "en" | "ur"): Promise<AlertItem[]> => {
+export const loadAlerts = cache(async (ctx: Ctx, t: Dict, lang: "ar" | "en" | "ur" | "bn"): Promise<AlertItem[]> => {
   const { data } = await ctx.supabase.rpc("alerts", { p_property: ctx.property.id });
   return ((data ?? []) as Row[]).map((r, i) => {
     const unit = r.unit ? `${t.unit} ${r.unit}` : "";
