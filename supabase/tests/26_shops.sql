@@ -31,9 +31,9 @@ insert into public.shop_items(tenant_id, shop_id, name, price)
 reset role;
 
 -- staff: a seller of the laundry, the renter of the shop, and someone with no shop
-insert into public.memberships(tenant_id, user_id, role, permissions) select t, '00000000-0000-0000-0000-0000000000e1', 'maintenance', '{shops}' from c;
-insert into public.memberships(tenant_id, user_id, role, permissions) select t, '00000000-0000-0000-0000-0000000000e2', 'maintenance', '{shops}' from c;
-insert into public.memberships(tenant_id, user_id, role, permissions) select t, '00000000-0000-0000-0000-0000000000e3', 'maintenance', '{shops}' from c;
+insert into public.memberships(tenant_id, user_id, role, permissions) select t, '00000000-0000-0000-0000-0000000000e1', 'maintenance', '{}' from c;
+insert into public.memberships(tenant_id, user_id, role, permissions) select t, '00000000-0000-0000-0000-0000000000e2', 'maintenance', '{}' from c;
+insert into public.memberships(tenant_id, user_id, role, permissions) select t, '00000000-0000-0000-0000-0000000000e3', 'maintenance', '{}' from c;
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 set local role authenticated;
 insert into public.shop_members(shop_id, tenant_id, user_id, access)
@@ -81,16 +81,16 @@ set local role authenticated;
 select pg_temp.check((select count(*) from public.shops) = 0, 'no shop, nothing visible');
 reset role;
 
--- the owner voids the room sale: the room charge is voided too; removing the section ends shop access
+-- the owner voids the room sale: the room charge is voided too; switching the seller off ends shop access
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 set local role authenticated;
 select public.void_shop_sale((select id from s2), 'wrong room');
-update public.memberships set permissions = '{board}' where user_id = '00000000-0000-0000-0000-0000000000e1';
+update public.memberships set active = false where user_id = '00000000-0000-0000-0000-0000000000e1';
 reset role;
 select pg_temp.check((select voided_at from public.charges where id = (select charge_id from public.shop_sales where id = (select id from s2))) is not null, 'room charge voided');
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000e1');
 set local role authenticated;
-select pg_temp.check((select count(*) from public.shops) = 0, 'no section, no shop');
+select pg_temp.check((select count(*) from public.shops) = 0, 'inactive staff, no shop');
 reset role;
 rollback;
 select 'SHOPS OK';

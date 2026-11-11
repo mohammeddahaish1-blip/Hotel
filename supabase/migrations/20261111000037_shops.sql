@@ -4,22 +4,11 @@
 -- * service shops inside the property (laundry, café, restaurant, mini-market…): items with prices,
 --   sales paid on the spot or charged to an in-house guest's bill;
 -- * rental shops let to a business: renter, monthly rent, contract dates, deposit and rent payments.
--- Each shop has its own people with their own access ('shops' section + a role in that shop):
+-- Each shop has its own people with their own access (a role in that shop, given by the owner or a manager;
+-- someone who works only in a shop needs no other section):
 --   seller (records sales) · manager (also items, all sales, voids) · renter (sees their contract and payments).
 -- They see only the shops they belong to; owner and managers see all.
 -- =====================================================================
-
--- 'shops' becomes a grantable section
-alter table public.memberships drop constraint memberships_permissions_valid;
-alter table public.memberships add constraint memberships_permissions_valid check (
-  permissions is null or permissions <@ array[
-    'dashboard', 'board', 'calendar', 'reservations', 'guests', 'housekeeping',
-    'maintenance', 'finance', 'reports', 'compliance', 'settings', 'audit', 'feedback', 'import', 'shops']::text[]);
-alter table public.invitations drop constraint invitations_permissions_valid;
-alter table public.invitations add constraint invitations_permissions_valid check (
-  permissions is null or permissions <@ array[
-    'dashboard', 'board', 'calendar', 'reservations', 'guests', 'housekeeping',
-    'maintenance', 'finance', 'reports', 'compliance', 'settings', 'audit', 'feedback', 'import', 'shops']::text[]);
 
 -- ---------------------------------------------------------------- shops
 create table public.shops (
@@ -63,7 +52,7 @@ create index shop_members_tenant_user_idx on public.shop_members(tenant_id, user
 alter table public.shop_members enable row level security;
 
 -- The caller's access to one shop: 'admin' (owner / manager), or their role in that shop while they
--- still hold the 'shops' section; null = no access.
+-- are active staff; null = no access.
 create or replace function private.shop_access(p_shop uuid)
 returns text
 language sql stable security definer set search_path = ''
@@ -73,8 +62,7 @@ as $$
     else (select sm.access from public.shop_members sm
             join public.memberships m on m.tenant_id = sm.tenant_id and m.user_id = sm.user_id
            where sm.shop_id = s.id and sm.user_id = (select auth.uid()) and m.active
-             and (m.support_until is null or m.support_until > now())
-             and m.permissions @> '{shops}')
+             and (m.support_until is null or m.support_until > now()))
   end
   from public.shops s where s.id = p_shop
 $$;
@@ -195,8 +183,7 @@ create or replace function public.record_shop_sale(p_shop uuid, p_lines jsonb, p
 returns uuid language plpgsql security definer set search_path = ''
 as $$
 declare
-  s public.shops; v_sale uuid; v_total bigint := 0; v_folio uuid; v_charge uuid; v_desc text;
-  l record;
+  s public.shops; v_sale uuid; v_total bigint := 0; v_folio uuid; v_charge uuid; v_desc text; v_lines jsonb;
 begin
   select * into s from public.shops where id = p_shop;
   if not found or coalesce(private.shop_access(p_shop), '') not in ('admin', 'manager', 'seller') then
@@ -205,22 +192,21 @@ begin
   if s.kind <> 'service' or not s.active then raise exception 'SHOP_CLOSED: this shop does not sell'; end if;
   if p_method not in ('cash', 'card', 'transfer', 'room') then raise exception 'INVALID_VALUE: method'; end if;
 
-  create temp table if not exists pg_temp.sale_lines (item_id uuid, name text, qty int, price bigint) on commit drop;
-  truncate pg_temp.sale_lines;
-  insert into pg_temp.sale_lines
-    select i.id, i.name, (x->>'qty')::int, i.price
-      from jsonb_array_elements(coalesce(p_lines, '[]'::jsonb)) x
-      join public.shop_items i on i.id = (x->>'item_id')::uuid and i.shop_id = p_shop and i.active
-     where (x->>'qty')::int between 1 and 999;
-  if not exists (select 1 from pg_temp.sale_lines) then raise exception 'NO_ITEMS: pick at least one item'; end if;
-  select sum(qty * price) into v_total from pg_temp.sale_lines;
+  -- the chosen items at the shop's own prices
+  select jsonb_agg(jsonb_build_object('item_id', i.id, 'name', i.name, 'qty', (x->>'qty')::int, 'price', i.price))
+    into v_lines
+    from jsonb_array_elements(coalesce(p_lines, '[]'::jsonb)) x
+    join public.shop_items i on i.id = (x->>'item_id')::uuid and i.shop_id = p_shop and i.active
+   where (x->>'qty')::int between 1 and 999;
+  if v_lines is null then raise exception 'NO_ITEMS: pick at least one item'; end if;
+  select sum((l->>'qty')::int * (l->>'price')::bigint) into v_total from jsonb_array_elements(v_lines) l;
   if v_total <= 0 then raise exception 'INVALID_AMOUNT: total must be positive'; end if;
 
   if p_method = 'room' then
     select f.id into v_folio from public.reservations r join public.folios f on f.reservation_id = r.id
      where r.id = p_reservation and r.property_id = s.property_id and r.status = 'checked_in';
     if v_folio is null then raise exception 'NOT_IN_HOUSE: the guest is not staying now'; end if;
-    select s.name || ': ' || string_agg(qty || '× ' || name, '، ') into v_desc from pg_temp.sale_lines;
+    select s.name || ': ' || string_agg((l->>'qty') || '× ' || (l->>'name'), '، ') into v_desc from jsonb_array_elements(v_lines) l;
     insert into public.charges(tenant_id, folio_id, kind, description, amount, taxable)
     values (s.tenant_id, v_folio,
             case s.category when 'laundry' then 'laundry' when 'cafe' then 'food' when 'restaurant' then 'food' else 'service' end,
@@ -233,7 +219,9 @@ begin
           case when p_method = 'room' then p_reservation end, v_charge, nullif(btrim(left(p_note, 300)), ''))
   returning id into v_sale;
   insert into public.shop_sale_lines(tenant_id, sale_id, shop_id, item_id, name, qty, unit_price, amount)
-    select s.tenant_id, v_sale, p_shop, item_id, name, qty, price, qty * price from pg_temp.sale_lines;
+    select s.tenant_id, v_sale, p_shop, (l->>'item_id')::uuid, l->>'name', (l->>'qty')::int, (l->>'price')::bigint,
+           (l->>'qty')::int * (l->>'price')::bigint
+      from jsonb_array_elements(v_lines) l;
   return v_sale;
 end $$;
 
