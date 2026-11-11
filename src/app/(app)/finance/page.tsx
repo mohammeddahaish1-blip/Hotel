@@ -6,6 +6,7 @@ import { intlLocale, type DictKey } from "@/lib/i18n/dict";
 import { addDays, dateTime, gregorian, omr, todayIn, whatsappLink, zonedStart } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { AmountInput, ReceiptInput, RemindAll } from "@/components/FinanceInputs";
+import { ScrollToHash } from "@/components/ScrollToHash";
 import { BarList } from "@/components/charts";
 import { Badge, Empty, Field, PageHeader, Section, Stat } from "@/components/ui";
 import { Salaries } from "./Salaries";
@@ -108,6 +109,21 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
   const net = collected - expTotal;
   const prevNet = prevCollected - prevExpTotal;
   const agingRows = (aging ?? []) as Aging[];
+  // deposits still held: deposits taken minus returned or applied, per guest account
+  const { data: depPays } = seesMoney
+    ? await db.from("payments")
+        .select("folio_id, kind, amount, folios!inner(property_id, reservation_id, reservations(code, status, units(number), guests(full_name)))")
+        .eq("folios.property_id", ctx.property.id).is("voided_at", null).in("kind", ["deposit", "deposit_refund", "deposit_applied"])
+    : { data: [] };
+  type DepRow = { folio_id: string; kind: string; amount: number; folios: { reservation_id: string | null; reservations: { code: string; status: string; units: { number: string } | null; guests: { full_name: string } | null } | null } | null };
+  const depBy = new Map<string, { folio: string; held: number; reservation: string | null; code: string | null; status: string | null; unit: string | null; guest: string | null }>();
+  for (const p of (depPays ?? []) as unknown as DepRow[]) {
+    const r = p.folios?.reservations;
+    const row = depBy.get(p.folio_id) ?? { folio: p.folio_id, held: 0, reservation: p.folios?.reservation_id ?? null, code: r?.code ?? null, status: r?.status ?? null, unit: r?.units?.number ?? null, guest: r?.guests?.full_name ?? null };
+    row.held += p.kind === "deposit" ? Number(p.amount) : -Number(p.amount);
+    depBy.set(p.folio_id, row);
+  }
+  const depositRows = [...depBy.values()].filter((r) => r.held > 0).sort((a, b) => b.held - a.held);
   const outstanding = agingRows.reduce((a, r) => a + r.balance, 0);
   const trend = (now: number, prev: number, goodUp = true) => {
     const c = change(now, prev);
@@ -154,7 +170,8 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
     const s = q.toString();
     return s ? `/finance?${s}` : "/finance";
   };
-  const overdue = agingRows.filter((r) => r.age_days > 30 && r.phone);
+  // "remind everyone": every guest who owes money and has a phone number, oldest debt first
+  const debtors = agingRows.filter((r) => r.phone).sort((a, b) => b.age_days - a.age_days);
   const reminder = (r: Aging) =>
     whatsappLink(
       r.phone,
@@ -164,6 +181,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
 
   return (
     <>
+      <ScrollToHash />
       <PageHeader
         title={t.fin_title}
         actions={
@@ -221,6 +239,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
         </Section>
 
         <div className="lg:col-span-2">
+          <div id="aging" className="scroll-mt-28" />
           <Section title={t.aging}>
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {BUCKETS.map((x) => {
@@ -236,7 +255,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
             <RemindAll
               label={t.remind_all}
               hint={t.remind_all_hint}
-              items={overdue.map((r) => ({ key: r.folio_id, name: `${r.guest_name ?? "—"}${r.unit ? ` · ${r.unit}` : ""}`, amount: omr(r.balance, lang), href: reminder(r) }))}
+              items={debtors.map((r) => ({ key: r.folio_id, name: `${r.guest_name ?? "—"}${r.unit ? ` · ${r.unit}` : ""}`, amount: omr(r.balance, lang), href: reminder(r) }))}
             />
             {agingRows.length === 0 ? (
               <Empty>{t.none}</Empty>
@@ -268,6 +287,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
 
       {seesMoney ? (
         <div className="mt-4">
+          <div id="payments" className="scroll-mt-28" />
           <Section title={`${t.fin_payments} · ${monthLabel}`}>
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
               {month === thisMonth ? (
@@ -327,6 +347,31 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                   </table>
                 </div>
               </details>
+            )}
+          </Section>
+        </div>
+      ) : null}
+
+      {seesMoney ? (
+        <div className="mt-4">
+          <div id="deposits" className="scroll-mt-28" />
+          <Section title={`${t.dash_deposits} · ${omr(depositRows.reduce((a, r) => a + r.held, 0), lang)}`}>
+            {depositRows.length === 0 ? <Empty>{t.none}</Empty> : (
+              <div className="overflow-x-auto">
+                <table className="table">
+                  <thead><tr><th>{t.guest}</th><th>{t.unit}</th><th>{t.status}</th><th>{t.amount}</th></tr></thead>
+                  <tbody>
+                    {depositRows.map((r) => (
+                      <tr key={r.folio}>
+                        <td>{r.reservation ? <Link href={`/reservations/${r.reservation}`} className="text-brand">{r.guest ?? "—"}</Link> : r.guest ?? "—"}{r.code ? <span className="ms-1 text-xs text-muted">{r.code}</span> : null}</td>
+                        <td>{r.unit ?? "—"}</td>
+                        <td>{r.status ? <Badge tone={r.status === "checked_out" ? "warn" : "gray"}>{t[`rs_${r.status}` as DictKey]}</Badge> : null}</td>
+                        <td className="num font-semibold">{omr(r.held, lang)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </Section>
         </div>
@@ -397,6 +442,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
           </Section>
           {seesMoney ? (
             <div className="space-y-4 lg:col-span-2">
+              <div id="expenses" className="scroll-mt-28" />
               <Section
                 title={`${t.expenses} · ${monthLabel} · ${omr(expTotal, lang)}`}
                 actions={<a href={`/api/export?kind=expenses&from=${from}&to=${monthEnd(month)}`} className="btn-ghost btn-sm inline-flex items-center gap-1.5"><Download className="size-4 shrink-0" /> {t.fin_export}</a>}

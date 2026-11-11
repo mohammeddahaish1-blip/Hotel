@@ -1,4 +1,5 @@
-import { BadgeCheck, Ban, BedDouble, CalendarClock, CircleCheck, CircleX, Hourglass, KeyRound, LogOut, SprayCan, UserX, Wrench } from "lucide-react";
+import Link from "next/link";
+import { BadgeCheck, Ban, BedDouble, CalendarClock, ChevronLeft, CircleCheck, CircleX, Hourglass, KeyRound, LogOut, SprayCan, UserX, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 
 const TONES = {
@@ -78,14 +79,19 @@ export function PageHeader({ title, sub, actions }: { title: string; sub?: React
   );
 }
 
-export function Stat({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: Tone }) {
-  return (
-    <div className="card">
-      <div className="text-xs font-semibold text-muted">{label}</div>
+/** A figure tile; with href the whole tile opens the details behind the figure. */
+export function Stat({ label, value, hint, tone, href }: { label: string; value: ReactNode; hint?: ReactNode; tone?: Tone; href?: string }) {
+  const body = (
+    <>
+      <div className="flex items-center justify-between gap-1 text-xs font-semibold text-muted">
+        <span>{label}</span>
+        {href ? <ChevronLeft className="size-3.5 shrink-0 opacity-60 ltr:rotate-180" aria-hidden /> : null}
+      </div>
       <div className={`num mt-1 text-xl font-bold ${tone ? TONES[tone].split(" ")[1] : ""}`}>{value}</div>
       {hint ? <div className="mt-1 text-xs text-muted">{hint}</div> : null}
-    </div>
+    </>
   );
+  return href ? <Link href={href} className="card block transition hover:border-brand hover:shadow-sm">{body}</Link> : <div className="card">{body}</div>;
 }
 
 export function Empty({ children }: { children: ReactNode }) {

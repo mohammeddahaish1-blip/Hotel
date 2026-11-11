@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { requireArea } from "@/lib/auth";
+import { can, hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { omr, pct, gregorian, hijri } from "@/lib/format";
@@ -28,6 +28,8 @@ type Dash = {
 export default async function DashboardPage() {
   const ctx = await requireArea("dashboard");
   const { t, lang } = await getDict();
+  // the finance page shows payments, deposits and expenses to owner, managers and accountants
+  const money = can(ctx, "finance") && hasRole(ctx, ["manager", "accountant"]);
   const [{ data, error }, alerts] = await Promise.all([
     ctx.supabase.rpc("owner_dashboard", { p_property: ctx.property.id }),
     loadAlerts(ctx, t, lang),
@@ -65,12 +67,13 @@ export default async function DashboardPage() {
         </div>
       ) : null}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <Stat label={t.dash_occupancy} value={pct(d.occupancy_bp)} hint={`${d.in_house} / ${d.units}`} tone="brand" />
-        <Stat label={t.dash_income_today} value={omr(d.income_today, lang)} />
-        <Stat label={t.dash_income_month} value={omr(d.income_month, lang)} />
-        <Stat label={t.dash_receivable} value={omr(d.receivable, lang)} tone={d.receivable > 0 ? "danger" : undefined} />
-        <Stat label={t.dash_deposits} value={omr(d.deposits_held, lang)} />
-        <Stat label={t.dash_expenses_month} value={omr(d.expenses_month, lang)} />
+        {/* each figure opens what is behind it */}
+        <Stat label={t.dash_occupancy} value={pct(d.occupancy_bp)} hint={`${d.in_house} / ${d.units}`} tone="brand" href={can(ctx, "board") ? "/board" : undefined} />
+        <Stat label={t.dash_income_today} value={omr(d.income_today, lang)} href={money ? "/finance#payments" : undefined} />
+        <Stat label={t.dash_income_month} value={omr(d.income_month, lang)} href={money ? "/finance#payments" : undefined} />
+        <Stat label={t.dash_receivable} value={omr(d.receivable, lang)} tone={d.receivable > 0 ? "danger" : undefined} href={can(ctx, "finance") ? "/finance#aging" : undefined} />
+        <Stat label={t.dash_deposits} value={omr(d.deposits_held, lang)} href={money ? "/finance#deposits" : undefined} />
+        <Stat label={t.dash_expenses_month} value={omr(d.expenses_month, lang)} href={money ? "/finance#expenses" : undefined} />
       </div>
 
       <div className="mt-4 card">

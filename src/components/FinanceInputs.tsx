@@ -98,12 +98,13 @@ export function RemindAll({ items, label, hint }: { items: { key: string; name: 
   if (!items.length) return null;
   return (
     <div className="mb-3">
-      <button type="button" className="btn-ghost btn-sm" onClick={() => setOpen((o) => !o)}>
+      <button type="button" className="btn-primary btn-sm" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <MessageCircle className="inline size-4" /> {label} ({items.length})
       </button>
       {open ? (
         <div className="mt-2 rounded-xl border border-line p-3">
           <p className="mb-2 text-xs text-muted">{hint}</p>
+          <p className="mb-2 text-xs font-semibold">{sent.size} / {items.length} ✓</p>
           <ul className="space-y-1.5">
             {items.map((x) => (
               <li key={x.key}>
