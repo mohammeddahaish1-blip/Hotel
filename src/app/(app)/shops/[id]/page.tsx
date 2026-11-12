@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCtx, hasRole } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -45,7 +46,7 @@ export default async function ShopPage({ params, searchParams }: PageProps<"/sho
   const nextDay = new Date(Date.parse(`${day}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 
   const [{ data: staff }, service, rental, { data: members }] = await Promise.all([
-    ctx.supabase.from("memberships").select("user_id, full_name, role, active, support_until").eq("tenant_id", ctx.tenantId),
+    ctx.supabase.from("memberships").select("user_id, full_name, role, active, support_until, staff_kind").eq("tenant_id", ctx.tenantId),
     x.kind === "service"
       ? Promise.all([
           ctx.supabase.from("shop_items").select("id, name, price, active").eq("shop_id", id).order("sort").order("name"),
@@ -281,7 +282,7 @@ export default async function ShopPage({ params, searchParams }: PageProps<"/sho
 
           {admin ? (
             <Section title={t.shp_people}>
-              <p className="mb-3 text-xs text-muted">{t.shp_people_hint}</p>
+              <p className="mb-3 text-xs text-muted">{t.shp_people_hint} <Link href="/shops/staff" className="font-semibold text-brand">{t.ss_title}</Link></p>
               {(members ?? []).length === 0 ? <p className="text-sm text-muted">{t.shp_people_none}</p> : (
                 <ul className="mb-3 divide-y divide-line text-sm">
                   {(members ?? []).map((m) => (
@@ -300,7 +301,7 @@ export default async function ShopPage({ params, searchParams }: PageProps<"/sho
                 <input type="hidden" name="shop" value={x.id} />
                 <Field label={t.shp_person}>
                   <select name="user_id" required className="input">
-                    {(staff ?? []).filter((m) => m.active && !m.support_until && m.role !== "owner" && !(members ?? []).some((x2) => x2.user_id === m.user_id))
+                    {(staff ?? []).filter((m) => m.active && !m.support_until && m.staff_kind === "shop" && !(members ?? []).some((x2) => x2.user_id === m.user_id))
                       .map((m) => <option key={m.user_id} value={m.user_id}>{m.full_name || "—"}</option>)}
                   </select>
                 </Field>

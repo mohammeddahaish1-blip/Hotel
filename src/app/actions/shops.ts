@@ -96,14 +96,61 @@ export async function addShopMember(_: ActionResult, fd: FormData): Promise<Acti
   const shop = s(fd, "shop")!;
   const { error } = await ctx.supabase.from("shop_members")
     .upsert({ shop_id: shop, tenant_id: ctx.tenantId, user_id: s(fd, "user_id")!, access: s(fd, "access") ?? "seller" });
-  return done(error, [`/shops/${shop}`]);
+  return done(error, [`/shops/${shop}`, "/shops/staff"]);
 }
 
 export async function removeShopMember(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const ctx = await admin();
   const shop = s(fd, "shop")!;
   const { error } = await ctx.supabase.from("shop_members").delete().eq("shop_id", shop).eq("user_id", s(fd, "user_id")!);
-  return done(error, [`/shops/${shop}`]);
+  return done(error, [`/shops/${shop}`, "/shops/staff"]);
+}
+
+// ---------------------------------------------------------------- shop staff (separate from hotel staff)
+/** "shopId:access" from the place picker; access must suit the shop (checked again in the database). */
+function place(fd: FormData) {
+  const [shop, access] = (s(fd, "place") ?? "").split(":");
+  return /^[0-9a-f-]{36}$/.test(shop ?? "") && ["seller", "manager", "renter"].includes(access ?? "") ? { shop, access } : null;
+}
+
+/** Invite someone to work in a shop only: no hotel section, never listed among hotel staff. */
+export async function inviteShopStaff(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await admin();
+  const { t } = await getDict();
+  const where = place(fd);
+  const email = (s(fd, "email") ?? "").toLowerCase();
+  if (!where || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: t.err_INVALID_VALUE };
+  const { error } = await ctx.supabase.from("invitations").insert({
+    tenant_id: ctx.tenantId, email, full_name: (s(fd, "full_name") ?? "").slice(0, 120),
+    role: "reception", permissions: [], staff_kind: "shop", shop_id: where.shop, shop_access: where.access,
+  });
+  return done(error, ["/shops/staff"]);
+}
+
+export async function cancelShopInvite(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await admin();
+  const { error } = await ctx.supabase.from("invitations").delete()
+    .eq("id", s(fd, "id")!).eq("tenant_id", ctx.tenantId).eq("staff_kind", "shop").is("accepted_at", null);
+  return done(error, ["/shops/staff"]);
+}
+
+/** Put a shop employee in one more shop (or change their access there). */
+export async function placeShopStaff(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await admin();
+  const { t } = await getDict();
+  const where = place(fd);
+  if (!where) return { error: t.err_INVALID_VALUE };
+  const { error } = await ctx.supabase.from("shop_members")
+    .upsert({ shop_id: where.shop, tenant_id: ctx.tenantId, user_id: s(fd, "user_id")!, access: where.access });
+  return done(error, ["/shops/staff", `/shops/${where.shop}`]);
+}
+
+/** Stop or resume a shop employee's access to every shop. */
+export async function setShopStaffActive(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await admin();
+  const { error } = await ctx.supabase.from("memberships").update({ active: fd.get("active") === "on" })
+    .eq("tenant_id", ctx.tenantId).eq("user_id", s(fd, "user_id")!).eq("staff_kind", "shop");
+  return done(error, ["/shops/staff", "/shops"]);
 }
 
 // ---------------------------------------------------------------- items (owner, manager or the shop's manager)

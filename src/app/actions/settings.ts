@@ -155,9 +155,9 @@ export async function inviteUser(_: ActionResult, fd: FormData): Promise<ActionR
   let row: Record<string, unknown>;
   if (ctx.role === "owner") {
     // Owner: free-text job title + the exact sections ticked in the form
-    // someone who works only in a shop gets no section; the owner then adds them to their shop
-    const areas = fd.get("shop_only") === "on" ? [] : fd.getAll("areas").map(String).filter((a) => VALID_AREAS.has(a));
-    if (areas.length === 0 && fd.get("shop_only") !== "on") return { error: t.invite_pick_sections };
+    // (shop staff are invited from Shops → Shop staff, never from here)
+    const areas = fd.getAll("areas").map(String).filter((a) => VALID_AREAS.has(a));
+    if (areas.length === 0) return { error: t.invite_pick_sections };
     row = { role: baseRoleFor(areas), permissions: areas };
   } else {
     row = { role: s(fd, "role") ?? "reception" };

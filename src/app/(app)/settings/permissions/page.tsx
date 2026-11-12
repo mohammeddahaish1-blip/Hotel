@@ -28,6 +28,7 @@ export default async function PermissionsPage({ searchParams }: PageProps<"/sett
     .select("user_id, full_name, job_title, role, active, permissions")
     .eq("tenant_id", ctx.tenantId)
     .neq("role", "owner")
+    .eq("staff_kind", "hotel")
     .is("support_until", null)
     .order("created_at");
   const members = (data ?? []) as Member[];

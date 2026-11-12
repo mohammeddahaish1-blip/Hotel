@@ -37,8 +37,11 @@ export default async function SettingsPage() {
       db.from("rate_plans").select("*, unit_types!inner(property_id, name_ar)").eq("unit_types.property_id", ctx.property.id).order("period"),
       db.from("tax_rules").select("*").eq("tenant_id", ctx.tenantId).order("sort"),
       db.from("memberships").select("*").eq("tenant_id", ctx.tenantId).is("support_until", null).order("created_at"),
-      db.from("invitations").select("*").eq("tenant_id", ctx.tenantId).is("accepted_at", null),
+      db.from("invitations").select("*").eq("tenant_id", ctx.tenantId).eq("staff_kind", "hotel").is("accepted_at", null),
     ]);
+  // shop staff are managed under Shops → Shop staff, not here
+  const shopStaffCount = (members ?? []).filter((m) => m.staff_kind === "shop").length;
+  const hotelMembers = (members ?? []).filter((m) => m.staff_kind !== "shop");
   const { data: profiles } = await db.from("staff_profiles").select("*").eq("tenant_id", ctx.tenantId);
   const profile = new Map((profiles ?? []).map((p) => [p.user_id as string, p]));
   const typeName = new Map((types ?? []).map((x) => [x.id, x.name_ar]));
@@ -357,7 +360,7 @@ export default async function SettingsPage() {
             ))}
           </datalist>
           <div className="space-y-2">
-            {(members ?? []).map((m) => {
+            {hotelMembers.map((m) => {
               const locked = m.user_id === ctx.userId || (!isOwner && ["owner", "manager"].includes(m.role));
               const title = m.job_title || t[`role_${m.role}` as DictKey];
               const pr = profile.get(m.user_id);
@@ -404,6 +407,11 @@ export default async function SettingsPage() {
               );
             })}
             <p className="flex items-start gap-1.5 text-xs text-muted"><Lock className="size-3.5 shrink-0" /> {t.staff_private_hint}</p>
+            {shopStaffCount ? (
+              <p className="rounded-xl bg-surface-2 px-3 py-2 text-xs text-muted">
+                <Link href="/shops/staff" className="font-semibold text-brand">{t.ss_hotel_note.replace("{n}", String(shopStaffCount))}</Link>
+              </p>
+            ) : null}
           </div>
           {(invites ?? []).length ? (
             <div className="mt-3 text-xs">
@@ -449,10 +457,6 @@ export default async function SettingsPage() {
                     </label>
                   ))}
                 </div>
-                <label className="mt-2 flex items-start gap-2 rounded-xl bg-surface-2 px-3 py-2 text-xs">
-                  <input type="checkbox" name="shop_only" className="mt-0.5" />
-                  <span><span className="block text-sm font-semibold">{t.invite_shop_only}</span><span className="text-muted">{t.invite_shop_only_hint}</span></span>
-                </label>
               </div>
             ) : (
               <Field label={t.role}>

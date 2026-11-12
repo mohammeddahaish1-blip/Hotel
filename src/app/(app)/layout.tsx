@@ -55,7 +55,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     },
     { key: "ops", label: t.nav_grp_ops, tabs: [...tab("housekeeping"), ...tab("maintenance")] },
     // shops: owner and managers manage all; a seller, shop manager or renter sees their own shops
-    { key: "shops", label: t.nav_shops, tabs: hasRole(ctx, ["manager"]) || ctx.shops.length ? [{ href: "/shops", label: t.nav_shops }] : [] },
+    { key: "shops", label: t.nav_shops, tabs: hasRole(ctx, ["manager"])
+      ? [{ href: "/shops", label: t.nav_shops }, { href: "/shops/staff", label: t.ss_title }]
+      : ctx.shops.length ? [{ href: "/shops", label: t.nav_shops }] : [] },
     {
       key: "finance",
       label: t.nav_finance,
