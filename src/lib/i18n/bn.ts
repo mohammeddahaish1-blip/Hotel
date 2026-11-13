@@ -3,6 +3,7 @@ import type { Dict } from "./dict";
 // বাংলা — for staff from Bangladesh (reception, housekeeping, maintenance, shops).
 export const bn: Dict = {
   appName: "নুজুল",
+  more: "আরও",
   tagline: "আপনার হোটেল ও সার্ভিসড অ্যাপার্টমেন্টের অপারেটিং সিস্টেম",
   nav_dashboard: "ড্যাশবোর্ড",
   nav_board: "ইউনিটের অবস্থা",

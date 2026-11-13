@@ -66,12 +66,14 @@ export default async function DashboardPage() {
           </ul>
         </div>
       ) : null}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        {/* each figure opens what is behind it */}
-        <Stat label={t.dash_occupancy} value={pct(d.occupancy_bp)} hint={`${d.in_house} / ${d.units}`} tone="brand" href={can(ctx, "board") ? "/board" : undefined} />
+      {/* the two figures an owner looks for first, then the rest; each opens what is behind it */}
+      <div className="grid gap-3 md:grid-cols-2">
+        <OccupancyTile href={can(ctx, "board") ? "/board" : undefined} label={t.dash_occupancy} value={pct(d.occupancy_bp)} share={d.occupancy_bp / 10000} hint={`${d.in_house} / ${d.units}`} />
+        <ReceivableTile href={can(ctx, "finance") ? "/finance#aging" : undefined} label={t.dash_receivable} value={omr(d.receivable, lang)} due={d.receivable > 0} />
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label={t.dash_income_today} value={omr(d.income_today, lang)} href={money ? "/finance#payments" : undefined} />
         <Stat label={t.dash_income_month} value={omr(d.income_month, lang)} href={money ? "/finance#payments" : undefined} />
-        <Stat label={t.dash_receivable} value={omr(d.receivable, lang)} tone={d.receivable > 0 ? "danger" : undefined} href={can(ctx, "finance") ? "/finance#aging" : undefined} />
         <Stat label={t.dash_deposits} value={omr(d.deposits_held, lang)} href={money ? "/finance#deposits" : undefined} />
         <Stat label={t.dash_expenses_month} value={omr(d.expenses_month, lang)} href={money ? "/finance#expenses" : undefined} />
       </div>
@@ -133,4 +135,37 @@ function MovementList({ items, t, empty }: { items: Dash["arrivals"]; t: Record<
       ))}
     </ul>
   );
+}
+
+/** Occupancy as a ring on the brand colour: the first thing read on the page. */
+function OccupancyTile({ href, label, value, share, hint }: { href?: string; label: string; value: string; share: number; hint: string }) {
+  const c = 2 * Math.PI * 34;
+  const filled = Math.max(0, Math.min(1, share)) * c;
+  const cls = "flex items-center gap-4 rounded-3xl bg-brand p-5 text-brand-ink shadow-[0_10px_26px_rgba(20,40,35,0.15)]";
+  const body = (
+    <>
+      <svg viewBox="0 0 80 80" className="size-20 shrink-0 -rotate-90" aria-hidden>
+        <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeOpacity="0.22" strokeWidth="8" />
+        <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${filled} ${c}`} />
+      </svg>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold opacity-85">{label}</span>
+        <span className="num block text-4xl font-bold leading-tight">{value}</span>
+        <span className="num block text-sm opacity-85">{hint}</span>
+      </span>
+    </>
+  );
+  return href ? <Link href={href} className={`${cls} transition hover:brightness-110`}>{body}</Link> : <div className={cls}>{body}</div>;
+}
+
+/** What guests still owe, large and red while anything is due. */
+function ReceivableTile({ href, label, value, due }: { href?: string; label: string; value: string; due: boolean }) {
+  const cls = `card flex flex-col justify-center p-5 ${due ? "bg-danger-soft" : ""}`;
+  const body = (
+    <>
+      <span className={`text-sm font-semibold ${due ? "text-danger" : "text-muted"}`}>{label}</span>
+      <span className={`num mt-1 text-3xl font-bold leading-tight ${due ? "text-danger" : ""}`}>{value}</span>
+    </>
+  );
+  return href ? <Link href={href} className={`${cls} transition hover:shadow-sm`}>{body}</Link> : <div className={cls}>{body}</div>;
 }

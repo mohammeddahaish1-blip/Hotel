@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Check, X } from "lucide-react";
 import { hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -10,7 +11,7 @@ import { addHkTask, setHkStatus, updateHkTask } from "@/app/actions/ops";
 type Task = { id: string; unit_id: string; kind: string; status: string; priority: number; due_date: string; notes: string | null; units: { number: string } | null };
 
 // FR-40: list ordered by arrivals; "Ready" returns the unit to availability.
-export default async function HousekeepingPage() {
+export default async function HousekeepingPage({ searchParams }: PageProps<"/housekeeping">) {
   const ctx = await requireArea("housekeeping");
   const { t } = await getDict();
   const today = todayIn(ctx.property.timezone);
@@ -35,15 +36,37 @@ export default async function HousekeepingPage() {
   );
 
   const canManage = hasRole(ctx, ["manager", "reception"]);
+  // filter chips: all, urgent (arrival today), being cleaned, waiting
+  const sp = await searchParams;
+  const f = typeof sp.f === "string" ? sp.f : "all";
+  const urgent = list.filter((x) => arriving.has(x.unit_id));
+  const doing = list.filter((x) => x.status === "in_progress");
+  const waiting = list.filter((x) => x.status !== "in_progress");
+  const shown = f === "urgent" ? urgent : f === "doing" ? doing : f === "waiting" ? waiting : list;
+  const chips = [
+    ["all", t.fb_all, list.length],
+    ["urgent", t.pr_1, urgent.length],
+    ["doing", t.hk_in_progress, doing.length],
+    ["waiting", t.hk_pending, waiting.length],
+  ] as const;
   return (
     <>
       <PageHeader title={t.hk_title} />
       {list.length === 0 ? (
         <Empty>{t.hk_empty}</Empty>
       ) : (
+        <>
+        <div className="mb-4 flex flex-wrap gap-2">
+          {chips.map(([k, label, n]) => (
+            <Link key={k} href={k === "all" ? "/housekeeping" : `/housekeeping?f=${k}`} className={`btn-sm ${f === k ? "btn-primary" : "btn-ghost"}`}>
+              {label} <span className="num opacity-80">{n}</span>
+            </Link>
+          ))}
+        </div>
+        {shown.length === 0 ? <Empty>{t.none}</Empty> : null}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {list.map((task) => (
-            <div key={task.id} className={`card ${arriving.has(task.unit_id) ? "border-danger/40" : ""}`}>
+          {shown.map((task) => (
+            <div key={task.id} className={`card ${arriving.has(task.unit_id) ? "border-danger/50 bg-danger-soft" : ""}`}>
               <div className="flex items-center justify-between">
                 <span className="num text-2xl font-bold">{task.units?.number}</span>
                 <Badge tone={task.status === "in_progress" ? "info" : "warn"}>{task.status === "in_progress" ? t.hk_in_progress : t.hk_pending}</Badge>
@@ -91,6 +114,7 @@ export default async function HousekeepingPage() {
             </div>
           ))}
         </div>
+        </>
       )}
 
       {canManage ? (

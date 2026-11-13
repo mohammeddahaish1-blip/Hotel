@@ -3,6 +3,7 @@ import type { Dict } from "./dict";
 // اردو — for staff from India and Pakistan (reception, housekeeping, maintenance).
 export const ur: Dict = {
   appName: "نُزُل",
+  more: "مزید",
   tagline: "آپ کے ہوٹل اور سروسڈ اپارٹمنٹس کا آپریٹنگ سسٹم",
   nav_dashboard: "ڈیش بورڈ",
   nav_board: "یونٹس کی حالت",

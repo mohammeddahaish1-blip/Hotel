@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
   Activity, Building2, MessageSquareWarning, CircleUserRound, Sparkles, CalendarCheck, ChartColumn, FileText, FileUp, LayoutGrid,
-  MessageSquareText, Settings, ShieldCheck, SprayCan, Store, Wallet, type LucideIcon,
+  Ellipsis, MessageSquareText, Settings, ShieldCheck, SprayCan, Store, Wallet, type LucideIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -96,5 +97,63 @@ export function GroupTabs({ groups }: { groups: NavGroup[] }) {
         </Link>
       ))}
     </div>
+  );
+}
+
+/** Phone and tablet menu: the four main sections stay under the thumb, the rest open in a sheet. */
+export function BottomNav({ groups, moreLabel }: { groups: NavGroup[]; moreLabel: string }) {
+  const path = usePathname();
+  const [open, setOpen] = useState(false);
+  const current = activeGroup(path, groups);
+  const wanted = ["dashboard", "reservations", "units", "finance"];
+  const main = [...groups.filter((g) => wanted.includes(g.key)).sort((a, b) => wanted.indexOf(a.key) - wanted.indexOf(b.key)), ...groups.filter((g) => !wanted.includes(g.key))].slice(0, 4);
+  const rest = groups.filter((g) => !main.includes(g));
+  const item = "flex min-h-14 w-full flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px] font-semibold";
+  const pill = (on: boolean) => `grid h-7 w-14 place-items-center rounded-full ${on ? "bg-brand text-brand-ink" : "text-muted"}`;
+  return (
+    <>
+      {open ? (
+        <>
+          <button type="button" aria-label={moreLabel} className="no-print fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />
+          <div className="sheet-up no-print fixed inset-x-0 bottom-0 z-50 max-h-[75vh] overflow-y-auto rounded-t-3xl bg-surface p-4 pb-8 shadow-[0_-10px_30px_rgba(0,0,0,0.15)] lg:hidden">
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" aria-hidden />
+            <ul className="mx-auto grid max-w-2xl grid-cols-3 gap-2 sm:grid-cols-4">
+              {rest.map((g) => (
+                <li key={g.key}>
+                  <Link
+                    href={g.tabs[0].href}
+                    onClick={() => setOpen(false)}
+                    className={`flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-2xl p-2 text-center text-xs font-semibold ${g.key === current ? "bg-brand text-brand-ink" : "bg-surface-2 text-ink"}`}
+                  >
+                    <GroupIcon k={g.key} className="size-5 shrink-0" />
+                    {g.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      ) : null}
+      <nav className="no-print fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+        <ul className="mx-auto flex max-w-2xl">
+          {main.map((g) => (
+            <li key={g.key} className="min-w-0 flex-1">
+              <Link href={g.tabs[0].href} className={`${item} ${g.key === current ? "text-brand" : "text-muted"}`}>
+                <span className={pill(g.key === current)}><GroupIcon k={g.key} className="size-[18px] shrink-0" /></span>
+                <span className="max-w-full truncate">{g.label}</span>
+              </Link>
+            </li>
+          ))}
+          {rest.length ? (
+            <li className="min-w-0 flex-1">
+              <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} className={`${item} ${rest.some((g) => g.key === current) ? "text-brand" : "text-muted"}`}>
+                <span className={pill(rest.some((g) => g.key === current))}><Ellipsis className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden /></span>
+                <span className="max-w-full truncate">{moreLabel}</span>
+              </button>
+            </li>
+          ) : null}
+        </ul>
+      </nav>
+    </>
   );
 }

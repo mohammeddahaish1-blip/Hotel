@@ -31,10 +31,26 @@ export default async function GuestsPage({ searchParams }: PageProps<"/guests">)
       {!guests?.length ? (
         <Empty>{t.none}</Empty>
       ) : (
-        <div className="card overflow-x-auto p-0">
+        <>
+        <ul className="grid gap-3 sm:grid-cols-2 md:hidden">
+          {guests.map((g) => (
+            <li key={g.id}>
+              <Link href={`/guests/${g.id}`} className="card flex items-center gap-3">
+                <span className="grid size-11 shrink-0 place-items-center rounded-full bg-brand-soft text-base font-bold text-brand" aria-hidden>{(g.full_name ?? "?").trim().charAt(0).toUpperCase()}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-bold">{g.full_name}</span>
+                  {g.full_name_ar ? <span className="block truncate text-xs text-muted">{g.full_name_ar}</span> : null}
+                  <span dir="ltr" className="block truncate text-start text-sm text-muted">{g.phone ?? "—"}</span>
+                </span>
+                {g.nationality ? <span className="shrink-0 rounded-full bg-gray-soft px-2.5 py-0.5 text-xs font-semibold text-muted">{g.nationality}</span> : null}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="card hidden overflow-x-auto p-0 md:block">
           <table className="table">
             <thead>
-              <tr><th>{t.name}</th><th>{t.phone}</th><th>{t.nationality}</th><th>{t.doc_number}</th></tr>
+              <tr><th>{t.name}</th><th>{t.phone}</th><th>{t.nationality.split(" (")[0]}</th><th>{t.doc_number}</th></tr>
             </thead>
             <tbody>
               {guests.map((g) => (
@@ -48,6 +64,7 @@ export default async function GuestsPage({ searchParams }: PageProps<"/guests">)
             </tbody>
           </table>
         </div>
+        </>
       )}
     </>
   );

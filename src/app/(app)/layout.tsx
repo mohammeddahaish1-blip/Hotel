@@ -3,7 +3,8 @@ import { initial } from "@/lib/profile-link";
 import { getCtx, can, hasRole, AREAS } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
-import { GroupTabs, NavLinks, type NavGroup } from "@/components/NavLinks";
+import { BottomNav, GroupTabs, NavLinks, type NavGroup } from "@/components/NavLinks";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { LangToggle } from "@/components/LangToggle";
 import { SignOut } from "@/components/SignOut";
 import { IdleLogout } from "@/components/IdleLogout";
@@ -145,8 +146,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               <ShieldCheck className="size-4 shrink-0" aria-hidden /> {t.adm_portal}
             </Link>
           ) : null}
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <LangToggle current={lang} />
+            <ThemeToggle />
             <SignOut label={t.signOut} />
           </div>
         </div>
@@ -163,12 +165,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
                 <span className="truncate">{ctx.fullName || ctx.email} · {roleLabel}</span>
               </Link>
             </div>
-            <div className="flex gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <LangToggle current={lang} />
+              <ThemeToggle />
               <SignOut label={t.signOut} />
             </div>
           </div>
-          <NavLinks groups={groups} variant="top" />
         </header>
         <div className="no-print sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur max-lg:static">
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 lg:px-8">
@@ -193,7 +195,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </div>
           </div>
         </div>
-        <main className="mx-auto max-w-6xl p-4 lg:p-8">
+        <main className="mx-auto max-w-6xl p-4 pb-28 md:p-6 md:pb-28 lg:p-8 lg:pb-8">
           {ctx.email === DEMO_EMAIL ? (
             <div role="status" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-brand-soft px-4 py-2.5 text-sm font-semibold text-brand">
               <span className="flex-1">{t.demo_banner}</span>
@@ -223,6 +225,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <GroupTabs groups={groups} />
           {children}
         </main>
+        <BottomNav groups={groups} moreLabel={t.more} />
       </div>
     </div>
   );

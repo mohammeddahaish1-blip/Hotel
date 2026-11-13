@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Amiri, IBM_Plex_Sans_Arabic, Noto_Sans_Bengali } from "next/font/google";
+import { cookies } from "next/headers";
 import { getDict } from "@/lib/i18n/server";
 import { isRtl } from "@/lib/i18n/dict";
 import "./globals.css";
@@ -40,8 +41,11 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const { lang } = await getDict();
+  // the user's own choice of light or dark; without one the page follows the device
+  const saved = (await cookies()).get("theme")?.value;
+  const theme = saved === "dark" || saved === "light" ? saved : undefined;
   return (
-    <html lang={lang} dir={isRtl(lang) ? "rtl" : "ltr"} className={`${plex.variable} ${bengali.variable} ${amiri.variable} h-full antialiased`}>
+    <html lang={lang} dir={isRtl(lang) ? "rtl" : "ltr"} data-theme={theme} className={`${plex.variable} ${bengali.variable} ${amiri.variable} h-full antialiased`}>
       <body className="min-h-full">{children}</body>
     </html>
   );

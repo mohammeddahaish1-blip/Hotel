@@ -4,6 +4,7 @@ import { bn } from "./bn";
 // UI dictionary — Arabic first (NFR-10). Keys are shared by both languages.
 const ar = {
   appName: "نُزُل",
+  more: "المزيد",
   tagline: "نظام تشغيل فندقك وشققك الفندقية",
   // nav
   nav_dashboard: "اللوحة",
@@ -1314,6 +1315,7 @@ export type Dict = Record<DictKey, string>;
 
 const en: Dict = {
   appName: "Nuzul",
+  more: "More",
   tagline: "The operating system for your hotel & serviced apartments",
   nav_dashboard: "Dashboard",
   nav_board: "Unit status",

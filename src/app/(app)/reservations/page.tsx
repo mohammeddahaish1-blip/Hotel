@@ -27,7 +27,24 @@ export default async function ReservationsPage({ searchParams }: PageProps<"/res
     .limit(100);
   if (tab === "upcoming") query = query.in("status", ["tentative", "confirmed"]);
   if (tab === "in_house") query = query.eq("status", "checked_in");
-  if (q) query = query.ilike("code", `%${q.replace(/[%,]/g, "")}%`);
+  // search by code, guest name, phone or unit number
+  const s = q.replace(/[%,()]/g, " ").trim();
+  if (s) {
+    const [{ data: gs }, { data: us }] = await Promise.all([
+      ctx.supabase.from("guests").select("id").eq("tenant_id", ctx.tenantId)
+        .or(`full_name.ilike.%${s}%,full_name_ar.ilike.%${s}%,phone.ilike.%${s}%`).limit(50),
+      ctx.supabase.from("units").select("id").eq("property_id", ctx.property.id).ilike("number", `%${s}%`).limit(50),
+    ]);
+    const guestIds = ((gs ?? []) as { id: string }[]).map((g) => g.id);
+    const unitIds = ((us ?? []) as { id: string }[]).map((u) => u.id);
+    query = query.or(
+      [
+        `code.ilike.%${s}%`,
+        ...(guestIds.length ? [`guest_id.in.(${guestIds.join(",")})`] : []),
+        ...(unitIds.length ? [`unit_id.in.(${unitIds.join(",")})`] : []),
+      ].join(","),
+    );
+  }
   const { data } = await query;
   const rows = (data ?? []) as unknown as Row[];
 
@@ -44,16 +61,43 @@ export default async function ReservationsPage({ searchParams }: PageProps<"/res
         {tabs.map(([k, label]) => (
           <Link key={k} href={`/reservations?tab=${k}`} className={`btn-sm ${tab === k ? "btn-primary" : "btn-ghost"}`}>{label}</Link>
         ))}
-        <form className="ms-auto flex gap-2">
+        <form className="flex w-full gap-2 sm:ms-auto sm:w-auto">
           <input type="hidden" name="tab" value="all" />
-          <input name="q" defaultValue={q} placeholder={t.code} className="input w-40" />
-          <button className="btn-ghost btn-sm">{t.search}</button>
+          <input name="q" defaultValue={q} placeholder={`${t.code} / ${t.guest} / ${t.phone} / ${t.unit}`} aria-label={t.search} className="input sm:w-72" />
+          <button className="btn-ghost shrink-0">{t.search}</button>
         </form>
       </div>
       {rows.length === 0 ? (
         <Empty>{t.none}</Empty>
       ) : (
-        <div className="card overflow-x-auto p-0">
+        <>
+        {/* phones: one card per reservation instead of a wide table */}
+        <ul className="grid gap-3 sm:grid-cols-2 md:hidden">
+          {rows.map((r) => {
+            const st = parseRange(r.stay);
+            return (
+              <li key={r.id}>
+                <Link href={`/reservations/${r.id}`} className="card block">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate font-bold">{r.guests?.full_name ?? "—"}</div>
+                      <div className="text-xs text-muted"><span className="font-semibold text-brand">{r.code}</span> · {t.unit} <span className="num">{r.units?.number}</span></div>
+                    </div>
+                    <Badge tone={RES_STATUS_TONE[r.status]}><span aria-hidden>{RES_STATUS_EMOJI[r.status]}</span> {t[`rs_${r.status}` as DictKey]}</Badge>
+                  </div>
+                  <div className="mt-3 flex items-end justify-between gap-2 text-sm">
+                    <div className="min-w-0 text-muted">
+                      <div>{gregorian(st.from, lang)} – {gregorian(st.to, lang)}</div>
+                      <div className="truncate text-xs">{t[`src_${r.source}` as DictKey]}{r.kind === "contract" ? ` · ${t.kind_contract}` : ""}</div>
+                    </div>
+                    <div className="num shrink-0 font-bold">{omr(r.room_total - r.discount_amount, lang)}</div>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="card hidden overflow-x-auto p-0 md:block">
           <table className="table">
             <thead>
               <tr><th>{t.code}</th><th>{t.guest}</th><th>{t.unit}</th><th>{t.from}</th><th>{t.to}</th><th>{t.source}</th><th>{t.total}</th><th>{t.status}</th></tr>
@@ -77,6 +121,7 @@ export default async function ReservationsPage({ searchParams }: PageProps<"/res
             </tbody>
           </table>
         </div>
+        </>
       )}
     </>
   );

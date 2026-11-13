@@ -34,8 +34,9 @@
   --grid: #e8ebe8;
 }
 
+/* dark colours: follow the device unless the user picked a theme (data-theme on <html>, saved in a cookie) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #111615;
     --surface: #182120;
     --surface-2: #1d2726;
@@ -59,7 +60,34 @@
     --gray-soft: #262f2e;
     --chart: #34a593;
     --grid: #26302f;
+    color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #111615;
+  --surface: #182120;
+  --surface-2: #1d2726;
+  --ink: #e8ece9;
+  --muted: #97a39f;
+  --line: #2b3735;
+  --brand: #3fb3a1;
+  --brand-ink: #0b1514;
+  --brand-soft: #173a35;
+  --accent: #e0a64b;
+  --danger: #f07c70;
+  --danger-soft: #3a1f1c;
+  --ok: #5cc785;
+  --ok-soft: #173323;
+  --warn: #e9b949;
+  --warn-soft: #3a2f12;
+  --info: #79aef0;
+  --info-soft: #172a40;
+  --violet: #b897e6;
+  --violet-soft: #2c2140;
+  --gray-soft: #262f2e;
+  --chart: #34a593;
+  --grid: #26302f;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -198,13 +226,24 @@ a.card:hover { box-shadow: 0 14px 30px rgba(20, 40, 35, 0.12); }
 .page-enter .card:nth-child(n + 6) { animation-delay: 0.25s; }
 @keyframes card-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
 a.card:active, a.rounded-xl:active { transform: scale(0.985); }
+/* a saved form flashes a check over its button, then fades back to the label */
+.btn-done {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  border-radius: inherit; background: var(--ok); color: var(--surface); pointer-events: none;
+  animation: btn-done 1.6s ease forwards;
+}
+@keyframes btn-done { 0% { opacity: 0; transform: scale(0.9); } 12% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; } }
+/* bottom sheet (phone / tablet "More" menu) */
+.sheet-up { animation: sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
 /* success note: shows, then folds away */
 .flash { overflow: hidden; animation: flash-out 0.35s ease 2.6s forwards; }
 @keyframes flash-out { to { opacity: 0; max-height: 0; margin-top: 0; padding-top: 0; padding-bottom: 0; } }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .skeleton, .page-enter, .page-enter .card { animation: none; }
+  .skeleton, .page-enter, .page-enter .card, .sheet-up { animation: none; }
+  .btn-done { animation-duration: 1.6s; transform: none; }
   .btn, .btn-primary, .btn-ghost, .btn-danger, a.card, a.rounded-xl, button.rounded-xl { transition: none; }
   .btn:active, .btn-primary:active, .btn-ghost:active, .btn-danger:active, a.card:active, a.rounded-xl:active { transform: none; }
 }
