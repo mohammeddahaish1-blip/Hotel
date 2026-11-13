@@ -6,6 +6,7 @@ import type { DictKey } from "@/lib/i18n/dict";
 import { BottomNav, GroupTabs, NavLinks, type NavGroup } from "@/components/NavLinks";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SideToggle } from "@/components/SideToggle";
+import { LiveAlerts } from "@/components/LiveAlerts";
 import { cookies } from "next/headers";
 import { LangToggle } from "@/components/LangToggle";
 import { SignOut } from "@/components/SignOut";
@@ -128,6 +129,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="min-h-screen lg:flex">
+      {/* reception and managers get the "unit ready" alert the moment a unit is cleaned */}
+      {can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"]) ? <LiveAlerts propertyId={ctx.property.id} /> : null}
       <IdleLogout minutes={ctx.role === "reception" || ctx.role === "housekeeping" ? 15 : 30} />
       <aside className={`no-print sticky top-0 hidden h-screen shrink-0 flex-col border-e border-line bg-surface lg:flex ${mini ? "w-[4.75rem] items-stretch p-3" : "w-60 p-4"}`}>
         <div className={`brand-word mb-1 text-brand ${mini ? "text-center text-3xl" : "text-4xl"}`}>{mini ? t.appName.charAt(0) : t.appName}</div>
