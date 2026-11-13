@@ -51,6 +51,12 @@ export async function createReservation(_: ActionResult, fd: FormData): Promise<
   redirect(`/reservations/${data}`);
 }
 
+/** Check-in pressed on the dashboard's "arriving today" list (same rules as on the reservation page). */
+export async function checkInFromDashboard(_: ActionResult, fd: FormData) {
+  const id = s(fd, "id")!;
+  return run((c) => c.supabase.rpc("check_in", { p_res: id }), ["/dashboard", `/reservations/${id}`, "/board", "/night-audit"]);
+}
+
 export async function checkIn(_: ActionResult, fd: FormData) {
   const id = s(fd, "id")!;
   return run((c) => c.supabase.rpc("check_in", { p_res: id }), [`/reservations/${id}`, "/board", "/night-audit"]);

@@ -10,7 +10,7 @@ import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { Badge, EditDetails, Empty, PageHeader, Section } from "@/components/ui";
 import { addHkTask, finishHkTask, reopenHkTask, setHkStatus, updateHkTask } from "@/app/actions/ops";
 
-type Done = { id: string; kind: string; started_at: string | null; finished_at: string; photo_path: string | null; units: { number: string } | null };
+type Done = { id: string; kind: string; started_at: string | null; finished_at: string; finished_by: string | null; photo_path: string | null; units: { number: string } | null };
 type Task = { id: string; unit_id: string; kind: string; status: string; priority: number; due_date: string; notes: string | null; units: { number: string } | null };
 
 // FR-40: list ordered by arrivals; "Ready" returns the unit to availability.
@@ -32,7 +32,7 @@ export default async function HousekeepingPage({ searchParams }: PageProps<"/hou
     // finished today: start and finish times, and the photo taken when the unit was marked ready
     ctx.supabase
       .from("hk_tasks")
-      .select("id, kind, started_at, finished_at, photo_path, units(number)")
+      .select("id, kind, started_at, finished_at, finished_by, photo_path, units(number)")
       .eq("property_id", ctx.property.id)
       .eq("status", "done")
       .gte("finished_at", zonedStart(today, ctx.property.timezone))
@@ -43,6 +43,12 @@ export default async function HousekeepingPage({ searchParams }: PageProps<"/hou
   // the photo is for the owner and managers; other roles see the times only
   const seesPhotos = hasRole(ctx, ["manager"]);
   const photos = seesPhotos ? await signedUrls(ctx, "hk-photos", done.map((d) => d.photo_path)) : new Map<string, string>();
+  // who pressed "Ready": names come from the hotel's staff list
+  const cleanerIds = [...new Set(done.map((d) => d.finished_by).filter((x): x is string => !!x))];
+  const { data: staff } = cleanerIds.length
+    ? await ctx.supabase.from("memberships").select("user_id, full_name").eq("tenant_id", ctx.tenantId).in("user_id", cleanerIds)
+    : { data: [] };
+  const cleaner = new Map(((staff ?? []) as { user_id: string; full_name: string }[]).map((m) => [m.user_id, m.full_name]));
   const clock = (iso: string | null) =>
     iso ? new Intl.DateTimeFormat(intlLocale(lang), { timeStyle: "short", timeZone: ctx.property.timezone }).format(new Date(iso)) : "—";
   const now = Date.now();
@@ -164,6 +170,7 @@ export default async function HousekeepingPage({ searchParams }: PageProps<"/hou
                       </div>
                       <div className="text-xs text-muted">{t[`hk_kind_${d.kind}` as DictKey]}</div>
                       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+                        {d.finished_by && cleaner.get(d.finished_by) ? <><dt className="text-muted">{t.hk_by}</dt><dd dir="auto" className="truncate font-semibold">{cleaner.get(d.finished_by)}</dd></> : null}
                         <dt className="text-muted">{t.hk_started}</dt><dd className="num font-semibold">{clock(d.started_at)}</dd>
                         <dt className="text-muted">{t.hk_finished}</dt><dd className="num font-semibold">{clock(d.finished_at)}{mins !== null ? <span className="font-normal text-muted"> · {t.hk_minutes.replace("{n}", String(mins))}</span> : null}</dd>
                       </dl>

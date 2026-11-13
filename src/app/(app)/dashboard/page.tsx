@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { KeyRound } from "lucide-react";
+import { ActionForm, SubmitButton } from "@/components/ActionForm";
+import { checkInFromDashboard } from "@/app/actions/ops";
 import { Suspense } from "react";
 import { can, hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -98,7 +101,7 @@ export default async function DashboardPage() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Section title={`${t.dash_arrivals} (${d.arrivals.length})`}>
-          <MovementList items={d.arrivals} t={t} empty={t.none} />
+          <MovementList items={d.arrivals} t={t} empty={t.none} checkInLabel={can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"]) ? t.res_check_in : undefined} />
         </Section>
         <Section title={`${t.dash_departures} (${d.departures.length})`}>
           <MovementList items={d.departures} t={t} empty={t.none} />
@@ -122,18 +125,25 @@ export default async function DashboardPage() {
   );
 }
 
-function MovementList({ items, t, empty }: { items: Dash["arrivals"]; t: Record<string, string>; empty: string }) {
+function MovementList({ items, t, empty, checkInLabel }: { items: Dash["arrivals"]; t: Record<string, string>; empty: string; checkInLabel?: string }) {
   if (items.length === 0) return <Empty>{empty}</Empty>;
   return (
     <ul className="divide-y divide-line">
       {items.map((a) => (
-        <li key={a.id}>
-          <Link href={`/reservations/${a.id}`} className="flex items-center justify-between gap-2 py-2 text-sm">
-            <span>
+        <li key={a.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
+          <Link href={`/reservations/${a.id}`} className="flex min-w-0 flex-1 items-center justify-between gap-2">
+            <span className="min-w-0 truncate">
               <span className="font-semibold">{a.unit}</span> · {a.guest}
             </span>
             <Badge tone={RES_STATUS_TONE[a.status]}><span aria-hidden>{RES_STATUS_EMOJI[a.status]}</span> {t[`rs_${a.status}`]}</Badge>
           </Link>
+          {/* one press from the dashboard; the confirmation names the unit and the guest */}
+          {checkInLabel && (a.status === "confirmed" || a.status === "tentative") ? (
+            <ActionForm action={checkInFromDashboard}>
+              <input type="hidden" name="id" value={a.id} />
+              <SubmitButton className="btn-primary btn-sm" confirm={`${checkInLabel}: ${a.unit} · ${a.guest}`}><KeyRound className="size-3.5 shrink-0" />{checkInLabel}</SubmitButton>
+            </ActionForm>
+          ) : null}
         </li>
       ))}
     </ul>

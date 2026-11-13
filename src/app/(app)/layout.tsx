@@ -5,6 +5,8 @@ import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { BottomNav, GroupTabs, NavLinks, type NavGroup } from "@/components/NavLinks";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SideToggle } from "@/components/SideToggle";
+import { cookies } from "next/headers";
 import { LangToggle } from "@/components/LangToggle";
 import { SignOut } from "@/components/SignOut";
 import { IdleLogout } from "@/components/IdleLogout";
@@ -121,35 +123,39 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   }
   const propertyName = (lang === "en" || lang === "bn") && ctx.property.name_en ? ctx.property.name_en : ctx.property.name_ar;
 
+  // wide screens: the sidebar can be folded to icons only (kept in a cookie)
+  const mini = (await cookies()).get("side")?.value === "mini";
+
   return (
     <div className="min-h-screen lg:flex">
       <IdleLogout minutes={ctx.role === "reception" || ctx.role === "housekeeping" ? 15 : 30} />
-      <aside className="no-print sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-e border-line bg-surface p-4 lg:flex">
-        <div className="brand-word mb-1 text-4xl text-brand">{t.appName}</div>
-        <PropertySwitcher current={ctx.property.id} properties={ctx.properties.map((p) => ({ id: p.id, name: p.name_ar }))} fallback={propertyName} />
+      <aside className={`no-print sticky top-0 hidden h-screen shrink-0 flex-col border-e border-line bg-surface lg:flex ${mini ? "w-[4.75rem] items-stretch p-3" : "w-60 p-4"}`}>
+        <div className={`brand-word mb-1 text-brand ${mini ? "text-center text-3xl" : "text-4xl"}`}>{mini ? t.appName.charAt(0) : t.appName}</div>
+        {mini ? null : <PropertySwitcher current={ctx.property.id} properties={ctx.properties.map((p) => ({ id: p.id, name: p.name_ar }))} fallback={propertyName} />}
         <nav className="mt-4 min-h-0 flex-1 overflow-y-auto">
-          <NavLinks groups={groups} variant="side" />
+          <NavLinks groups={groups} variant="side" mini={mini} />
         </nav>
         <div className="mt-4 border-t border-line pt-3 text-xs text-muted">
           {/* your name opens your account (the former "My account" menu item) */}
-          <Link href="/profile" title={t.nav_profile} className="-mx-2 flex items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-surface-2">
+          <Link href="/profile" title={mini ? ctx.fullName || ctx.email : t.nav_profile} className={`flex items-center gap-3 rounded-xl py-1.5 hover:bg-surface-2 ${mini ? "justify-center" : "-mx-2 px-2"}`}>
             <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-soft text-base font-bold text-brand" aria-hidden>
               {initial(ctx.fullName || ctx.email)}
             </span>
-            <span className="min-w-0">
+            <span className={mini ? "sr-only" : "min-w-0"}>
               <span className="block truncate text-sm font-bold text-ink">{ctx.fullName || ctx.email}</span>
               <span className="block truncate">{roleLabel}</span>
             </span>
           </Link>
-          {plan.isAdmin ? (
+          {plan.isAdmin && !mini ? (
             <Link href="/admin" className="mt-2 flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-surface-2">
               <ShieldCheck className="size-4 shrink-0" aria-hidden /> {t.adm_portal}
             </Link>
           ) : null}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <LangToggle current={lang} />
+          <div className={`mt-3 flex items-center gap-2 ${mini ? "flex-col" : "flex-wrap"}`}>
+            {mini ? null : <LangToggle current={lang} />}
             <ThemeToggle />
-            <SignOut label={t.signOut} />
+            <SideToggle mini={mini} label={t.nav_collapse} />
+            {mini ? null : <SignOut label={t.signOut} />}
           </div>
         </div>
       </aside>

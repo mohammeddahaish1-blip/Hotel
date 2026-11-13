@@ -4,6 +4,12 @@ import type { Dict } from "./dict";
 export const bn: Dict = {
   appName: "নুজুল",
   more: "আরও",
+  al_unit_ready: "আজকের আগমনের জন্য ইউনিট প্রস্তুত",
+  hk_by: "পরিষ্কার করেছেন",
+  sort_soon: "নিকটতম আগে",
+  sort_late: "দূরতম আগে",
+  sort_new: "সর্বশেষ যোগ করা",
+  nav_collapse: "মেনু ছোট বা বড় করুন",
   hk_photo: "পরিষ্কারের পরের ছবি",
   hk_photo_ready: "ছবি প্রস্তুত",
   hk_photo_required: "পরিষ্কারের পর ইউনিটের ছবি দিন",

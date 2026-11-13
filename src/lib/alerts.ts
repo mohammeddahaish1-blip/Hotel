@@ -3,7 +3,7 @@ import { cache } from "react";
 import type { Ctx } from "./auth";
 import { can } from "./auth";
 import type { Dict, DictKey } from "./i18n/dict";
-import { gregorian, omr } from "./format";
+import { gregorian, omr, todayIn, zonedStart } from "./format";
 import type { AlertItem } from "@/components/AlertsBell";
 import { hasRole } from "./auth";
 import { expiringWorkers, missingPhotoDays, type ShopRow } from "./shop-books";
@@ -46,6 +46,21 @@ export const loadAlerts = cache(async (ctx: Ctx, t: Dict, lang: "ar" | "en" | "u
         key: `iqama-${w.id}`, severity: 2, title: t.al_iqama_expiring,
         detail: join([w.full_name, names.get(w.shop_id) ?? null, gregorian(w.iqama_expiry, lang)]), href: `/shops/${w.shop_id}`,
       });
+    }
+  }
+  // reception and managers: a unit with an arrival today has just been cleaned, the guest can go up
+  if (can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"])) {
+    const today = todayIn(ctx.property.timezone);
+    const { data: cleaned } = await ctx.supabase.from("hk_tasks").select("units(number)")
+      .eq("property_id", ctx.property.id).eq("status", "done").gte("finished_at", zonedStart(today, ctx.property.timezone)).limit(200);
+    const ready = new Set(((cleaned ?? []) as unknown as { units: { number: string } | null }[]).map((x) => x.units?.number).filter(Boolean));
+    if (ready.size) {
+      const { data: coming } = await ctx.supabase.rpc("today_board_rows", { p_property: ctx.property.id, p_today: today });
+      for (const r of (coming ?? []) as { id: string; stay_from: string; status: string; unit: string | null; guest: string | null }[]) {
+        if (r.stay_from === today && r.status !== "checked_in" && r.unit && ready.has(r.unit)) {
+          extraAlerts.push({ key: `unit-ready-${r.id}`, severity: 3, title: t.al_unit_ready, detail: join([`${t.unit} ${r.unit}`, r.guest]), href: `/reservations/${r.id}` });
+        }
+      }
     }
   }
   return extraAlerts.concat(((data ?? []) as Row[]).map((r, i) => {

@@ -40,7 +40,7 @@ function activeGroup(path: string, groups: NavGroup[]) {
 }
 
 /** Main menu: one entry per group, linking to the group's first allowed tab. */
-export function NavLinks({ groups, variant }: { groups: NavGroup[]; variant: "side" | "top" }) {
+export function NavLinks({ groups, variant, mini = false }: { groups: NavGroup[]; variant: "side" | "top"; mini?: boolean }) {
   const path = usePathname();
   const current = activeGroup(path, groups);
   if (variant === "top") {
@@ -65,10 +65,11 @@ export function NavLinks({ groups, variant }: { groups: NavGroup[]; variant: "si
         <li key={g.key}>
           <Link
             href={g.tabs[0].href}
-            className={`flex items-center gap-2.5 rounded-full px-3.5 py-2 text-sm ${g.key === current ? "bg-brand font-semibold text-brand-ink" : "text-ink hover:bg-surface-2"}`}
+            title={mini ? g.label : undefined}
+            className={`flex items-center gap-2.5 rounded-full text-sm ${mini ? "justify-center py-2.5" : "px-3.5 py-2"} ${g.key === current ? "bg-brand font-semibold text-brand-ink" : "text-ink hover:bg-surface-2"}`}
           >
             <GroupIcon k={g.key} className={`size-[18px] shrink-0 ${g.key === current ? "" : "text-muted"}`} />
-            {g.label}
+            <span className={mini ? "sr-only" : undefined}>{g.label}</span>
           </Link>
         </li>
       ))}

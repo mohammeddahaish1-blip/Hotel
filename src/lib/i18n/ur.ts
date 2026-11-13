@@ -4,6 +4,12 @@ import type { Dict } from "./dict";
 export const ur: Dict = {
   appName: "نُزُل",
   more: "مزید",
+  al_unit_ready: "آج کی آمد کے لیے یونٹ تیار ہے",
+  hk_by: "صفائی کی",
+  sort_soon: "قریب ترین پہلے",
+  sort_late: "دور ترین پہلے",
+  sort_new: "تازہ ترین اندراج",
+  nav_collapse: "مینو چھوٹا یا بڑا کریں",
   hk_photo: "صفائی کے بعد کی تصویر",
   hk_photo_ready: "تصویر تیار ہے",
   hk_photo_required: "صفائی کے بعد یونٹ کی تصویر لگائیں",
