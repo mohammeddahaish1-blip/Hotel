@@ -7,12 +7,12 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { t, lang } = await getDict();
   const sp = await searchParams;
   return (
-    <main className="grid min-h-screen bg-white md:grid-cols-2">
+    <main className="grid min-h-screen bg-surface md:grid-cols-2">
         {/* Branding panel */}
-        <section className="relative hidden flex-col bg-white p-10 text-[#1c2321] md:flex lg:p-14">
+        <section className="relative hidden flex-col bg-surface p-10 text-ink md:flex lg:p-14">
           <div>
             <div className="brand-word text-7xl text-brand lg:text-8xl">{t.appName}</div>
-            <div className="mt-2 text-lg text-[#66706c]">
+            <div className="mt-2 text-lg text-muted">
               {{ ar: "لإدارة الفنادق والشقق الفندقية", en: "Hotels & serviced apartments", ur: "ہوٹلوں اور سروسڈ اپارٹمنٹس کے لیے", bn: "হোটেল ও সার্ভিসড অ্যাপার্টমেন্টের জন্য" }[lang]}
             </div>
           </div>
@@ -22,7 +22,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </section>
 
         {/* Form panel */}
-        <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-brand px-6 py-10 text-white sm:px-12">
+        <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0d6b5f] px-6 py-10 text-white sm:px-12">
           <span className="pointer-events-none absolute -end-24 -top-24 h-64 w-64 rounded-full bg-white/10" />
           <span className="pointer-events-none absolute -bottom-28 -start-20 h-72 w-72 rounded-full bg-white/10" />
           <span className="pointer-events-none absolute end-10 top-10 h-3 w-3 rounded-full bg-[#f4c76b]" />

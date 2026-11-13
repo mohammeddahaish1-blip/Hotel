@@ -2,9 +2,9 @@ import { CircleCheck } from "lucide-react";
 import Link from "next/link";
 import { hasRole, type Ctx } from "@/lib/auth";
 import type { Dict, Lang } from "@/lib/i18n/dict";
-import { addDays, gregorian, omr, parseRange, todayIn } from "@/lib/format";
+import { addDays, gregorian, omr, todayIn } from "@/lib/format";
 
-type Res = { id: string; code: string; stay: string; kind: string; status: string; units: { number: string } | null; guests: { full_name: string } | null };
+type Row = { id: string; code: string; stay_from: string; stay_to: string; kind: string; status: string; unit: string | null; guest: string | null };
 type Item = { date: string; kind: "arrival" | "departure" | "rent" | "cheque" | "contract_end"; label: string; amount?: number; href: string };
 
 const KIND_LABEL: Record<Item["kind"], keyof Dict> = {
@@ -23,8 +23,8 @@ export async function TodayBoard({ ctx, t, lang }: { ctx: Ctx; t: Dict; lang: La
   const in30 = addDays(today, 30);
   const money = hasRole(ctx, ["manager", "reception", "accountant"]);
   const [{ data: resRows }, { data: cheques }, { data: rents }, { data: corr }] = await Promise.all([
-    db.from("reservations").select("id, code, stay, kind, status, units(number), guests(full_name)").eq("property_id", pid)
-      .in("status", ["tentative", "confirmed", "checked_in"]).limit(1000),
+    // only reservations starting within 7 days or ending within 30 (today_board_rows), not every open one
+    db.rpc("today_board_rows", { p_property: pid, p_today: today }),
     money
       ? db.from("cheques").select("id, cheque_no, amount, due_date, status, reservation_id, guests(full_name)").eq("property_id", pid)
           .in("status", ["pending", "bounced"]).lte("due_date", in7)
@@ -35,7 +35,11 @@ export async function TodayBoard({ ctx, t, lang }: { ctx: Ctx; t: Dict; lang: La
       : Promise.resolve({ data: [] }),
     hasRole(ctx, ["manager"]) ? db.from("correction_requests").select("id").eq("property_id", pid).eq("status", "pending") : Promise.resolve({ data: [] }),
   ]);
-  const res = ((resRows ?? []) as unknown as Res[]).map((r) => ({ ...r, ...parseRange(r.stay) }));
+  const res = ((resRows ?? []) as Row[]).map((r) => ({
+    id: r.id, code: r.code, kind: r.kind, status: r.status, from: r.stay_from, to: r.stay_to,
+    units: r.unit ? { number: r.unit } : null,
+    guests: r.guest ? { full_name: r.guest } : null,
+  }));
   const who = (r: { guests: { full_name: string } | null; units: { number: string } | null }) => `${r.guests?.full_name ?? "—"}${r.units ? ` · ${r.units.number}` : ""}`;
   const chq = (cheques ?? []) as unknown as { id: string; cheque_no: string; amount: number; due_date: string; status: string; reservation_id: string | null; guests: { full_name: string } | null }[];
   const rent = (rents ?? []) as unknown as { id: string; due_date: string; amount: number; contracts: { reservation_id: string; reservations: { units: { number: string } | null; guests: { full_name: string } | null } } }[];

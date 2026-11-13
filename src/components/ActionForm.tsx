@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useActionState, useContext, useEffect, useRef, type ReactNode } from "react";
+import { createContext, useActionState, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Check } from "lucide-react";
 import { useFormStatus } from "react-dom";
 
@@ -10,30 +10,77 @@ export type FormAction = (prev: ActionResult, formData: FormData) => Promise<Act
 /** Counts the successful saves of the surrounding form, so its button can flash a check. */
 const SavedCount = createContext(0);
 
+// the two buttons of the confirmation box, by interface language (read from <html lang>)
+const CONFIRM_WORDS: Record<string, [string, string]> = {
+  ar: ["تأكيد", "تراجع"],
+  en: ["Confirm", "Go back"],
+  ur: ["تصدیق کریں", "واپس"],
+  bn: ["নিশ্চিত করুন", "ফিরে যান"],
+};
+
 export function SubmitButton({ children, className = "btn-primary", confirm }: { children: ReactNode; className?: string; confirm?: string }) {
   const { pending } = useFormStatus();
   const saved = useContext(SavedCount);
+  // a button with `confirm` first opens our own box (a sheet on phones, a centred box on larger screens)
+  const [ask, setAsk] = useState<[string, string] | null>(null);
+  const agreed = useRef(false);
+  const btn = useRef<HTMLButtonElement>(null);
   return (
-    <button
-      type="submit"
-      className={`relative ${className}`}
-      disabled={pending}
-      aria-busy={pending}
-      onClick={(e) => {
-        if (confirm && !window.confirm(confirm)) e.preventDefault();
-      }}
-    >
-      {/* keep the label (and the button's width) while saving; a spinner sits on top */}
-      <span className={`inline-flex items-center gap-1.5 ${pending ? "opacity-0" : ""}`}>{children}</span>
-      {pending ? (
-        <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
-          <span className="size-4 animate-spin rounded-full border-2 border-current border-e-transparent" />
-        </span>
+    <>
+      <button
+        ref={btn}
+        type="submit"
+        className={`relative ${className}`}
+        disabled={pending}
+        aria-busy={pending}
+        onClick={(e) => {
+          if (!confirm || agreed.current) {
+            agreed.current = false;
+            return;
+          }
+          e.preventDefault();
+          setAsk(CONFIRM_WORDS[document.documentElement.lang] ?? CONFIRM_WORDS.en);
+        }}
+      >
+        {/* keep the label (and the button's width) while saving; a spinner sits on top */}
+        <span className={`inline-flex items-center gap-1.5 ${pending ? "opacity-0" : ""}`}>{children}</span>
+        {pending ? (
+          <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
+            <span className="size-4 animate-spin rounded-full border-2 border-current border-e-transparent" />
+          </span>
+        ) : null}
+        {saved > 0 && !pending ? (
+          <span key={saved} className="btn-done" aria-hidden><Check className="size-4" strokeWidth={3} /></span>
+        ) : null}
+      </button>
+      {ask ? (
+        <>
+          <button type="button" aria-label={ask[1]} className="fixed inset-0 z-[60] cursor-default bg-black/40" onClick={() => setAsk(null)} />
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-label={confirm}
+            className="sheet-up fixed inset-x-3 bottom-3 z-[70] rounded-3xl bg-surface p-5 text-start shadow-xl sm:inset-x-0 sm:bottom-auto sm:top-1/3 sm:mx-auto sm:w-[24rem]"
+          >
+            <p className="text-base font-bold text-ink">{confirm}</p>
+            <div className="mt-4 flex gap-2">
+              <button type="button" className="btn-ghost flex-1" onClick={() => setAsk(null)}>{ask[1]}</button>
+              <button
+                type="button"
+                className="btn-danger flex-1"
+                onClick={() => {
+                  agreed.current = true;
+                  setAsk(null);
+                  btn.current?.click();
+                }}
+              >
+                {ask[0]}
+              </button>
+            </div>
+          </div>
+        </>
       ) : null}
-      {saved > 0 && !pending ? (
-        <span key={saved} className="btn-done" aria-hidden><Check className="size-4" strokeWidth={3} /></span>
-      ) : null}
-    </button>
+    </>
   );
 }
 

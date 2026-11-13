@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getCtx } from "@/lib/auth";
+import { getCtx, hasRole } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { errorMessage } from "@/lib/errors";
 import { toBaisa } from "@/lib/format";
@@ -283,6 +283,24 @@ export async function postDueRent(_: ActionResult, __: FormData) {
 // ---------------------------------------------------------------- housekeeping & maintenance
 export async function setHkStatus(_: ActionResult, fd: FormData) {
   return run((c) => c.supabase.rpc("set_hk_task_status", { p_task: s(fd, "id")!, p_status: s(fd, "status")! }), ["/housekeeping", "/board"]);
+}
+
+/** "Ready": saves the photo of the cleaned unit (cleaning staff must attach one), then closes the task. */
+export async function finishHkTask(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await getCtx();
+  const { t } = await getDict();
+  const photo = await uploadTo(ctx, "hk-photos", fd.get("photo"));
+  if (photo && "error" in photo) return { error: errorMessage(t, photo.error as { message: string }) };
+  if (!photo && !hasRole(ctx, ["manager", "reception"])) return { error: t.hk_photo_required };
+  const { error } = await ctx.supabase.rpc("finish_hk_task", { p_task: s(fd, "id")!, p_photo: photo ? photo.path : null });
+  if (error) return { error: errorMessage(t, error as { message: string }) };
+  ["/housekeeping", "/board"].forEach((p) => revalidatePath(p));
+  return { ok: t.saved };
+}
+
+/** Undo a "Ready" pressed by mistake (allowed for 30 minutes). */
+export async function reopenHkTask(_: ActionResult, fd: FormData) {
+  return run((c) => c.supabase.rpc("reopen_hk_task", { p_task: s(fd, "id")! }), ["/housekeeping", "/board"]);
 }
 
 export async function addHkTask(_: ActionResult, fd: FormData) {

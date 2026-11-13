@@ -8,18 +8,23 @@ import { Empty, PageHeader } from "@/components/ui";
 export default async function GuestsPage({ searchParams }: PageProps<"/guests">) {
   const ctx = await requireArea("guests");
   const { t } = await getDict();
-  const q = String((await searchParams).q ?? "").trim();
+  const sp = await searchParams;
+  const q = String(sp.q ?? "").trim();
+  // 50 at a time; "show more" raises the count
+  const shownMax = Math.min(1000, Math.max(50, Number(sp.n) || 50));
   let query = ctx.supabase
     .from("guests")
     .select("id, full_name, full_name_ar, phone, nationality, doc_type, doc_number")
     .eq("tenant_id", ctx.tenantId)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(shownMax + 1);
   if (q) {
     const s = q.replace(/[%,()]/g, " ");
     query = query.or(`full_name.ilike.%${s}%,full_name_ar.ilike.%${s}%,phone.ilike.%${s}%,doc_number.ilike.%${s}%`);
   }
-  const { data: guests } = await query;
+  const { data: found } = await query;
+  const guests = (found ?? []).slice(0, shownMax);
+  const hasMore = (found ?? []).length > shownMax;
 
   return (
     <>
@@ -28,8 +33,8 @@ export default async function GuestsPage({ searchParams }: PageProps<"/guests">)
         <input name="q" defaultValue={q} placeholder={`${t.name} / ${t.phone} / ${t.doc_number}`} className="input" />
         <button className="btn-ghost">{t.search}</button>
       </form>
-      {!guests?.length ? (
-        <Empty>{t.none}</Empty>
+      {!guests.length ? (
+        q ? <Empty>{t.none}</Empty> : <Empty action={<Link href="/guests/new" className="btn-primary">{t.guest_new}</Link>}>{t.empty_guests}</Empty>
       ) : (
         <>
         <ul className="grid gap-3 sm:grid-cols-2 md:hidden">
@@ -64,6 +69,11 @@ export default async function GuestsPage({ searchParams }: PageProps<"/guests">)
             </tbody>
           </table>
         </div>
+        {hasMore ? (
+          <div className="mt-4 text-center">
+            <Link href={`/guests?${q ? `q=${encodeURIComponent(q)}&` : ""}n=${shownMax + 50}`} scroll={false} className="btn-ghost">{t.show_more}</Link>
+          </div>
+        ) : null}
         </>
       )}
     </>

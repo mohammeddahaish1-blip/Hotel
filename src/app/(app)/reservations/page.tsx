@@ -19,12 +19,15 @@ export default async function ReservationsPage({ searchParams }: PageProps<"/res
   const tab = typeof sp.tab === "string" ? sp.tab : "upcoming";
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
 
+  // 100 at a time; "show more" raises the count
+  const shownMax = Math.min(1000, Math.max(100, Number(sp.n) || 100));
+
   let query = ctx.supabase
     .from("reservations")
     .select("id, code, stay, status, kind, source, room_total, discount_amount, guests(full_name, phone), units(number)")
     .eq("property_id", ctx.property.id)
     .order("stay", { ascending: tab !== "all" })
-    .limit(100);
+    .limit(shownMax + 1);
   if (tab === "upcoming") query = query.in("status", ["tentative", "confirmed"]);
   if (tab === "in_house") query = query.eq("status", "checked_in");
   // search by code, guest name, phone or unit number
@@ -46,7 +49,9 @@ export default async function ReservationsPage({ searchParams }: PageProps<"/res
     );
   }
   const { data } = await query;
-  const rows = (data ?? []) as unknown as Row[];
+  const all = (data ?? []) as unknown as Row[];
+  const rows = all.slice(0, shownMax);
+  const hasMore = all.length > shownMax;
 
   const tabs = [
     ["upcoming", t.res_upcoming],
@@ -68,7 +73,7 @@ export default async function ReservationsPage({ searchParams }: PageProps<"/res
         </form>
       </div>
       {rows.length === 0 ? (
-        <Empty>{t.none}</Empty>
+        q ? <Empty>{t.none}</Empty> : <Empty action={<Link href="/reservations/new" className="btn-primary">{t.res_new}</Link>}>{t.empty_reservations}</Empty>
       ) : (
         <>
         {/* phones: one card per reservation instead of a wide table */}
@@ -121,6 +126,11 @@ export default async function ReservationsPage({ searchParams }: PageProps<"/res
             </tbody>
           </table>
         </div>
+        {hasMore ? (
+          <div className="mt-4 text-center">
+            <Link href={`/reservations?tab=${tab}${q ? `&q=${encodeURIComponent(q)}` : ""}&n=${shownMax + 100}`} scroll={false} className="btn-ghost">{t.show_more}</Link>
+          </div>
+        ) : null}
         </>
       )}
     </>

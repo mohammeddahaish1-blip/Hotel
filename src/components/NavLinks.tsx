@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   Activity, Building2, MessageSquareWarning, CircleUserRound, Sparkles, CalendarCheck, ChartColumn, FileText, FileUp, LayoutGrid,
-  Ellipsis, MessageSquareText, Settings, ShieldCheck, SprayCan, Store, Wallet, type LucideIcon,
+  Ellipsis, MessageSquareText, Plus, Settings, ShieldCheck, SprayCan, Store, Wallet, type LucideIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -101,7 +101,7 @@ export function GroupTabs({ groups }: { groups: NavGroup[] }) {
 }
 
 /** Phone and tablet menu: the four main sections stay under the thumb, the rest open in a sheet. */
-export function BottomNav({ groups, moreLabel }: { groups: NavGroup[]; moreLabel: string }) {
+export function BottomNav({ groups, moreLabel, quick }: { groups: NavGroup[]; moreLabel: string; quick?: { href: string; label: string } }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const current = activeGroup(path, groups);
@@ -133,6 +133,16 @@ export function BottomNav({ groups, moreLabel }: { groups: NavGroup[]; moreLabel
             </ul>
           </div>
         </>
+      ) : null}
+      {quick && !open && !path.startsWith(quick.href) ? (
+        <Link
+          href={quick.href}
+          aria-label={quick.label}
+          title={quick.label}
+          className="no-print fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] end-4 z-30 grid size-14 place-items-center rounded-full bg-brand text-brand-ink shadow-[0_10px_24px_rgba(20,40,35,0.3)] lg:hidden"
+        >
+          <Plus className="size-6" aria-hidden />
+        </Link>
       ) : null}
       <nav className="no-print fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
         <ul className="mx-auto flex max-w-2xl">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BadgeCheck, Ban, BedDouble, CalendarClock, ChevronLeft, CircleCheck, CircleX, Hourglass, KeyRound, LogOut, SprayCan, UserX, Wrench } from "lucide-react";
+import { BadgeCheck, Ban, BedDouble, Inbox, CalendarClock, ChevronLeft, CircleCheck, CircleX, Hourglass, KeyRound, LogOut, SprayCan, UserX, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 
 const TONES = {
@@ -94,8 +94,16 @@ export function Stat({ label, value, hint, tone, href }: { label: string; value:
   return href ? <Link href={href} className="card block transition hover:border-brand hover:shadow-sm">{body}</Link> : <div className="card">{body}</div>;
 }
 
-export function Empty({ children }: { children: ReactNode }) {
-  return <div className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-muted">{children}</div>;
+/** Nothing to show. With an action (a link or button) it becomes a full empty state that says what to do next. */
+export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  if (!action) return <div className="rounded-2xl border border-dashed border-line p-6 text-center text-sm text-muted">{children}</div>;
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-line px-6 py-10 text-center text-sm text-muted">
+      <span className="grid size-12 place-items-center rounded-full bg-surface-2" aria-hidden><Inbox className="size-5" /></span>
+      <div className="max-w-sm">{children}</div>
+      {action}
+    </div>
+  );
 }
 
 export function Section({ title, actions, children }: { title: string; actions?: ReactNode; children: ReactNode }) {

@@ -225,7 +225,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <GroupTabs groups={groups} />
           {children}
         </main>
-        <BottomNav groups={groups} moreLabel={t.more} />
+        <BottomNav groups={groups} moreLabel={t.more} quick={can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"]) ? { href: "/reservations/new", label: t.res_new } : undefined} />
       </div>
     </div>
   );

@@ -30,10 +30,13 @@ export default async function DashboardPage() {
   const { t, lang } = await getDict();
   // the finance page shows payments, deposits and expenses to owner, managers and accountants
   const money = can(ctx, "finance") && hasRole(ctx, ["manager", "accountant"]);
-  const [{ data, error }, alerts] = await Promise.all([
+  const [{ data, error }, alerts, { data: days }] = await Promise.all([
     ctx.supabase.rpc("owner_dashboard", { p_property: ctx.property.id }),
     loadAlerts(ctx, t, lang),
+    // income per day for the last week, drawn as a small line under "income today"
+    money ? ctx.supabase.rpc("income_last_days", { p_property: ctx.property.id, p_days: 7 }) : Promise.resolve({ data: null }),
   ]);
+  const week = ((days ?? []) as { day: string; amount: number }[]).map((x) => Number(x.amount));
   if (error) throw new Error(error.message);
   const d = data as Dash;
   const statuses = ["available", "reserved", "occupied", "dirty", "maintenance", "out_of_service"];
@@ -72,7 +75,7 @@ export default async function DashboardPage() {
         <ReceivableTile href={can(ctx, "finance") ? "/finance#aging" : undefined} label={t.dash_receivable} value={omr(d.receivable, lang)} due={d.receivable > 0} />
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label={t.dash_income_today} value={omr(d.income_today, lang)} href={money ? "/finance#payments" : undefined} />
+        <Stat label={t.dash_income_today} value={omr(d.income_today, lang)} hint={week.length > 1 ? <Spark values={week} label={t.last7} /> : undefined} href={money ? "/finance#payments" : undefined} />
         <Stat label={t.dash_income_month} value={omr(d.income_month, lang)} href={money ? "/finance#payments" : undefined} />
         <Stat label={t.dash_deposits} value={omr(d.deposits_held, lang)} href={money ? "/finance#deposits" : undefined} />
         <Stat label={t.dash_expenses_month} value={omr(d.expenses_month, lang)} href={money ? "/finance#expenses" : undefined} />
@@ -168,4 +171,19 @@ function ReceivableTile({ href, label, value, due }: { href?: string; label: str
     </>
   );
   return href ? <Link href={href} className={`${cls} transition hover:shadow-sm`}>{body}</Link> : <div className={cls}>{body}</div>;
+}
+
+/** A week of daily figures as one small line (oldest first). */
+function Spark({ values, label }: { values: number[]; label: string }) {
+  const min = Math.min(...values, 0);
+  const span = Math.max(...values) - min || 1;
+  const points = values.map((v, i) => `${(i / (values.length - 1)) * 100},${26 - ((v - min) / span) * 24}`).join(" ");
+  return (
+    <span className="block">
+      <svg viewBox="0 0 100 28" preserveAspectRatio="none" className="h-7 w-full text-chart" role="img" aria-label={label}>
+        <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <span className="block">{label}</span>
+    </span>
+  );
 }

@@ -197,7 +197,7 @@ body {
   font-weight: 700;
   transition: background 0.15s, color 0.15s;
 }
-.pill-button:hover:not(:disabled) { background: #ffffff; color: var(--brand); }
+.pill-button:hover:not(:disabled) { background: #ffffff; color: #0d6b5f; }
 .pill-button:disabled { opacity: 0.6; }
 
 /* ---------------------------------------------------------------- motion
