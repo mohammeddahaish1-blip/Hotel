@@ -8,15 +8,15 @@
 }
 
 :root {
-  --bg: #f6f4ef;
+  --bg: #eceaef;
   --surface: #ffffff;
-  --surface-2: #faf8f4;
-  --ink: #1c2321;
-  --muted: #66706c;
-  --line: #e4e0d6;
-  --brand: #0d6b5f;
+  --surface-2: #f5f3f7;
+  --ink: #1f1a22;
+  --muted: #6f6875;
+  --line: #e6e2ea;
+  --brand: #46264b;
   --brand-ink: #ffffff;
-  --brand-soft: #e3f1ee;
+  --brand-soft: #eadff0;
   --accent: #b7791f;
   --danger: #b42318;
   --danger-soft: #fdecea;
@@ -28,23 +28,23 @@
   --info-soft: #e7f0fb;
   --violet: #6b3fa0;
   --violet-soft: #f1eafa;
-  --gray-soft: #eceae4;
+  --gray-soft: #e7e4eb;
   /* chart marks: brand teal, saturated enough to not read gray (validated) */
-  --chart: #0a8a78;
-  --grid: #ebe7dd;
+  --chart: #7a3f83;
+  --grid: #ebe7ef;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111615;
-    --surface: #182120;
-    --surface-2: #1d2726;
-    --ink: #e8ece9;
-    --muted: #97a39f;
-    --line: #2b3735;
-    --brand: #3fb3a1;
-    --brand-ink: #0b1514;
-    --brand-soft: #173a35;
+    --bg: #141216;
+    --surface: #1d1a20;
+    --surface-2: #242027;
+    --ink: #ece8ee;
+    --muted: #a49ba9;
+    --line: #332e37;
+    --brand: #c9a3d1;
+    --brand-ink: #1a0f1c;
+    --brand-soft: #3a2540;
     --accent: #e0a64b;
     --danger: #f07c70;
     --danger-soft: #3a1f1c;
@@ -56,9 +56,9 @@
     --info-soft: #172a40;
     --violet: #b897e6;
     --violet-soft: #2c2140;
-    --gray-soft: #262f2e;
-    --chart: #34a593;
-    --grid: #26302f;
+    --gray-soft: #2b2630;
+    --chart: #b98bc4;
+    --grid: #2a252e;
   }
 }
 
@@ -97,13 +97,13 @@ body {
 }
 
 @layer components {
-  .card { @apply rounded-2xl border border-line bg-surface p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]; }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed; }
-  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed bg-brand text-brand-ink hover:brightness-110; }
-  .btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed border border-line bg-surface text-ink hover:bg-surface-2; }
-  .btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed bg-danger text-white hover:brightness-110; }
-  .btn-sm { @apply px-3 py-1.5 text-xs rounded-lg; }
-  .input { @apply w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20; }
+  .card { @apply rounded-3xl border border-transparent bg-surface p-4 shadow-[0_10px_26px_rgba(50,25,60,0.07)]; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed; }
+  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed bg-brand text-brand-ink hover:brightness-110; }
+  .btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed border border-line bg-surface text-ink hover:bg-surface-2; }
+  .btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed bg-danger text-white hover:brightness-110; }
+  .btn-sm { @apply px-3.5 py-1.5 text-xs rounded-full; }
+  .input { @apply w-full rounded-2xl border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20; }
   .label { @apply mb-1 block text-xs font-semibold text-muted; }
 
   /* Fields must never push their column wider than the grid gives them (all browsers). */
@@ -188,7 +188,15 @@ html { scroll-behavior: smooth; }
 .btn, .btn-primary, .btn-ghost, .btn-danger { transition: transform 0.08s ease, filter 0.15s, background-color 0.15s, border-color 0.15s, opacity 0.15s; }
 .btn:active:not(:disabled), .btn-primary:active:not(:disabled), .btn-ghost:active:not(:disabled), .btn-danger:active:not(:disabled) { transform: scale(0.97); }
 a.card, a.rounded-xl, button.rounded-xl { transition: transform 0.12s ease, box-shadow 0.15s, border-color 0.15s, background-color 0.15s; }
-a.card:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06); }
+a.card:hover { box-shadow: 0 14px 30px rgba(50, 25, 60, 0.12); }
+/* cards rise in one after another when a page opens (backwards: see the note on .page-enter) */
+.page-enter .card { animation: card-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.page-enter .card:nth-child(2) { animation-delay: 0.05s; }
+.page-enter .card:nth-child(3) { animation-delay: 0.1s; }
+.page-enter .card:nth-child(4) { animation-delay: 0.15s; }
+.page-enter .card:nth-child(5) { animation-delay: 0.2s; }
+.page-enter .card:nth-child(n + 6) { animation-delay: 0.25s; }
+@keyframes card-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
 a.card:active, a.rounded-xl:active { transform: scale(0.985); }
 /* success note: shows, then folds away */
 .flash { overflow: hidden; animation: flash-out 0.35s ease 2.6s forwards; }
@@ -196,7 +204,7 @@ a.card:active, a.rounded-xl:active { transform: scale(0.985); }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .skeleton, .page-enter { animation: none; }
+  .skeleton, .page-enter, .page-enter .card { animation: none; }
   .btn, .btn-primary, .btn-ghost, .btn-danger, a.card, a.rounded-xl, button.rounded-xl { transition: none; }
   .btn:active, .btn-primary:active, .btn-ghost:active, .btn-danger:active, a.card:active, a.rounded-xl:active { transform: none; }
 }

@@ -49,7 +49,7 @@ export function NavLinks({ groups, variant }: { groups: NavGroup[]; variant: "si
           <Link
             key={g.key}
             href={g.tabs[0].href}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ${g.key === current ? "bg-brand text-brand-ink" : "text-muted"}`}
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm ${g.key === current ? "bg-brand text-brand-ink" : "text-muted"}`}
           >
             <GroupIcon k={g.key} className="size-4 shrink-0" />
             {g.label}
@@ -64,7 +64,7 @@ export function NavLinks({ groups, variant }: { groups: NavGroup[]; variant: "si
         <li key={g.key}>
           <Link
             href={g.tabs[0].href}
-            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${g.key === current ? "bg-brand-soft font-semibold text-brand" : "text-ink hover:bg-surface-2"}`}
+            className={`flex items-center gap-2.5 rounded-full px-3.5 py-2 text-sm ${g.key === current ? "bg-brand font-semibold text-brand-ink" : "text-ink hover:bg-surface-2"}`}
           >
             <GroupIcon k={g.key} className={`size-[18px] shrink-0 ${g.key === current ? "" : "text-muted"}`} />
             {g.label}

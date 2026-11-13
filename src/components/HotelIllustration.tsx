@@ -1,7 +1,7 @@
 /** Flat illustration for the login panel: a coastal hotel with a palm and a guest arriving. */
 export function HotelIllustration({ className = "" }: { className?: string }) {
-  const teal = "#0d6b5f";
-  const tealSoft = "#cfe7e2";
+  const teal = "#46264b";
+  const tealSoft = "#e2d3e8";
   const sand = "#e9e1d0";
   const ink = "#1c2321";
   const windows = [];
