@@ -40,10 +40,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       label: t.nav_grp_units,
       tabs: [
         ...(can(ctx, "board") ? [{ href: "/properties", label: t.nav_properties }] : []),
-        ...tab("board"),
-        ...tab("calendar"),
-        ...(has("channels") && can(ctx, "board") && hasRole(ctx, ["manager", "reception"]) ? [{ href: "/channels", label: t.ch_title }] : []),
-        ...(has("owners") && hasRole(ctx, ["manager", "accountant"]) ? [{ href: "/properties/owners", label: t.nav_owners }] : []),
+        ...(can(ctx, "board") ? [{ href: "/board", label: t.units_now }] : []),
+        ...(can(ctx, "calendar") ? [{ href: "/calendar", label: t.units_days }] : []),
       ],
     },
     {
@@ -91,6 +89,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         ...tab("settings", t.nav_settings_general),
         ...(ctx.role === "owner" ? [{ href: "/settings/permissions", label: t.nav_permissions }] : []),
         ...(has("automation") && can(ctx, "settings") && hasRole(ctx, ["manager"]) ? [{ href: "/settings/automation", label: t.auto_title }] : []),
+        ...(has("channels") && can(ctx, "board") && hasRole(ctx, ["manager", "reception"]) ? [{ href: "/channels", label: t.ch_title }] : []),
+        ...(has("owners") && hasRole(ctx, ["manager", "accountant"]) ? [{ href: "/properties/owners", label: t.nav_owners }] : []),
         ...(hasRole(ctx, ["manager"]) ? [{ href: "/support", label: t.sup_title }] : []),
       ],
     },

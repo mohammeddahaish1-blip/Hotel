@@ -1,3 +1,4 @@
+import { SettingsTabs } from "../../settings/SettingsTabs";
 import { requireFeature } from "@/lib/plan";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -20,7 +21,7 @@ export default async function OwnersPage() {
 
   return (
     <>
-      <Crumb href="/properties" label={t.nav_properties} />
+      <SettingsTabs ctx={ctx} t={t} current="owners" />
       <PageHeader title={t.nav_owners} sub={t.own_hint} />
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">

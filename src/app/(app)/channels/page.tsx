@@ -1,3 +1,4 @@
+import { SettingsTabs } from "../settings/SettingsTabs";
 import { requireFeature } from "@/lib/plan";
 import { Pause, Play, RefreshCw, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -36,6 +37,7 @@ export default async function ChannelsPage() {
 
   return (
     <>
+      <SettingsTabs ctx={ctx} t={t} current="channels" />
       <PageHeader
         title={t.ch_title}
         sub={t.ch_hint}

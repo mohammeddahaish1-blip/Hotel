@@ -7,20 +7,28 @@ export type SettingsView = "property" | "units" | "prices" | "staff" | "money" |
 export const settingsHref = (s: SettingsView) => (s === "property" ? "/settings" : `/settings?s=${s}`);
 
 /** One bar for everything under Settings, one subject per tab. A tab only shows to the roles that may open it. */
-export async function SettingsTabs({ ctx, t, current }: { ctx: Ctx; t: Dict; current: SettingsView | "permissions" | "automation" | "support" }) {
-  if (!can(ctx, "settings")) return null;
+export async function SettingsTabs({ ctx, t, current }: { ctx: Ctx; t: Dict; current: SettingsView | "permissions" | "automation" | "support" | "channels" | "owners" }) {
   const plan = await getPlan(ctx);
+  const full = can(ctx, "settings");
+  // the settings proper need the settings permission; channel links and unit owners follow their own rules
   const tabs: { key: string; href: string; label: string }[] = [
-    { key: "property", href: settingsHref("property"), label: t.set_tab_property },
-    { key: "units", href: settingsHref("units"), label: t.set_tab_units },
-    { key: "prices", href: settingsHref("prices"), label: t.set_tab_prices },
-    { key: "staff", href: settingsHref("staff"), label: t.set_staff },
-    { key: "money", href: settingsHref("money"), label: t.set_tab_money },
-    ...(hasRole(ctx, ["manager"]) ? [{ key: "plan", href: settingsHref("plan"), label: t.set_tab_plan }] : []),
+    ...(full
+      ? [
+          { key: "property", href: settingsHref("property"), label: t.set_tab_property },
+          { key: "units", href: settingsHref("units"), label: t.set_tab_units },
+          { key: "prices", href: settingsHref("prices"), label: t.set_tab_prices },
+          { key: "staff", href: settingsHref("staff"), label: t.set_staff },
+          { key: "money", href: settingsHref("money"), label: t.set_tab_money },
+        ]
+      : []),
+    ...(planHas(plan, "channels") && can(ctx, "board") && hasRole(ctx, ["manager", "reception"]) ? [{ key: "channels", href: "/channels", label: t.ch_title }] : []),
+    ...(planHas(plan, "owners") && hasRole(ctx, ["manager", "accountant"]) ? [{ key: "owners", href: "/properties/owners", label: t.nav_owners }] : []),
+    ...(full && hasRole(ctx, ["manager"]) ? [{ key: "plan", href: settingsHref("plan"), label: t.set_tab_plan }] : []),
     ...(ctx.role === "owner" ? [{ key: "permissions", href: "/settings/permissions", label: t.nav_permissions }] : []),
-    ...(planHas(plan, "automation") && hasRole(ctx, ["manager"]) ? [{ key: "automation", href: "/settings/automation", label: t.auto_title }] : []),
-    ...(hasRole(ctx, ["manager"]) ? [{ key: "support", href: "/support", label: t.sup_title }] : []),
+    ...(full && planHas(plan, "automation") && hasRole(ctx, ["manager"]) ? [{ key: "automation", href: "/settings/automation", label: t.auto_title }] : []),
+    ...(full && hasRole(ctx, ["manager"]) ? [{ key: "support", href: "/support", label: t.sup_title }] : []),
   ];
+  if (tabs.length < 2) return null;
   return (
     <nav aria-label={t.set_title} className="no-print mb-5 flex max-w-full gap-1 overflow-x-auto rounded-full bg-gray-soft p-1">
       {tabs.map((x) => (

@@ -57,6 +57,8 @@ export function TapeChart({
 
   const dayLabel = (d: string) =>
     new Intl.DateTimeFormat(intlLocale(lang), { weekday: "short", day: "numeric" }).format(new Date(`${d}T00:00:00`));
+  // Friday and Saturday (the weekend here) are tinted so the eye finds its place in the row
+  const weekend = (d: string) => [5, 6].includes(new Date(`${d}T00:00:00Z`).getUTCDay());
   const hijriDay = (d: string) =>
     new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "short" }).format(new Date(`${d}T00:00:00`));
 
@@ -66,12 +68,12 @@ export function TapeChart({
       {msg ? (
         <div className={`mb-3 rounded-xl px-3 py-2 text-sm ${msg.tone === "ok" ? "bg-ok-soft text-ok" : "bg-danger-soft text-danger"}`}>{msg.text}</div>
       ) : null}
-      <div className="card overflow-x-auto p-0">
+      <div className="card hidden overflow-x-auto p-0 md:block">
         <div className="relative" style={{ minWidth: 90 + days * cell }}>
           <div className="sticky top-0 z-10 flex border-b border-line bg-surface">
             <div className="w-[90px] shrink-0 p-2 text-xs font-semibold text-muted">{labels.unit}</div>
             {dates.map((d) => (
-              <div key={d} style={{ width: cell }} className={`shrink-0 border-s border-line p-1 text-center text-[11px] ${d === today ? "bg-brand-soft font-bold text-brand" : "text-muted"}`}>
+              <div key={d} style={{ width: cell }} className={`shrink-0 border-s border-line p-1 text-center text-[11px] ${d === today ? "bg-brand font-bold text-brand-ink" : weekend(d) ? "bg-surface-2 text-muted" : "text-muted"}`}>
                 <div>{dayLabel(d)}</div>
                 <div className="opacity-70">{hijriDay(d)}</div>
               </div>
@@ -86,7 +88,7 @@ export function TapeChart({
                   <div
                     key={d}
                     style={{ width: cell }}
-                    className={`group shrink-0 border-s border-line ${d === today ? "bg-brand-soft/40" : ""} ${drag ? "hover:bg-info-soft" : ""} ${
+                    className={`group shrink-0 border-s border-line ${d === today ? "bg-brand-soft" : weekend(d) ? "bg-surface-2/70" : ""} ${drag ? "hover:bg-info-soft" : ""} ${
                       canBook && d >= today && !drag ? "cursor-pointer hover:bg-brand-soft" : ""
                     }`}
                     onDragOver={(e) => e.preventDefault()}
