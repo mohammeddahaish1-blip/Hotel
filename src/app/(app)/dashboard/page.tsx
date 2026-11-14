@@ -75,13 +75,13 @@ export default async function DashboardPage() {
       {/* the two figures an owner looks for first, then the rest; each opens what is behind it */}
       <div className="grid gap-3 md:grid-cols-2">
         <OccupancyTile href={can(ctx, "board") ? "/board" : undefined} label={t.dash_occupancy} value={pct(d.occupancy_bp)} share={d.occupancy_bp / 10000} hint={`${d.in_house} / ${d.units}`} />
-        <ReceivableTile href={can(ctx, "finance") ? "/finance#aging" : undefined} label={t.dash_receivable} value={omr(d.receivable, lang)} due={d.receivable > 0} />
+        <ReceivableTile href={can(ctx, "finance") ? "/finance?v=owed" : undefined} label={t.dash_receivable} value={omr(d.receivable, lang)} due={d.receivable > 0} />
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label={t.dash_income_today} value={omr(d.income_today, lang)} hint={week.length > 1 ? <Spark values={week} label={t.last7} /> : undefined} href={money ? "/finance#payments" : undefined} />
-        <Stat label={t.dash_income_month} value={omr(d.income_month, lang)} href={money ? "/finance#payments" : undefined} />
-        <Stat label={t.dash_deposits} value={omr(d.deposits_held, lang)} href={money ? "/finance#deposits" : undefined} />
-        <Stat label={t.dash_expenses_month} value={omr(d.expenses_month, lang)} href={money ? "/finance#expenses" : undefined} />
+        <Stat label={t.dash_income_today} value={omr(d.income_today, lang)} hint={week.length > 1 ? <Spark values={week} label={t.last7} /> : undefined} href={money ? "/finance?v=received" : undefined} />
+        <Stat label={t.dash_income_month} value={omr(d.income_month, lang)} href={money ? "/finance?v=received" : undefined} />
+        <Stat label={t.dash_deposits} value={omr(d.deposits_held, lang)} href={money ? "/finance?v=received#deposits" : undefined} />
+        <Stat label={t.dash_expenses_month} value={omr(d.expenses_month, lang)} href={money ? "/finance?v=expenses" : undefined} />
       </div>
 
       <div className="mt-4 card">

@@ -1,3 +1,4 @@
+import { FinanceTabs } from "../FinanceTabs";
 import { requireFeature } from "@/lib/plan";
 import { redirect } from "next/navigation";
 import { hasRole, requireArea } from "@/lib/auth";
@@ -22,6 +23,7 @@ export default async function PaymentLinksPage() {
   const tz = ctx.property.timezone;
   return (
     <>
+      <FinanceTabs ctx={ctx} t={t} current="links" />
       <PageHeader title={t.pl_title} sub={t.pl_page_hint} />
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <Stat label={`${t.pl_st_proof_submitted} (${proof.length})`} value={omr(sum(proof), lang)} tone={proof.length ? "info" : undefined} />

@@ -1,3 +1,4 @@
+import { FinanceTabs } from "../FinanceTabs";
 import { Camera } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -119,6 +120,7 @@ export default async function ChequesPage() {
 
   return (
     <>
+      <FinanceTabs ctx={ctx} t={t} current="cheques" />
       <PageHeader title={t.chq_title} sub={t.chq_hint} />
       <div className="mb-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {groups.map((g) => (

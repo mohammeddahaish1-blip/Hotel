@@ -65,6 +65,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     {
       key: "finance",
       label: t.nav_finance,
+      ownTabs: true,
       tabs: can(ctx, "finance")
         ? [
             { href: "/finance", label: t.nav_finance },

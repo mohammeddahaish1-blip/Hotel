@@ -9,7 +9,8 @@ import {
 import { usePathname } from "next/navigation";
 
 export type NavTab = { href: string; label: string };
-export type NavGroup = { key: string; label: string; tabs: NavTab[]; also?: string[] };
+/** ownTabs: the group's pages draw their own tab bar, so the shared one stays hidden. */
+export type NavGroup = { key: string; label: string; tabs: NavTab[]; also?: string[]; ownTabs?: boolean };
 
 const ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutGrid, units: Building2, reservations: CalendarCheck, ops: SprayCan, shops: Store, finance: Wallet,
@@ -82,7 +83,7 @@ export function GroupTabs({ groups }: { groups: NavGroup[] }) {
   const path = usePathname();
   const key = activeGroup(path, groups);
   const group = groups.find((g) => g.key === key);
-  if (!group || group.tabs.length < 2) return null;
+  if (!group || group.ownTabs || group.tabs.length < 2) return null;
   const active = bestTab(path, group.tabs)?.href;
   return (
     <div className="no-print mb-5 flex gap-1 overflow-x-auto border-b border-line">

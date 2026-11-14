@@ -1,3 +1,4 @@
+import { FinanceTabs } from "../FinanceTabs";
 import { MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -79,6 +80,7 @@ export default async function CorrectionsPage() {
 
   return (
     <>
+      <FinanceTabs ctx={ctx} t={t} current="corrections" />
       <PageHeader title={t.cr_title} sub={t.cr_hint} />
       <div className="space-y-4">
         <Section title={`${t.cr_pending} (${pending.length})`}>

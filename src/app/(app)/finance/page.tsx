@@ -10,6 +10,9 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { BarList } from "@/components/charts";
 import { Badge, Empty, Field, PageHeader, Section, Stat } from "@/components/ui";
 import { Salaries } from "./Salaries";
+import { CloseShift } from "./CloseShift";
+import { FinanceTabs, defaultFinanceView, type FinanceView } from "./FinanceTabs";
+import { loadAlerts } from "@/lib/alerts";
 import { addExpense, archiveExpense, closeShift, openShift, postDueRent, restoreExpense, updateExpense } from "@/app/actions/ops";
 import { requestCorrection } from "@/app/actions/money";
 import { signedUrls } from "@/lib/storage";
@@ -51,6 +54,10 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
   const cat = typeof sp.cat === "string" && CATEGORIES.includes(sp.cat) ? sp.cat : "";
   const shiftLimit = Math.min(Math.max(Number(sp.shifts) || 10, 10), 200);
   const showArchive = sp.archived === "1";
+  // one task per view; roles that do not run the money never land on the views made for those who do
+  const first = defaultFinanceView(ctx);
+  const allowed: FinanceView[] = hasRole(ctx, ["manager", "accountant"]) ? ["overview", "cash", "received", "owed", "expenses"] : hasRole(ctx, ["reception"]) ? ["cash", "owed", "expenses"] : ["cash", "owed"];
+  const v: FinanceView = allowed.includes(sp.v as FinanceView) ? (sp.v as FinanceView) : first;
   const noProofOnly = sp.noproof === "1";
   const from = `${month}-01`;
   const to = month === thisMonth ? today : monthEnd(month);
@@ -165,7 +172,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
     : [{ data: [] }, { data: [] }];
 
   const qs = (extra: Record<string, string>) => {
-    const q = new URLSearchParams({ ...(month !== thisMonth ? { month } : {}), ...(cat ? { cat } : {}), ...extra });
+    const q = new URLSearchParams({ ...(v !== first ? { v } : {}), ...(month !== thisMonth ? { month } : {}), ...(cat ? { cat } : {}), ...extra });
     for (const [k, v] of [...q.entries()]) if (!v) q.delete(k);
     const s = q.toString();
     return s ? `/finance?${s}` : "/finance";
@@ -179,66 +186,227 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
     );
   const amountProps = { lang, preview: t.fin_amount_preview, bigConfirm: t.fin_big_amount };
 
+  // ---- what the overview lists under "needs your action": today's money alerts, in plain words, each with one way out
+  const todo = seesMoney
+    ? (await loadAlerts(ctx, t, lang))
+        .filter((a) => a.href.startsWith("/finance") || a.key.startsWith("rent_due-"))
+        .map((a) => ({
+          ...a,
+          href: a.key.startsWith("rent_due-")
+            ? `/reservations/${a.key.slice("rent_due-".length, "rent_due-".length + 36)}`
+            : a.key.startsWith("shift_open_long-") || a.key.startsWith("cash_shortage-")
+              ? "/finance?v=cash"
+              : a.href,
+        }))
+    : [];
+  if (withoutProof && month === thisMonth) {
+    todo.push({ key: "no-proof", severity: 3, title: t.fin_todo_noproof.replace("{n}", String(withoutProof)), detail: t.fin_todo_noproof_hint, href: "/finance?v=received&noproof=1" });
+  }
+  const oldest = agingRows.reduce((a, r) => Math.max(a, r.age_days), 0);
+  const monthNav = (
+    <div className="mb-4 flex flex-wrap items-center gap-2">
+      <Link href={qs({ month: addMonth(month, -1) })} className="btn-ghost btn-sm">‹ {t.fin_prev_month}</Link>
+      <span className="px-2 font-semibold">{monthLabel}</span>
+      {month < thisMonth ? <Link href={qs({ month: addMonth(month, 1) === thisMonth ? "" : addMonth(month, 1) })} className="btn-ghost btn-sm">{t.fin_next_month} ›</Link> : null}
+      {month !== thisMonth ? <Link href={qs({ month: "" })} className="btn-ghost btn-sm">{t.fin_this_month}</Link> : null}
+    </div>
+  );
+
   return (
     <>
       <ScrollToHash />
+      <FinanceTabs ctx={ctx} t={t} current={v} month={month !== thisMonth ? month : undefined} />
       <PageHeader
-        title={t.fin_title}
+        title={v === "cash" ? t.fin_tab_cash : v === "owed" ? t.fin_tab_owed : v === "received" ? t.fin_tab_received : v === "expenses" ? t.expenses : t.fin_title}
         actions={
-          <ActionForm action={postDueRent}>
-            <SubmitButton className="btn-ghost btn-sm">{t.post_rent}</SubmitButton>
-          </ActionForm>
+          v === "overview" || v === "owed" ? (
+            <ActionForm action={postDueRent}>
+              <SubmitButton className="btn-ghost btn-sm">{t.post_rent}</SubmitButton>
+            </ActionForm>
+          ) : undefined
         }
       />
 
-      {seesMoney ? (
+      {v === "overview" ? (
         <>
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <Link href={`/finance?month=${addMonth(month, -1)}`} className="btn-ghost btn-sm">‹ {t.fin_prev_month}</Link>
-            <span className="px-2 font-semibold">{monthLabel}</span>
-            {month < thisMonth ? <Link href={addMonth(month, 1) === thisMonth ? "/finance" : `/finance?month=${addMonth(month, 1)}`} className="btn-ghost btn-sm">{t.fin_next_month} ›</Link> : null}
-            {month !== thisMonth ? <Link href="/finance" className="btn-ghost btn-sm">{t.fin_this_month}</Link> : null}
+          {monthNav}
+          <div className="grid gap-3 md:grid-cols-3">
+            <Link href={qs({ v: "received" })} className="card block p-5">
+              <div className="text-sm font-semibold text-muted">{t.fin_q_in}</div>
+              <div className="num mt-1 text-3xl font-bold leading-tight">{omr(collected, lang)}</div>
+              <p className="mt-1.5 text-sm text-muted">{t.fin_q_in_hint}</p>
+              <div className="mt-2 text-xs font-semibold">{trend(collected, prevCollected)}</div>
+            </Link>
+            <Link href={qs({ v: "expenses" })} className="card block p-5">
+              <div className="text-sm font-semibold text-muted">{t.fin_q_out}</div>
+              <div className="num mt-1 text-3xl font-bold leading-tight">{omr(expTotal, lang)}</div>
+              <p className="mt-1.5 text-sm text-muted">{t.fin_q_out_hint}</p>
+              <div className="mt-2 text-xs font-semibold">{trend(expTotal, prevExpTotal, false)}</div>
+            </Link>
+            {/* the one red figure on the page: money guests still owe */}
+            <div className={`card p-5 ${outstanding > 0 ? "bg-danger-soft" : ""}`}>
+              <div className={`text-sm font-semibold ${outstanding > 0 ? "text-danger" : "text-muted"}`}>{t.fin_q_owed}</div>
+              <div className={`num mt-1 text-3xl font-bold leading-tight ${outstanding > 0 ? "text-danger" : ""}`}>{omr(outstanding, lang)}</div>
+              <p className="mt-1.5 text-sm text-muted">
+                {agingRows.length ? t.fin_q_owed_hint.replace("{n}", String(agingRows.length)).replace("{d}", String(oldest)) : t.fin_q_owed_none}
+              </p>
+              {agingRows.length ? <Link href={qs({ v: "owed" })} className="btn-danger btn-sm mt-3">{t.remind_all}</Link> : null}
+            </div>
           </div>
-          <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label={t.fin_collected} value={omr(collected, lang)} hint={trend(collected, prevCollected)} />
-            <Stat label={t.expenses} value={omr(expTotal, lang)} hint={trend(expTotal, prevExpTotal, false)} />
-            <Stat label={t.fin_net} value={omr(net, lang)} tone={net < 0 ? "danger" : "ok"} hint={trend(net, prevNet)} />
-            <Stat label={t.fin_outstanding} value={omr(outstanding, lang)} tone={outstanding > 0 ? "warn" : undefined} />
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-brand p-5 text-brand-ink">
+            <div>
+              <div className="font-semibold">{t.fin_net_month}</div>
+              <div className="text-sm opacity-85">{t.fin_net_hint}</div>
+            </div>
+            <div className="num text-3xl font-bold">{omr(net, lang)}</div>
+          </div>
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <Section title={`${t.fin_todo}${todo.length ? ` (${todo.length})` : ""}`}>
+                {todo.length === 0 ? (
+                  <p className="text-sm text-muted">{t.fin_todo_none}</p>
+                ) : (
+                  <ul className="divide-y divide-line">
+                    {todo.map((a) => (
+                      <li key={a.key} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+                        <span className={`size-2.5 shrink-0 rounded-full ${a.severity === 1 ? "bg-danger" : a.severity === 2 ? "bg-warn" : "bg-info"}`} aria-hidden />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold">{a.title}</div>
+                          <div className="truncate text-sm text-muted">{a.detail}</div>
+                        </div>
+                        <Link href={a.href} className="btn-ghost btn-sm">{t.view}</Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Section>
+            </div>
+            <div className="space-y-4">
+              <Section title={t.fin_cash_now}>
+                <div className="flex items-center justify-between gap-2">
+                  <Badge tone={myShift ? "ok" : "gray"}>{myShift ? t.open : t.fin_cash_closed}</Badge>
+                  {myShift ? <span className="text-xs text-muted">{dateTime(myShift.opened_at, tz, lang)}</span> : null}
+                </div>
+                {breakdown ? (
+                  <>
+                    <p className="mt-3 text-sm text-muted">{t.fin_cash_should}</p>
+                    <div className="num text-2xl font-bold">{omr(breakdown.expected, lang)}</div>
+                  </>
+                ) : null}
+                <Link href="/finance?v=cash" className="btn-ghost mt-3 w-full">{myShift ? t.fin_cash_go_close : t.fin_cash_go_open}</Link>
+              </Section>
+              <Link href="/finance?v=expenses#new" className="btn-primary w-full">{t.fin_new_expense}</Link>
+            </div>
           </div>
         </>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Section title={t.shift}>
-          {myShift ? (
-            <div className="space-y-3">
-              <div className="text-sm text-muted">{dateTime(myShift.opened_at, tz, lang)}</div>
-              {breakdown ? (
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between"><span>{t.shift_float}</span><span className="num">{omr(breakdown.opening_float, lang)}</span></div>
-                  <div className="flex justify-between text-ok"><span>{t.shift_cash_in} ({breakdown.payments_count})</span><span className="num">{omr(breakdown.cash_in, lang)}</span></div>
-                  <div className="flex justify-between text-danger"><span>{t.shift_refunds}</span><span className="num">{omr(breakdown.cash_refunds, lang)}</span></div>
-                  <div className="flex justify-between text-danger"><span>{t.shift_cash_expenses} ({breakdown.expenses_count})</span><span className="num">{omr(breakdown.cash_expenses, lang)}</span></div>
-                  <div className="flex justify-between border-t border-line pt-1 font-bold"><span>{t.shift_expected}</span><span className="num">{omr(breakdown.expected, lang)}</span></div>
-                </div>
-              ) : null}
+      {v === "cash" ? (
+        <div className="space-y-4">
+          {myShift && breakdown ? (
+            <>
+              <p className="text-sm text-muted">{dateTime(myShift.opened_at, tz, lang)}</p>
+              <CloseShift
+                action={closeShift}
+                shiftId={myShift.id}
+                expected={breakdown.expected}
+                lang={lang}
+                lines={[
+                  { label: t.shift_float, value: omr(breakdown.opening_float, lang) },
+                  { label: `${t.shift_cash_in} (${breakdown.payments_count})`, value: omr(breakdown.cash_in, lang), tone: "ok" },
+                  { label: t.shift_refunds, value: omr(breakdown.cash_refunds, lang), tone: "danger" },
+                  { label: `${t.shift_cash_expenses} (${breakdown.expenses_count})`, value: omr(breakdown.cash_expenses, lang), tone: "danger" },
+                  { label: t.shift_expected, value: omr(breakdown.expected, lang), tone: "total" },
+                ]}
+                labels={{
+                  step1: t.cash_step1, step2: t.cash_step2, step3: t.cash_step3, countQ: t.cash_count_q, countHint: t.cash_count_hint, counted: t.shift_counted,
+                  how: t.cash_how, nonCash: t.cash_noncash, result: t.cash_result, expected: t.cash_expected_short, youCounted: t.cash_counted_short,
+                  match: t.cash_match, short: t.cash_short, over: t.cash_over, recount: t.cash_recount, why: t.cash_why, next: t.cash_next, back: t.back,
+                  confirmQ: t.cash_confirm_q, close: t.fin_cash_go_close,
+                }}
+              />
+            </>
+          ) : myShift ? (
+            // no breakdown came back: fall back to the plain closing form
+            <Section title={t.shift}>
               <ActionForm action={closeShift} className="space-y-2">
                 <input type="hidden" name="shift" value={myShift.id} />
                 <Field label={t.shift_counted}><AmountInput name="counted" {...amountProps} /></Field>
                 <Field label={t.notes}><input name="notes" className="input" /></Field>
                 <SubmitButton className="btn-primary w-full" confirm={t.shift_close}>{t.shift_close}</SubmitButton>
               </ActionForm>
-            </div>
+            </Section>
           ) : (
-            <ActionForm action={openShift} className="space-y-2">
-              <p className="text-sm text-muted">{t.shift_none}</p>
-              <Field label={t.shift_float}><input name="float" defaultValue="0" inputMode="decimal" className="input" /></Field>
-              <SubmitButton className="btn-primary w-full">{t.shift_open}</SubmitButton>
-            </ActionForm>
+            <div className="mx-auto max-w-md">
+              <Section title={t.fin_cash_go_open}>
+                <ActionForm action={openShift} className="space-y-3">
+                  <p className="text-sm text-muted">{t.cash_open_hint}</p>
+                  <Field label={t.shift_float}><input name="float" defaultValue="0" inputMode="decimal" className="input num py-3 text-xl font-bold" /></Field>
+                  <SubmitButton className="btn-primary w-full">{t.fin_cash_go_open}</SubmitButton>
+                </ActionForm>
+              </Section>
+            </div>
           )}
-        </Section>
+          {seesMoney ? (
+            <>
+              <Section title={t.shift_history}>
+                {shiftRows.length === 0 ? (
+                  <Empty>{t.none}</Empty>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="table">
+                        <thead><tr><th>{t.date}</th><th>{t.audit_actor}</th><th>{t.shift_expected}</th><th>{t.shift_counted}</th><th>{t.shift_difference}</th></tr></thead>
+                        <tbody>
+                          {shiftRows.map((sh) => {
+                            const pays = ((shiftPays ?? []) as unknown as { id: string; amount: number; kind: string; received_at: string; cash_shift_id: string; folios: { reservations: { code: string } | null } | null }[])
+                              .filter((p) => p.cash_shift_id === sh.id);
+                            const exps = ((shiftExps ?? []) as { id: string; amount: number; description: string; cash_shift_id: string }[]).filter((x) => x.cash_shift_id === sh.id);
+                            return (
+                              <tr key={sh.id} className={sh.difference < 0 ? "bg-danger-soft/40" : undefined}>
+                                <td className="align-top text-xs">
+                                  {dateTime(sh.closed_at, tz, lang)}
+                                  {pays.length || exps.length ? (
+                                    <details className="mt-1">
+                                      <summary className="cursor-pointer text-brand">{t.shift_ops} ({pays.length + exps.length})</summary>
+                                      <ul className="mt-1 space-y-0.5">
+                                        {pays.map((p) => (
+                                          <li key={p.id} className="text-ok">+ {omr(p.kind === "refund" || p.kind === "deposit_refund" ? -p.amount : p.amount, lang)} · {p.folios?.reservations?.code ?? t[`pk_${p.kind}` as DictKey]}</li>
+                                        ))}
+                                        {exps.map((x) => (
+                                          <li key={x.id} className="text-danger">− {omr(x.amount, lang)} · {x.description}</li>
+                                        ))}
+                                      </ul>
+                                    </details>
+                                  ) : null}
+                                </td>
+                                <td className="align-top">{staffName.get(sh.opened_by) || "—"}</td>
+                                <td className="num align-top">{omr(sh.expected_cash, lang)}</td>
+                                <td className="num align-top">{omr(sh.counted_cash, lang)}</td>
+                                <td className={`num align-top font-semibold ${sh.difference < 0 ? "text-danger" : sh.difference > 0 ? "text-warn" : "text-ok"}`}>
+                                  {sh.difference < 0 ? <TriangleAlert className="me-1 inline size-3.5" /> : null}{omr(sh.difference, lang)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {(shifts ?? []).length > shiftLimit ? (
+                      <div className="mt-3 text-center">
+                        <Link href={qs({ shifts: String(shiftLimit + 20) })} scroll={false} className="btn-ghost btn-sm">{t.audit_more}</Link>
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </Section>
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
-        <div className="lg:col-span-2">
+      {v === "owed" ? (
+        <div>
           <div id="aging" className="scroll-mt-28" />
           <Section title={t.aging}>
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -283,10 +451,13 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
             )}
           </Section>
         </div>
-      </div>
+      ) : null}
 
+      {v === "received" ? (
+        <>
+          {monthNav}
       {seesMoney ? (
-        <div className="mt-4">
+        <div>
           <div id="payments" className="scroll-mt-28" />
           <Section title={`${t.fin_payments} · ${monthLabel}`}>
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -352,6 +523,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
         </div>
       ) : null}
 
+
       {seesMoney ? (
         <div className="mt-4">
           <div id="deposits" className="scroll-mt-28" />
@@ -377,23 +549,29 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
         </div>
       ) : null}
 
-      {hasRole(ctx, ["manager"]) ? (
-        <div className="mt-4">
-          <Salaries ctx={ctx} month={month} monthLabel={monthLabel} t={t} lang={lang} />
-        </div>
+        </>
       ) : null}
 
+      {v === "expenses" ? (
+        <>
+          {seesMoney ? monthNav : null}
       {hasRole(ctx, ["manager", "accountant", "reception"]) ? (
-        <div className="mt-4 grid gap-4 lg:grid-cols-3">
-          <Section title={t.expense_add}>
+        <div className={seesMoney ? "grid gap-4 lg:grid-cols-3" : "mx-auto max-w-xl"}>
+          <div>
+          <div id="new" className="scroll-mt-28" />
+          <Section title={t.fin_new_expense}>
             <ActionForm action={addExpense} resetOnSuccess className="space-y-2">
+              <Field label={`${t.amount} (${lang === "en" || lang === "bn" ? "OMR" : "ر.ع"})`}><AmountInput {...amountProps} /></Field>
+              <Field label={t.description}><input name="description" required className="input" /></Field>
+              <ReceiptInput label={t.fin_receipt} ready={t.fin_receipt_ready} />
+              <details className="rounded-2xl bg-surface-2 p-3">
+                <summary className="cursor-pointer text-sm font-semibold text-brand">{t.fin_more_details}</summary>
+                <div className="mt-3 space-y-2">
               <Field label={t.category}>
                 <select name="category" className="input">
                   {CATEGORIES.map((c) => <option key={c} value={c}>{t[`ec_${c}` as DictKey]}</option>)}
                 </select>
               </Field>
-              <Field label={t.description}><input name="description" required className="input" /></Field>
-              <Field label={`${t.amount} (${lang === "en" || lang === "bn" ? "OMR" : "ر.ع"})`}><AmountInput {...amountProps} /></Field>
               <div className="grid grid-cols-2 gap-2">
                 <Field label={t.method}>
                   <select name="method" className="input">
@@ -410,7 +588,8 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                   </select>
                 </Field>
               ) : null}
-              <ReceiptInput label={t.fin_receipt} ready={t.fin_receipt_ready} />
+                </div>
+              </details>
               <SubmitButton className="btn-primary w-full">{t.add}</SubmitButton>
             </ActionForm>
             {!seesMoney && (myExpenses ?? []).length ? (
@@ -440,6 +619,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
               </div>
             ) : null}
           </Section>
+          </div>
           {seesMoney ? (
             <div className="space-y-4 lg:col-span-2">
               <div id="expenses" className="scroll-mt-28" />
@@ -538,60 +718,18 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
                   ) : null}
                 </div>
               </Section>
-              <Section title={t.shift_history}>
-                {shiftRows.length === 0 ? (
-                  <Empty>{t.none}</Empty>
-                ) : (
-                  <>
-                    <div className="overflow-x-auto">
-                      <table className="table">
-                        <thead><tr><th>{t.date}</th><th>{t.audit_actor}</th><th>{t.shift_expected}</th><th>{t.shift_counted}</th><th>{t.shift_difference}</th></tr></thead>
-                        <tbody>
-                          {shiftRows.map((sh) => {
-                            const pays = ((shiftPays ?? []) as unknown as { id: string; amount: number; kind: string; received_at: string; cash_shift_id: string; folios: { reservations: { code: string } | null } | null }[])
-                              .filter((p) => p.cash_shift_id === sh.id);
-                            const exps = ((shiftExps ?? []) as { id: string; amount: number; description: string; cash_shift_id: string }[]).filter((x) => x.cash_shift_id === sh.id);
-                            return (
-                              <tr key={sh.id} className={sh.difference < 0 ? "bg-danger-soft/40" : undefined}>
-                                <td className="align-top text-xs">
-                                  {dateTime(sh.closed_at, tz, lang)}
-                                  {pays.length || exps.length ? (
-                                    <details className="mt-1">
-                                      <summary className="cursor-pointer text-brand">{t.shift_ops} ({pays.length + exps.length})</summary>
-                                      <ul className="mt-1 space-y-0.5">
-                                        {pays.map((p) => (
-                                          <li key={p.id} className="text-ok">+ {omr(p.kind === "refund" || p.kind === "deposit_refund" ? -p.amount : p.amount, lang)} · {p.folios?.reservations?.code ?? t[`pk_${p.kind}` as DictKey]}</li>
-                                        ))}
-                                        {exps.map((x) => (
-                                          <li key={x.id} className="text-danger">− {omr(x.amount, lang)} · {x.description}</li>
-                                        ))}
-                                      </ul>
-                                    </details>
-                                  ) : null}
-                                </td>
-                                <td className="align-top">{staffName.get(sh.opened_by) || "—"}</td>
-                                <td className="num align-top">{omr(sh.expected_cash, lang)}</td>
-                                <td className="num align-top">{omr(sh.counted_cash, lang)}</td>
-                                <td className={`num align-top font-semibold ${sh.difference < 0 ? "text-danger" : sh.difference > 0 ? "text-warn" : "text-ok"}`}>
-                                  {sh.difference < 0 ? <TriangleAlert className="me-1 inline size-3.5" /> : null}{omr(sh.difference, lang)}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                    {(shifts ?? []).length > shiftLimit ? (
-                      <div className="mt-3 text-center">
-                        <Link href={qs({ shifts: String(shiftLimit + 20) })} scroll={false} className="btn-ghost btn-sm">{t.audit_more}</Link>
-                      </div>
-                    ) : null}
-                  </>
-                )}
-              </Section>
             </div>
           ) : null}
         </div>
+      ) : null}
+
+      {hasRole(ctx, ["manager"]) ? (
+        <div className="mt-4">
+          <Salaries ctx={ctx} month={month} monthLabel={monthLabel} t={t} lang={lang} />
+        </div>
+      ) : null}
+
+        </>
       ) : null}
     </>
   );
