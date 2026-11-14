@@ -75,16 +75,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           ]
         : [],
     },
-    { key: "reports", label: t.nav_grp_reports, tabs: [...tab("reports"), ...tab("compliance")] },
     {
-      key: "analytics",
-      label: t.nav_grp_analytics,
-      tabs: can(ctx, "reports") && has("analytics")
-        ? [
-            { href: "/analytics", label: t.an_charts },
-            ...(hasRole(ctx, ["manager"]) ? [{ href: "/analytics/staff", label: t.an_staff }] : []),
-          ]
-        : [],
+      key: "reports",
+      label: t.nav_grp_reports,
+      // the charts live inside Reports now; staff performance sits beside it
+      tabs: [...tab("reports"), ...tab("compliance"), ...(can(ctx, "reports") && has("analytics") && hasRole(ctx, ["manager"]) ? [{ href: "/analytics/staff", label: t.an_staff }] : [])],
     },
     { key: "feedback", label: t.nav_feedback, tabs: tab("feedback") },
     { key: "import", label: t.nav_import, tabs: has("import") ? tab("import") : [] },

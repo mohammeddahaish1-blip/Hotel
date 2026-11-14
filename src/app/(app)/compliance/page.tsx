@@ -1,4 +1,5 @@
-import { CreditCard } from "lucide-react";
+import { BarChart3, CreditCard, Download, Receipt, ShieldCheck } from "lucide-react";
+import { DownloadLink } from "@/components/DownloadLink";
 import { can, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
@@ -29,11 +30,16 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
   const from = typeof sp.from === "string" && sp.from ? sp.from : today;
   const to = typeof sp.to === "string" && sp.to ? sp.to : today;
   const q = quarterOf(today);
+  // the ministry's statistics are monthly: last month by default, or the chosen period
+  const picked = typeof sp.from === "string" && !!sp.from;
+  const prevEnd = addDays(`${today.slice(0, 8)}01`, -1);
+  const mFrom = picked ? from : `${prevEnd.slice(0, 8)}01`;
+  const mTo = picked ? to : prevEnd;
   const db = ctx.supabase;
 
   const [{ data: police }, { data: stats }, { data: taxes }, { data: history }] = await Promise.all([
     db.rpc("police_register", { p_property: ctx.property.id, p_from: from, p_to: to }),
-    db.rpc("ministry_statistics", { p_property: ctx.property.id, p_from: from, p_to: to }),
+    db.rpc("ministry_statistics", { p_property: ctx.property.id, p_from: mFrom, p_to: mTo }),
     db.rpc("tax_liability", { p_property: ctx.property.id, p_from: q.start, p_to: q.end }),
     db.from("compliance_submissions").select("*").eq("property_id", ctx.property.id).order("created_at", { ascending: false }).limit(20),
   ]);
@@ -56,26 +62,68 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
   for (const d of docs ?? []) if (!copyOf.has(d.guest_id as string)) copyOf.set(d.guest_id as string, d.id as string);
   const fromReader = rows.filter((r) => guestOf.get(r.reservation_code)?.guests?.doc_source === "reader").length;
 
+  // ---- each authority as one task: what is due, and the last file made for it
+  type Sub = { id: string; authority: string; status: string; period: string; created_at: string };
+  const subs = (history ?? []) as unknown as Sub[];
+  const covers = (h: Sub, a: string, b: string) => { const p = parseRange(h.period); return p.from <= a && b <= p.to; };
+  // police: reported once a file covering the period was marked as uploaded; otherwise the newest file still waits for step 2
+  const ropDone = subs.some((h) => h.authority === "rop" && h.status === "submitted" && covers(h, from, to));
+  const ropWaiting = subs.find((h) => h.authority === "rop" && h.status === "generated" && covers(h, from, to));
+  const mhtDone = subs.some((h) => h.authority === "mht" && h.status === "submitted" && covers(h, mFrom, mTo));
+  const mhtWaiting = subs.find((h) => h.authority === "mht" && h.status === "generated" && covers(h, mFrom, mTo));
+  const guestsCount = (st?.by_nationality ?? []).reduce((a, n) => a + n.guests, 0);
+  const taxDue = ((taxes ?? []) as Tax[]).reduce((a, x) => a + Number(x.net), 0);
+  // estimated dates until the official ones are confirmed: statistics by the 10th of the following month, fees 30 days after the quarter
+  const mhtDue = `${addDays(mTo, 1).slice(0, 8)}10`;
+  const taxDueDate = addDays(q.end, 30);
+  const estimated = (d: string) => t.cmp_due_est.replace("{d}", gregorian(d, lang));
+  const stepNo = "num grid size-7 shrink-0 place-items-center rounded-full text-sm font-bold";
+  const steps = (kind: "police" | "ministry", a: string, b: string, waiting: Sub | undefined, done: boolean) => (
+    <ol className="mt-4 space-y-2">
+      <li className="flex flex-wrap items-center gap-3 rounded-2xl bg-surface-2 p-3">
+        <span className={`${stepNo} bg-brand text-brand-ink`}>1</span>
+        <span className="min-w-40 flex-1 font-semibold">{t.cmp_step1}</span>
+        <DownloadLink href={`/api/export?kind=${kind}&from=${a}&to=${b}`} className={done ? "btn-ghost btn-sm" : "btn-primary btn-sm"}><Download className="size-4 shrink-0" />{t.cmp_step1}</DownloadLink>
+      </li>
+      <li className="flex flex-wrap items-center gap-3 rounded-2xl bg-surface-2 p-3">
+        <span className={`${stepNo} ${waiting ? "bg-brand text-brand-ink" : "bg-gray-soft text-muted"}`}>2</span>
+        <span className="min-w-40 flex-1">
+          <span className="font-semibold">{t.cmp_step2}</span>
+          <span className="block text-xs text-muted">{waiting ? t.cmp_step2_hint : done ? t.cmp_mark_submitted : t.cmp_step2_wait}</span>
+        </span>
+        {waiting ? (
+          <ActionForm action={logSubmission}>
+            <input type="hidden" name="id" value={waiting.id} />
+            <SubmitButton className="btn-primary btn-sm">{t.cmp_mark_submitted}</SubmitButton>
+          </ActionForm>
+        ) : null}
+      </li>
+    </ol>
+  );
+  const more = "mt-3 text-sm";
+  const moreSummary = "cursor-pointer font-semibold text-brand";
+
   return (
     <>
-      <PageHeader title={t.cmp_title} />
-      <form className="card mb-4 grid gap-2 sm:grid-cols-4">
-        <Field label={t.from}><input type="date" name="from" defaultValue={from} className="input" /></Field>
-        <Field label={t.to}><input type="date" name="to" defaultValue={to} className="input" /></Field>
-        <div className="flex items-end"><button className="btn-primary w-full">{t.run}</button></div>
-      </form>
+      <PageHeader title={t.cmp_title} sub={t.cmp_intro} />
 
       <div className="space-y-4">
-        <Section
-          title={`${t.cmp_police} (${rows.length})`}
-          actions={<a href={`/api/export?kind=police&from=${from}&to=${to}`} className="btn-primary btn-sm">{t.cmp_generate}</a>}
-        >
-          <p className="mb-3 text-xs text-muted">{t.cmp_police_hint}</p>
-          {missing ? <div className="mb-3 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger">{t.err_GUEST_DATA_INCOMPLETE} ({missing})</div> : null}
-          {rows.length ? <p className="mb-3 text-xs text-muted">{t.cmp_from_reader}: <b className="num">{fromReader} / {rows.length}</b></p> : null}
-          {rows.length === 0 ? (
-            <Empty>{t.none}</Empty>
-          ) : (
+        <section className="card">
+          <div className="flex flex-wrap items-start gap-3">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand"><ShieldCheck className="size-6" aria-hidden /></span>
+            <div className="min-w-56 flex-1">
+              <h2 className="h2">{t.cmp_rop_name}</h2>
+              <p className="mt-1 text-sm">{rows.length ? t.cmp_rop_text.replace("{n}", String(rows.length)) : t.cmp_rop_none}</p>
+              <p className="text-xs text-muted">{t.cmp_daily} · {from === to ? gregorian(from, lang) : `${gregorian(from, lang)} – ${gregorian(to, lang)}`}</p>
+            </div>
+            <Badge tone={ropDone ? "ok" : rows.length ? "danger" : "gray"}>{ropDone ? t.cmp_mark_submitted : rows.length ? t.cmp_today_due : t.cmp_nothing}</Badge>
+          </div>
+          {missing ? <div className="mt-3 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger">{t.err_GUEST_DATA_INCOMPLETE} ({missing})</div> : null}
+          {rows.length ? steps("police", from, to, ropWaiting, ropDone) : null}
+          {rows.length ? (
+            <details className={more}>
+              <summary className={moreSummary}>{t.cmp_show_names} ({rows.length})</summary>
+              <p className="my-2 text-xs text-muted">{t.cmp_from_reader}: <b className="num">{fromReader} / {rows.length}</b></p>
             <div className="overflow-x-auto">
               <table className="table">
                 <thead><tr><th>{t.code}</th><th>{t.name}</th><th>{t.nationality}</th><th>{t.doc_number}</th><th>{t.cmp_source}</th><th>{t.unit}</th><th>{t.res_check_in}</th></tr></thead>
@@ -110,14 +158,24 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
                 </tbody>
               </table>
             </div>
-          )}
-        </Section>
+            </details>
+          ) : null}
+        </section>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Section
-            title={t.cmp_ministry}
-            actions={<a href={`/api/export?kind=ministry&from=${from}&to=${to}`} className="btn-ghost btn-sm">{t.cmp_generate}</a>}
-          >
+        <section className="card">
+          <div className="flex flex-wrap items-start gap-3">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand"><BarChart3 className="size-6" aria-hidden /></span>
+            <div className="min-w-56 flex-1">
+              <h2 className="h2">{t.cmp_mht_name}</h2>
+              <p className="mt-1 text-sm">{t.cmp_mht_text.replace("{n}", String(st?.occupancy.room_nights_sold ?? 0)).replace("{g}", String(guestsCount))}</p>
+              <p className="text-xs text-muted">{gregorian(mFrom, lang)} – {gregorian(mTo, lang)}</p>
+            </div>
+            <Badge tone={mhtDone ? "ok" : "warn"}>{mhtDone ? t.cmp_mark_submitted : estimated(mhtDue)}</Badge>
+          </div>
+          {steps("ministry", mFrom, mTo, mhtWaiting, mhtDone)}
+          <details className={more}>
+            <summary className={moreSummary}>{t.cmp_show_details}</summary>
+            <div className="mt-2">
             {st ? (
               <div className="space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-2">
@@ -136,10 +194,23 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
                 </table></div>
               </div>
             ) : null}
-          </Section>
+            </div>
+          </details>
+        </section>
 
-          <Section title={`${t.cmp_tax} · ${gregorian(q.start, lang)} → ${gregorian(q.end, lang)}`}>
-            <p className="mb-3 text-xs text-muted">{t.cmp_tax_hint}</p>
+        <section className="card">
+          <div className="flex flex-wrap items-start gap-3">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand"><Receipt className="size-6" aria-hidden /></span>
+            <div className="min-w-56 flex-1">
+              <h2 className="h2">{t.cmp_tax_name}</h2>
+              <p className="mt-1 text-sm">{t.cmp_tax_text.replace("{x}", omr(taxDue, lang))}</p>
+              <p className="text-xs text-muted">{gregorian(q.start, lang)} – {gregorian(q.end, lang)}</p>
+            </div>
+            <Badge tone="gray">{estimated(taxDueDate)}</Badge>
+          </div>
+          <details className={more}>
+            <summary className={moreSummary}>{t.cmp_show_details}</summary>
+            <p className="my-2 text-xs text-muted">{t.cmp_tax_hint}</p>
             {(taxes ?? []).length === 0 ? (
               <Empty>{t.none}</Empty>
             ) : (
@@ -157,11 +228,24 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
                 </tbody>
               </table></div>
             )}
-          </Section>
-        </div>
+          </details>
+        </section>
 
-        <Section title={t.cmp_history}>
-          {(history ?? []).length === 0 ? (
+        <p className="text-xs text-muted">{t.cmp_est_note}</p>
+
+        <details className="card">
+          <summary className="cursor-pointer text-sm font-semibold">{t.cmp_other_period}</summary>
+          <form className="mt-3 grid gap-2 sm:grid-cols-4">
+            <Field label={t.from}><input type="date" name="from" defaultValue={from} className="input" /></Field>
+            <Field label={t.to}><input type="date" name="to" defaultValue={to} className="input" /></Field>
+            <div className="flex items-end"><button className="btn-primary w-full">{t.run}</button></div>
+          </form>
+        </details>
+
+        <details className="card">
+          <summary className="cursor-pointer text-sm font-semibold">{t.cmp_sent_before} ({subs.length})</summary>
+          <div className="mt-3">
+          {subs.length === 0 ? (
             <Empty>{t.none}</Empty>
           ) : (
             <div className="overflow-x-auto"><table className="table">
@@ -171,10 +255,10 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
                   return (
                     <tr key={h.id}>
                       <td>{dateTime(h.created_at, ctx.property.timezone, lang)}</td>
-                      <td>{h.authority === "rop" ? "ROP" : h.authority === "mht" ? "MHT" : h.authority}</td>
+                      <td>{h.authority === "rop" ? t.cmp_rop_name : h.authority === "mht" ? t.cmp_mht_name : h.authority}</td>
                       <td>{gregorian(p.from, lang)} → {gregorian(p.to, lang)}</td>
                       <td className="num">{h.record_count}</td>
-                      <td><Badge tone={h.status === "submitted" ? "ok" : "warn"}>{h.status}</Badge></td>
+                      <td><Badge tone={h.status === "submitted" ? "ok" : "warn"}>{h.status === "submitted" ? t.cmp_mark_submitted : t.cmp_not_uploaded}</Badge></td>
                       <td>
                         {h.status === "generated" ? (
                           <ActionForm action={logSubmission}>
@@ -189,7 +273,8 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
               </tbody>
             </table></div>
           )}
-        </Section>
+          </div>
+        </details>
       </div>
     </>
   );
