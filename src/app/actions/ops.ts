@@ -126,6 +126,8 @@ export async function addPayment(_: ActionResult, fd: FormData): Promise<ActionR
   const { t } = await getDict();
   const proof = await uploadTo(ctx, "payment-proofs", fd.get("proof"));
   if (proof && "error" in proof) return { error: errorMessage(t, proof.error as { message: string }) };
+  // a bank transfer leaves nothing in the drawer to count, so its picture is the evidence: required
+  if (s(fd, "method") === "transfer" && !proof) return { error: t.pay_proof_required };
   const { error } = await ctx.supabase.from("payments").insert({
     tenant_id: ctx.tenantId,
     folio_id: s(fd, "folio")!,

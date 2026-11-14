@@ -1,5 +1,6 @@
 import { getPlan, planHas } from "@/lib/plan";
-import { FileSignature, Link2 as LinkIcon, MessageCircle, Paperclip, Receipt } from "lucide-react";
+import { Ellipsis, FileSignature, Link2 as LinkIcon, MessageCircle, Paperclip, Phone, Receipt } from "lucide-react";
+import { PaymentForm } from "./PaymentForm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { hasRole, requireArea } from "@/lib/auth";
@@ -29,7 +30,7 @@ const CHARGE_KINDS = ["service", "food", "laundry", "damage", "utility", "room",
 const PAY_KINDS = ["payment", "deposit", "deposit_applied", "deposit_refund", "refund"];
 const METHODS = ["cash", "card", "transfer", "link"];
 
-export default async function ReservationPage({ params }: PageProps<"/reservations/[id]">) {
+export default async function ReservationPage({ params, searchParams }: PageProps<"/reservations/[id]">) {
   const ctx = await requireArea("reservations");
   const plan = await getPlan(ctx);
   const { t, lang } = await getDict();
@@ -93,61 +94,63 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
     .filter((b) => b.status !== "cancelled")
     .sort((a, b) => a.due_date.localeCompare(b.due_date));
 
+  // ---- one job per tab; the header above them always says where the booking stands
+  const sp = await searchParams;
+  const tab = sp.tab === "pay" || sp.tab === "docs" || sp.tab === "edit" ? sp.tab : "account";
+  const open = ["tentative", "confirmed"].includes(r.status);
+  const balance = sum?.balance ?? 0;
+  const canPay = Boolean(folio) && canOperate && !["cancelled", "no_show"].includes(r.status);
+  const tabLink = (k: string, label: string) => (
+    <Link
+      key={k}
+      href={k === "account" ? `/reservations/${id}` : `/reservations/${id}?tab=${k}`}
+      scroll={false}
+      aria-current={tab === k ? "page" : undefined}
+      className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ${tab === k ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}
+    >
+      {label}
+    </Link>
+  );
+
   return (
     <>
       <Crumb href="/reservations" label={t.nav_reservations} />
-      <PageHeader
-        title={`${t.res_details} ${r.code}`}
-        sub={
-          <span className="flex flex-wrap items-center gap-2">
-            <Badge tone={RES_STATUS_TONE[r.status]}><span aria-hidden>{RES_STATUS_EMOJI[r.status]}</span> {t[`rs_${r.status}` as DictKey]}</Badge>
-            <span>{t[`kind_${r.kind}` as DictKey]} · {t[`src_${r.source}` as DictKey]}</span>
-          </span>
-        }
-        actions={
-          guest.phone ? (
-            <a href={whatsappLink(guest.phone, confirmText)} target="_blank" rel="noreferrer" className="btn-ghost">
-              {t.res_share_confirmation}
-            </a>
-          ) : null
-        }
-      />
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <div className="card grid gap-3 sm:grid-cols-3">
-            <div>
-              <div className="label">{t.guest}</div>
-              <Link href={`/guests/${guest.id}`} className="font-semibold text-brand">{guest.full_name}</Link>
-              <div dir="ltr" className="text-start text-xs text-muted">{guest.phone}</div>
-              {guest.doc_expiry && guest.doc_expiry < today ? (
-                <div role="alert" className="mt-1 text-xs font-semibold text-danger">{t.doc_expired_warn}</div>
-              ) : null}
+      <section className="card mb-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="h1"><Link href={`/guests/${guest.id}`}>{guest.full_name}</Link></h1>
+              <Badge tone={RES_STATUS_TONE[r.status]}><span aria-hidden>{RES_STATUS_EMOJI[r.status]}</span> {t[`rs_${r.status}` as DictKey]}</Badge>
             </div>
-            <div>
-              <div className="label">{t.unit}</div>
-              <div className="font-semibold">{unit.number}</div>
-              <div className="text-xs text-muted">{unit.unit_types?.name_ar}</div>
-            </div>
-            <div>
-              <div className="label">{t.from} → {t.to}</div>
-              <div className="font-semibold">{gregorian(stay.from, lang)} → {gregorian(stay.to, lang)}</div>
-              <div className="text-xs text-muted">{hijri(stay.from, lang)} · {nights(stay.from, stay.to)} {t.nightsLabel}</div>
-            </div>
-            {r.checked_in_at ? <div className="text-xs text-muted">{t.res_check_in}: {dateTime(r.checked_in_at, ctx.property.timezone, lang)}</div> : null}
-            {r.checked_out_at ? <div className="text-xs text-muted">{t.res_check_out}: {dateTime(r.checked_out_at, ctx.property.timezone, lang)}</div> : null}
-            {r.notes ? <div className="text-sm sm:col-span-3">{r.notes}</div> : null}
+            <p className="mt-1.5">
+              {t.unit} <b className="num">{unit.number}</b> · {unit.unit_types?.name_ar} · {gregorian(stay.from, lang)} – {gregorian(stay.to, lang)} · <span className="num">{nights(stay.from, stay.to)}</span> {t.nightsLabel}
+            </p>
+            <p className="text-sm text-muted">{r.code} · {t[`kind_${r.kind}` as DictKey]} · {t[`src_${r.source}` as DictKey]} · {hijri(stay.from, lang)}</p>
+            {guest.doc_expiry && guest.doc_expiry < today ? <p role="alert" className="mt-1 text-sm font-semibold text-danger">{t.doc_expired_warn}</p> : null}
+            {r.checked_in_at ? <p className="text-xs text-muted">{t.res_check_in}: {dateTime(r.checked_in_at, ctx.property.timezone, lang)}</p> : null}
+            {r.checked_out_at ? <p className="text-xs text-muted">{t.res_check_out}: {dateTime(r.checked_out_at, ctx.property.timezone, lang)}</p> : null}
+            {r.notes ? <p className="mt-1 text-sm">{r.notes}</p> : null}
           </div>
-
-          {canOperate ? (
-            <div className="card flex flex-wrap gap-2">
-              {["tentative", "confirmed"].includes(r.status) && stay.from <= today ? (
+          {sum ? (
+            <div className="text-end">
+              <div className="text-sm font-semibold text-muted">{t.res_remaining}</div>
+              <div className={`num text-4xl font-bold leading-tight ${balance > 0 ? "text-danger" : "text-ok"}`}>{omr(balance, lang)}</div>
+              <div className="text-sm text-muted">{t.total} <span className="num">{omr(sum.total, lang)}</span> · {t.paid} <span className="num">{omr(sum.paid, lang)}</span></div>
+            </div>
+          ) : null}
+        </div>
+        {/* the one thing to do next comes first; cancelling lives under "change booking" */}
+        <div className="no-print mt-4 flex flex-wrap items-start gap-2">
+          {canOperate && open && stay.from <= today ? (
                 <ActionForm action={checkIn}>
                   <input type="hidden" name="id" value={id} />
                   <SubmitButton>{t.res_check_in}</SubmitButton>
                 </ActionForm>
-              ) : null}
-              {r.status === "checked_in" ? (
+          ) : null}
+          {canPay && (r.status !== "checked_in" || balance > 0) ? (
+            <Link href={`/reservations/${id}?tab=pay#pay`} className={r.status === "checked_in" && balance > 0 ? "btn-primary" : "btn-ghost"}>{t.res_record_payment}</Link>
+          ) : null}
+          {canOperate && r.status === "checked_in" ? (
                 <ActionForm action={checkOut} className="flex flex-wrap items-center gap-2">
                   <input type="hidden" name="id" value={id} />
                   {sum && sum.balance > 0 ? (
@@ -160,44 +163,29 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
                     <SubmitButton>{t.res_check_out}</SubmitButton>
                   )}
                 </ActionForm>
-              ) : null}
-              {["tentative", "confirmed"].includes(r.status) ? (
-                <>
-                  <ActionForm action={cancelReservation} className="flex gap-2">
-                    <input type="hidden" name="id" value={id} />
-                    <input name="reason" placeholder={t.res_cancel_reason} className="input w-44" />
-                    <SubmitButton className="btn-ghost" confirm={t.res_cancel}>{t.res_cancel}</SubmitButton>
-                  </ActionForm>
-                  {stay.from <= today ? (
-                    <ActionForm action={cancelReservation}>
-                      <input type="hidden" name="id" value={id} />
-                      <input type="hidden" name="no_show" value="1" />
-                      <SubmitButton className="btn-ghost" confirm={t.res_no_show}>{t.res_no_show}</SubmitButton>
-                    </ActionForm>
-                  ) : null}
-                </>
-              ) : null}
-            </div>
           ) : null}
-
-          {canOperate && ["tentative", "confirmed", "checked_in"].includes(r.status) ? (
-            <Section title={t.res_change}>
-              <ActionForm action={changeReservation} className="grid gap-2 sm:grid-cols-4">
-                <input type="hidden" name="id" value={id} />
-                <Field label={t.unit}>
-                  <select name="unit" defaultValue={unit.id} className="input">
-                    {(units ?? []).map((u) => <option key={u.id} value={u.id}>{u.number}</option>)}
-                  </select>
-                </Field>
-                <Field label={t.from}><input type="date" name="from" defaultValue={stay.from} readOnly={r.status === "checked_in"} className="input" /></Field>
-                <Field label={t.to}><input type="date" name="to" defaultValue={stay.to} className="input" /></Field>
-                <div className="flex items-end"><SubmitButton className="btn-ghost w-full">{t.save}</SubmitButton></div>
-              </ActionForm>
-            </Section>
+          <span className="flex-1" />
+          {guest.phone ? (
+            <>
+              <a href={`tel:${guest.phone}`} aria-label={t.phone} title={guest.phone} className="grid size-11 shrink-0 place-items-center rounded-full border border-line bg-surface text-ink hover:bg-surface-2"><Phone className="size-[18px]" aria-hidden /></a>
+              <a href={whatsappLink(guest.phone, confirmText)} target="_blank" rel="noreferrer" aria-label={t.res_share_confirmation} title={t.res_share_confirmation} className="grid size-11 shrink-0 place-items-center rounded-full border border-line bg-surface text-ink hover:bg-surface-2"><MessageCircle className="size-[18px]" aria-hidden /></a>
+            </>
           ) : null}
+        </div>
+      </section>
 
+      <nav aria-label={t.res_details} className="no-print mb-4 inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-gray-soft p-1">
+        {tabLink("account", t.res_tab_account)}
+        {canPay ? tabLink("pay", t.res_tab_pay) : null}
+        {tabLink("docs", t.res_tab_docs)}
+        {canOperate && ["tentative", "confirmed", "checked_in"].includes(r.status) ? tabLink("edit", t.res_tab_edit) : null}
+      </nav>
+
+      {tab === "account" ? (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="space-y-4 lg:col-span-2">
           {folio ? (
-            <Section title={t.charges}>
+            <Section title={t.res_owes}>
               <div className="overflow-x-auto">
                 <table className="table">
                   <thead><tr><th>{t.date}</th><th>{t.charge_kind}</th><th>{t.description}</th><th>{t.amount}</th><th></th></tr></thead>
@@ -238,8 +226,9 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
             </Section>
           ) : null}
 
+
           {folio ? (
-            <Section title={t.payments}>
+            <Section title={t.res_paid_list}>
               {(payments ?? []).length === 0 ? (
                 <Empty>{t.none}</Empty>
               ) : (
@@ -255,7 +244,11 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
                           <td>{t[`pm_${p.method}` as DictKey]}</td>
                           <td>{p.reference ?? ""}</td>
                           <td className="num">{omr(p.amount, lang)}</td>
-                          <td className="space-y-1 text-xs">
+                          <td className="text-xs">
+                            {/* receipt, proof, void and correction for this payment, out of the way until asked for */}
+                            <details>
+                            <summary className="btn-ghost btn-sm cursor-pointer list-none" aria-label={t.more}><Ellipsis className="size-4" aria-hidden /></summary>
+                            <div className="mt-2 space-y-1">
                             <div className="flex flex-wrap gap-1.5">
                               <a href={`/r/${p.receipt_token}`} target="_blank" rel="noreferrer" className="btn-ghost btn-sm inline-flex items-center gap-1"><Receipt className="size-3.5 shrink-0" /> {t.rc_view}</a>
                               {guest.phone && !p.voided_at ? (
@@ -296,6 +289,8 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
                                 </ActionForm>
                               </details>
                             ) : null}
+                            </div>
+                            </details>
                           </td>
                         </tr>
                       ))}
@@ -303,65 +298,56 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
                   </table>
                 </div>
               )}
-              <ActionForm action={addPayment} resetOnSuccess className="mt-3 grid gap-2 sm:grid-cols-5">
-                <input type="hidden" name="folio" value={folio.id} />
-                <input type="hidden" name="res" value={id} />
-                <select name="kind" className="input">
-                  {PAY_KINDS.map((k) => <option key={k} value={k}>{t[`pk_${k}` as DictKey]}</option>)}
-                </select>
-                <select name="method" className="input">
-                  {METHODS.map((k) => <option key={k} value={k}>{t[`pm_${k}` as DictKey]}</option>)}
-                </select>
-                <input name="amount" required inputMode="decimal" placeholder={t.amount} defaultValue={sum && sum.balance > 0 ? (sum.balance / 1000).toFixed(3) : ""} className="input" />
-                <input name="reference" placeholder={t.reference} className="input" />
-                <SubmitButton>{t.add_payment}</SubmitButton>
-                <div className="sm:col-span-5"><ReceiptInput name="proof" label={t.rc_proof_label} ready="" /></div>
-              </ActionForm>
             </Section>
           ) : null}
 
-          {canContracts ? (
-            <Section title={t.ct_section}>
-              {docLinks.length === 0 ? <p className="text-sm text-muted">{t.ct_hint}</p> : null}
-              <ul className="divide-y divide-line">
-                {docLinks.map((d) => (
-                  <li key={d.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-                    <FileSignature className="size-4 shrink-0 text-muted" />
-                    <span className="font-semibold">{d.title}</span>
-                    <Badge tone={d.status === "signed" ? "ok" : d.status === "void" ? "gray" : "warn"}>{t[`ct_st_${d.status}` as DictKey]}</Badge>
-                    {d.guest_signed_at ? <span className="text-xs text-muted">{d.guest_sign_name} · {dateTime(d.guest_signed_at, ctx.property.timezone, lang)}</span> : null}
-                    <span className="ms-auto flex flex-wrap gap-1.5">
-                      <a href={d.url} target="_blank" rel="noreferrer" className="btn-ghost btn-sm inline-flex items-center gap-1"><LinkIcon className="size-3.5 shrink-0" />{t.ct_open}</a>
-                      {d.status === "awaiting_guest" && guest.phone ? (
-                        <a
-                          href={whatsappLink(guest.phone, guest.preferred_language === "en"
-                            ? `Hello ${guest.full_name.split(" ")[0]}, your contract for unit ${unit.number} is ready to sign: ${d.url}`
-                            : `مرحباً ${guest.full_name.split(" ")[0]}، عقدكم للوحدة ${unit.number} جاهز للتوقيع الإلكتروني: ${d.url}`)}
-                          target="_blank" rel="noreferrer" className="btn-ghost btn-sm inline-flex items-center gap-1"
-                        >
-                          <MessageCircle className="size-3.5 shrink-0" />{t.rc_send}
-                        </a>
-                      ) : null}
-                      {d.status !== "void" && hasRole(ctx, ["manager"]) ? (
-                        <ActionForm action={voidContract}>
-                          <input type="hidden" name="id" value={d.id} />
-                          <input type="hidden" name="res" value={id} />
-                          <SubmitButton className="btn-ghost btn-sm text-danger" confirm={t.ct_void_q}>{t.ct_void_btn}</SubmitButton>
-                        </ActionForm>
-                      ) : null}
-                    </span>
-                  </li>
+          </div>
+          <div className="space-y-4">
+          {sum ? (
+            <Section title={t.folio}>
+              <dl className="space-y-1.5 text-sm">
+                {sum.invoiced_total ? <Row k={t.invoiced} v={omr(sum.invoiced_total, lang)} /> : null}
+                <Row k={t.subtotal} v={omr(sum.uninvoiced_subtotal, lang)} />
+                {sum.uninvoiced_taxes.map((x) => (
+                  <Row key={x.code} k={`${lang === "ar" ? x.name_ar : x.name_en} (${x.rate_bp / 100}%)`} v={omr(x.amount, lang)} muted />
                 ))}
-              </ul>
-              {!docLinks.some((d) => d.status !== "void") ? (
-                <ActionForm action={issueContract} className="mt-3">
-                  <input type="hidden" name="res" value={id} />
-                  <SubmitButton className="btn-primary inline-flex items-center gap-1.5"><FileSignature className="size-4 shrink-0" />{t.ct_issue}</SubmitButton>
-                </ActionForm>
-              ) : null}
+                <div className="my-2 border-t border-line" />
+                <Row k={t.total} v={omr(sum.total, lang)} bold />
+                <Row k={t.paid} v={omr(sum.paid, lang)} />
+                <Row k={t.balance} v={omr(sum.balance, lang)} bold tone={sum.balance > 0 ? "text-danger" : "text-ok"} />
+                {sum.deposit_held ? <Row k={t.deposit_held} v={omr(sum.deposit_held, lang)} muted /> : null}
+              </dl>
             </Section>
           ) : null}
 
+          </div>
+        </div>
+      ) : null}
+
+      {tab === "pay" ? (
+        <div className="grid gap-4 lg:grid-cols-5">
+          <div className="lg:col-span-2">
+            {canPay && folio ? (
+              <>
+                <div id="pay" className="scroll-mt-28" />
+                <Section title={t.res_record_payment}>
+                  <ActionForm action={addPayment} className="space-y-4">
+                    <input type="hidden" name="folio" value={folio.id} />
+                    <input type="hidden" name="res" value={id} />
+                    <PaymentForm
+                      key={balance}
+                      balance={balance > 0 ? (balance / 1000).toFixed(3) : ""}
+                      methods={METHODS.map((k) => ({ value: k, label: t[`pm_${k}` as DictKey] }))}
+                      kinds={PAY_KINDS.map((k) => ({ value: k, label: t[`pk_${k}` as DictKey] }))}
+                      labels={{ amount: t.amount, all: t.pay_all, how: t.pay_how, proof: t.rc_proof, proofReady: t.fin_receipt_ready, proofHint: t.pay_proof_hint, more: t.fin_more_details, kind: t.type, reference: t.reference }}
+                    />
+                    <SubmitButton className="btn-primary w-full">{t.add_payment}</SubmitButton>
+                  </ActionForm>
+                </Section>
+              </>
+            ) : null}
+          </div>
+          <div className="space-y-4 lg:col-span-3">
           {folio && canLinks ? (
             <Section title={t.pl_title}>
               {payLinks.length ? <PaymentLinksList links={payLinks} t={t} lang={lang} tz={ctx.property.timezone} /> : <p className="text-sm text-muted">{t.pl_hint}</p>}
@@ -376,6 +362,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
               </ActionForm>
             </Section>
           ) : null}
+
 
           {folio && (r.kind === "contract" || (cheques ?? []).length) ? (
             <Section title={t.chq_title}>
@@ -435,6 +422,7 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
             </Section>
           ) : null}
 
+
           {schedules.length ? (
             <Section title={t.res_schedule}>
               <div className="overflow-x-auto"><table className="table">
@@ -455,25 +443,54 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
               </table></div>
             </Section>
           ) : null}
+          </div>
         </div>
+      ) : null}
 
-        <div className="space-y-4">
-          {sum ? (
-            <Section title={t.folio}>
-              <dl className="space-y-1.5 text-sm">
-                {sum.invoiced_total ? <Row k={t.invoiced} v={omr(sum.invoiced_total, lang)} /> : null}
-                <Row k={t.subtotal} v={omr(sum.uninvoiced_subtotal, lang)} />
-                {sum.uninvoiced_taxes.map((x) => (
-                  <Row key={x.code} k={`${lang === "ar" ? x.name_ar : x.name_en} (${x.rate_bp / 100}%)`} v={omr(x.amount, lang)} muted />
+      {tab === "docs" ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {canContracts ? (
+            <Section title={t.ct_section}>
+              {docLinks.length === 0 ? <p className="text-sm text-muted">{t.ct_hint}</p> : null}
+              <ul className="divide-y divide-line">
+                {docLinks.map((d) => (
+                  <li key={d.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
+                    <FileSignature className="size-4 shrink-0 text-muted" />
+                    <span className="font-semibold">{d.title}</span>
+                    <Badge tone={d.status === "signed" ? "ok" : d.status === "void" ? "gray" : "warn"}>{t[`ct_st_${d.status}` as DictKey]}</Badge>
+                    {d.guest_signed_at ? <span className="text-xs text-muted">{d.guest_sign_name} · {dateTime(d.guest_signed_at, ctx.property.timezone, lang)}</span> : null}
+                    <span className="ms-auto flex flex-wrap gap-1.5">
+                      <a href={d.url} target="_blank" rel="noreferrer" className="btn-ghost btn-sm inline-flex items-center gap-1"><LinkIcon className="size-3.5 shrink-0" />{t.ct_open}</a>
+                      {d.status === "awaiting_guest" && guest.phone ? (
+                        <a
+                          href={whatsappLink(guest.phone, guest.preferred_language === "en"
+                            ? `Hello ${guest.full_name.split(" ")[0]}, your contract for unit ${unit.number} is ready to sign: ${d.url}`
+                            : `مرحباً ${guest.full_name.split(" ")[0]}، عقدكم للوحدة ${unit.number} جاهز للتوقيع الإلكتروني: ${d.url}`)}
+                          target="_blank" rel="noreferrer" className="btn-ghost btn-sm inline-flex items-center gap-1"
+                        >
+                          <MessageCircle className="size-3.5 shrink-0" />{t.rc_send}
+                        </a>
+                      ) : null}
+                      {d.status !== "void" && hasRole(ctx, ["manager"]) ? (
+                        <ActionForm action={voidContract}>
+                          <input type="hidden" name="id" value={d.id} />
+                          <input type="hidden" name="res" value={id} />
+                          <SubmitButton className="btn-ghost btn-sm text-danger" confirm={t.ct_void_q}>{t.ct_void_btn}</SubmitButton>
+                        </ActionForm>
+                      ) : null}
+                    </span>
+                  </li>
                 ))}
-                <div className="my-2 border-t border-line" />
-                <Row k={t.total} v={omr(sum.total, lang)} bold />
-                <Row k={t.paid} v={omr(sum.paid, lang)} />
-                <Row k={t.balance} v={omr(sum.balance, lang)} bold tone={sum.balance > 0 ? "text-danger" : "text-ok"} />
-                {sum.deposit_held ? <Row k={t.deposit_held} v={omr(sum.deposit_held, lang)} muted /> : null}
-              </dl>
+              </ul>
+              {!docLinks.some((d) => d.status !== "void") ? (
+                <ActionForm action={issueContract} className="mt-3">
+                  <input type="hidden" name="res" value={id} />
+                  <SubmitButton className="btn-primary inline-flex items-center gap-1.5"><FileSignature className="size-4 shrink-0" />{t.ct_issue}</SubmitButton>
+                </ActionForm>
+              ) : null}
             </Section>
           ) : null}
+
 
           {folio ? (
             <Section title={t.invoices}>
@@ -503,7 +520,50 @@ export default async function ReservationPage({ params }: PageProps<"/reservatio
             </Section>
           ) : null}
         </div>
-      </div>
+      ) : null}
+
+      {tab === "edit" ? (
+        <div className="space-y-4">
+          {canOperate && ["tentative", "confirmed", "checked_in"].includes(r.status) ? (
+            <Section title={t.res_change}>
+              <ActionForm action={changeReservation} className="grid gap-2 sm:grid-cols-4">
+                <input type="hidden" name="id" value={id} />
+                <Field label={t.unit}>
+                  <select name="unit" defaultValue={unit.id} className="input">
+                    {(units ?? []).map((u) => <option key={u.id} value={u.id}>{u.number}</option>)}
+                  </select>
+                </Field>
+                <Field label={t.from}><input type="date" name="from" defaultValue={stay.from} readOnly={r.status === "checked_in"} className="input" /></Field>
+                <Field label={t.to}><input type="date" name="to" defaultValue={stay.to} className="input" /></Field>
+                <div className="flex items-end"><SubmitButton className="btn-ghost w-full">{t.save}</SubmitButton></div>
+              </ActionForm>
+            </Section>
+          ) : null}
+
+
+          {canOperate && open ? (
+            <section className="card border-danger/30">
+              <h2 className="h2 text-danger">{t.res_cancel}</h2>
+              <p className="mb-3 mt-1 text-sm text-muted">{t.res_cancel_hint}</p>
+              <div className="flex flex-wrap items-start gap-2">
+                  <ActionForm action={cancelReservation} className="flex flex-wrap gap-2">
+                    <input type="hidden" name="id" value={id} />
+                    <input name="reason" placeholder={t.res_cancel_reason} className="input min-w-40 flex-1" />
+                    <SubmitButton className="btn-ghost" confirm={t.res_cancel}>{t.res_cancel}</SubmitButton>
+                  </ActionForm>
+
+                {stay.from <= today ? (
+                    <ActionForm action={cancelReservation}>
+                      <input type="hidden" name="id" value={id} />
+                      <input type="hidden" name="no_show" value="1" />
+                      <SubmitButton className="btn-ghost" confirm={t.res_no_show}>{t.res_no_show}</SubmitButton>
+                    </ActionForm>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+        </div>
+      ) : null}
     </>
   );
 }

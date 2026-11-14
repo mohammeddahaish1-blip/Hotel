@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
-import { gregorian, omr, parseRange } from "@/lib/format";
+import { gregorian, omr, parseRange, todayIn } from "@/lib/format";
 import { FilterSelect } from "@/components/FilterSelect";
 import { Badge, Empty, PageHeader, RES_STATUS_TONE, RES_STATUS_EMOJI } from "@/components/ui";
 
@@ -35,8 +35,8 @@ export default async function ReservationsPage({ searchParams }: PageProps<"/res
     .eq("property_id", ctx.property.id)
     .order(sort === "new" ? "created_at" : "stay", { ascending: sort === "soon" })
     .limit(shownMax + 1);
-  if (tab === "upcoming") query = query.in("status", ["tentative", "confirmed"]);
-  if (tab === "in_house") query = query.eq("status", "checked_in");
+  if (tab === "upcoming" || tab === "arrive") query = query.in("status", ["tentative", "confirmed"]);
+  if (tab === "in_house" || tab === "depart") query = query.eq("status", "checked_in");
   if (src) query = query.eq("source", src);
   if (st) query = query.eq("status", st);
   // search by code, guest name, phone or unit number
@@ -58,11 +58,17 @@ export default async function ReservationsPage({ searchParams }: PageProps<"/res
     );
   }
   const { data } = await query;
-  const all = (data ?? []) as unknown as Row[];
+  // "arriving today" = not checked in yet and due today or earlier; "leaving today" = in house and due out today or earlier
+  const today = todayIn(ctx.property.timezone);
+  const all = ((data ?? []) as unknown as Row[]).filter((r) =>
+    tab === "arrive" ? parseRange(r.stay).from <= today : tab === "depart" ? parseRange(r.stay).to <= today : true,
+  );
   const rows = all.slice(0, shownMax);
   const hasMore = all.length > shownMax;
 
   const tabs = [
+    ["arrive", t.res_tab_arrive],
+    ["depart", t.res_tab_depart],
     ["upcoming", t.res_upcoming],
     ["in_house", t.res_in_house],
     ["all", t.res_all],
@@ -91,7 +97,7 @@ export default async function ReservationsPage({ searchParams }: PageProps<"/res
         <FilterSelect name="sort" label={t.sort_soon} value={sort} options={[["soon", t.sort_soon], ["late", t.sort_late], ["new", t.sort_new]]} />
       </form>
       {rows.length === 0 ? (
-        q || src || st ? <Empty>{t.none}</Empty> : <Empty action={<Link href="/reservations/new" className="btn-primary">{t.res_new}</Link>}>{t.empty_reservations}</Empty>
+        q || src || st || tab === "arrive" || tab === "depart" ? <Empty>{t.none}</Empty> : <Empty action={<Link href="/reservations/new" className="btn-primary">{t.res_new}</Link>}>{t.empty_reservations}</Empty>
       ) : (
         <>
         {/* phones: one card per reservation instead of a wide table */}
