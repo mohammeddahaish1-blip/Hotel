@@ -4,6 +4,7 @@ import type { Dict } from "./dict";
 export const ur: Dict = {
   appName: "نُزُل",
   more: "مزید",
+  dash_expenses_today: "آج کے اخراجات",
   log_sens_title: "آج {n} کارروائیاں توجہ کے قابل ہیں",
   log_show: "دکھائیں",
   log_search: "لاگ میں تلاش: مہمان کا نام، یونٹ نمبر، بکنگ کوڈ…",

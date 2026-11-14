@@ -5,6 +5,7 @@ import { bn } from "./bn";
 const ar = {
   appName: "نُزُل",
   more: "المزيد",
+  dash_expenses_today: "مصروفات اليوم",
   log_sens_title: "{n} عمليات تستحق نظرتك اليوم",
   log_show: "اعرضها",
   log_search: "ابحث في السجل: اسم نزيل، رقم وحدة، رمز حجز…",
@@ -1535,6 +1536,7 @@ export type Dict = Record<DictKey, string>;
 const en: Dict = {
   appName: "Nuzul",
   more: "More",
+  dash_expenses_today: "Today's expenses",
   log_sens_title: "{n} actions worth a look today",
   log_show: "Show them",
   log_search: "Search the log: guest name, unit number, booking code…",

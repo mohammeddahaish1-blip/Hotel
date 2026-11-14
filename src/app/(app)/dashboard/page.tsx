@@ -42,6 +42,11 @@ export default async function DashboardPage() {
   const week = ((days ?? []) as { day: string; amount: number }[]).map((x) => Number(x.amount));
   if (error) throw new Error(error.message);
   const d = data as Dash;
+  // what was spent today (by the expense's own date), for the same people who can open the expenses list
+  const { data: spent } = money
+    ? await ctx.supabase.from("expenses").select("amount").eq("property_id", ctx.property.id).eq("expense_date", d.date)
+    : { data: null };
+  const expensesToday = ((spent ?? []) as { amount: number }[]).reduce((sum, x) => sum + Number(x.amount), 0);
   const statuses = ["available", "reserved", "occupied", "dirty", "maintenance", "out_of_service"];
 
   return (
@@ -77,11 +82,15 @@ export default async function DashboardPage() {
         <OccupancyTile href={can(ctx, "board") ? "/board" : undefined} label={t.dash_occupancy} value={pct(d.occupancy_bp)} share={d.occupancy_bp / 10000} hint={`${d.in_house} / ${d.units}`} />
         <ReceivableTile href={can(ctx, "finance") ? "/finance?v=owed" : undefined} label={t.dash_receivable} value={omr(d.receivable, lang)} due={d.receivable > 0} />
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className={`mt-3 grid grid-cols-2 gap-3 ${money ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
         <Stat label={t.dash_income_today} value={omr(d.income_today, lang)} hint={week.length > 1 ? <Spark values={week} label={t.last7} /> : undefined} href={money ? "/finance?v=received" : undefined} />
+        {money ? <Stat label={t.dash_expenses_today} value={omr(expensesToday, lang)} href="/finance?v=expenses" /> : null}
         <Stat label={t.dash_income_month} value={omr(d.income_month, lang)} href={money ? "/finance?v=received" : undefined} />
-        <Stat label={t.dash_deposits} value={omr(d.deposits_held, lang)} href={money ? "/finance?v=received#deposits" : undefined} />
         <Stat label={t.dash_expenses_month} value={omr(d.expenses_month, lang)} href={money ? "/finance?v=expenses" : undefined} />
+        {/* five tiles: the last one takes the full row on phones */}
+        <div className={money ? "col-span-2 lg:col-span-1 [&>*]:h-full" : "[&>*]:h-full"}>
+          <Stat label={t.dash_deposits} value={omr(d.deposits_held, lang)} href={money ? "/finance?v=received#deposits" : undefined} />
+        </div>
       </div>
 
       <div className="mt-4 card">
