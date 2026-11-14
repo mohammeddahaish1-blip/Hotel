@@ -1,14 +1,21 @@
 import type { getCtx } from "@/lib/auth";
 import type { Dict } from "@/lib/i18n/dict";
 import { addDays, todayIn, zonedStart } from "@/lib/format";
-import { AUDIT_TABLES, describeAudit, type AuditLookups, type AuditRow, type AuditView } from "@/lib/audit";
+import { AUDIT_TABLES, auditTag, describeAudit, type AuditLookups, type AuditRow, type AuditView } from "@/lib/audit";
 
 type Ctx = Awaited<ReturnType<typeof getCtx>>;
 type Params = Record<string, string | string[] | undefined>;
 
 export type AuditFilters = {
   table: string; actor: string; action: string; period: string; from: string; to: string; sensitive: boolean; limit: number;
+  /** free text looked for in the plain sentence of each action */
+  q: string;
+  /** one booking or guest: everything recorded about it */
+  record: string;
 };
+
+/** How many of the newest actions a text search (or the "sensitive only" filter) reads before trimming. */
+export const AUDIT_SCAN = 3000;
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
@@ -22,13 +29,14 @@ export function parseAuditFilters(sp: Params | URLSearchParams): AuditFilters {
     table: (AUDIT_TABLES as readonly string[]).includes(table) ? table : "",
     actor: /^[0-9a-f-]{36}$|^system$/.test(get("actor")) ? get("actor") : "",
     action: ["insert", "update", "delete"].includes(action) ? action : "",
-    period: ["today", "7d", "30d", "custom"].includes(get("period"))
-      ? get("period")
-      : DATE.test(get("from")) || DATE.test(get("to")) ? "custom" : "",
+    // two dates always win over a ready-made period
+    period: DATE.test(get("from")) || DATE.test(get("to")) ? "custom" : ["today", "yesterday", "7d", "30d"].includes(get("period")) ? get("period") : "",
     from: DATE.test(get("from")) ? get("from") : "",
     to: DATE.test(get("to")) ? get("to") : "",
     sensitive: get("sensitive") === "1",
     limit,
+    q: get("q").trim().slice(0, 80),
+    record: /^[0-9a-f-]{36}$/.test(get("record")) ? get("record") : "",
   };
 }
 
@@ -42,6 +50,8 @@ export function filtersToQuery(f: AuditFilters, extra: Partial<AuditFilters> = {
   if (g.period === "custom" && g.from) q.set("from", g.from);
   if (g.period === "custom" && g.to) q.set("to", g.to);
   if (g.sensitive) q.set("sensitive", "1");
+  if (g.q) q.set("q", g.q);
+  if (g.record) q.set("record", g.record);
   if (g.limit !== 100) q.set("limit", String(g.limit));
   return q.toString();
 }
@@ -49,6 +59,7 @@ export function filtersToQuery(f: AuditFilters, extra: Partial<AuditFilters> = {
 function range(f: AuditFilters, tz: string): { from?: string; to?: string } {
   const today = todayIn(tz);
   if (f.period === "today") return { from: zonedStart(today, tz) };
+  if (f.period === "yesterday") return { from: zonedStart(addDays(today, -1), tz), to: zonedStart(today, tz) };
   if (f.period === "7d") return { from: zonedStart(addDays(today, -6), tz) };
   if (f.period === "30d") return { from: zonedStart(addDays(today, -29), tz) };
   if (f.period === "custom") {
@@ -91,8 +102,9 @@ export type AuditEntry = AuditRow & AuditView;
 /** Filtered page of the log, each row already described in plain language. */
 export async function loadAudit(ctx: Ctx, f: AuditFilters, t: Dict, lang: "ar" | "en" | "ur" | "bn") {
   const { from, to } = range(f, ctx.property.timezone);
-  // "sensitive" is decided per row in code, so read a wider window and trim afterwards
-  const fetch = f.sensitive ? Math.max(f.limit * 5, 1000) : f.limit + 1;
+  // "sensitive" and the text search are decided per row in code (the sentence is written when shown,
+  // not stored), so read a wider window of the newest actions and trim afterwards
+  const fetch = f.sensitive || f.q ? AUDIT_SCAN : f.limit + 1;
   let q = ctx.supabase.from("audit_log").select("*").eq("tenant_id", ctx.tenantId).order("at", { ascending: false }).limit(fetch);
   if (f.table) q = q.eq("table_name", f.table);
   if (f.action) q = q.eq("action", f.action);
@@ -100,12 +112,31 @@ export async function loadAudit(ctx: Ctx, f: AuditFilters, t: Dict, lang: "ar" |
   else if (f.actor) q = q.eq("actor", f.actor);
   if (from) q = q.gte("at", from);
   if (to) q = q.lt("at", to);
+  if (f.record) {
+    // the item itself, what points at it, and (for a booking) the payments and charges on its account
+    const { data: fol } = await ctx.supabase.from("folios").select("id").eq("reservation_id", f.record);
+    const folioIds = ((fol ?? []) as { id: string }[]).map((x) => x.id);
+    q = q.or(
+      [
+        `record_id.eq.${f.record}`,
+        `new_data->>reservation_id.eq.${f.record}`, `old_data->>reservation_id.eq.${f.record}`,
+        `new_data->>guest_id.eq.${f.record}`, `old_data->>guest_id.eq.${f.record}`,
+        ...folioIds.flatMap((id) => [`new_data->>folio_id.eq.${id}`, `old_data->>folio_id.eq.${id}`]),
+      ].join(","),
+    );
+  }
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as AuditRow[];
   const lk = await auditLookups(ctx, rows);
   let entries: AuditEntry[] = rows.map((r) => ({ ...r, ...describeAudit(r, t, lang, lk) }));
   if (f.sensitive) entries = entries.filter((e) => e.sensitive);
+  if (f.q) {
+    const needle = f.q.toLowerCase();
+    entries = entries.filter((e) =>
+      [e.summary, e.actor ? lk.staff.get(e.actor) ?? "" : "", ...e.changes.flatMap((c) => [c.label, c.before ?? "", c.after ?? ""])].join(" ").toLowerCase().includes(needle),
+    );
+  }
   const hasMore = entries.length > f.limit;
   return { entries: entries.slice(0, f.limit), hasMore, lk };
 }
@@ -125,13 +156,17 @@ export async function auditStats(ctx: Ctx, t: Dict, lang: "ar" | "en" | "ur" | "
   const lk = await auditLookups(ctx, rows);
   const startToday = zonedStart(today, tz);
   const todays = rows.filter((r) => r.at >= startToday);
-  const sensitiveToday = todays.filter((r) => describeAudit(r, t, lang, lk).sensitive).length;
+  const sensitive = todays.filter((r) => describeAudit(r, t, lang, lk).sensitive);
+  const sensitiveToday = sensitive.length;
+  // what kinds they are, in a few words ("payment · price · discount")
+  const sensitiveKinds = [...new Set(sensitive.map((r) => auditTag(r, lang === "ur" ? "en" : lang).label))].slice(0, 4);
   const counts = new Map<string, number>();
   for (const r of rows) if (r.actor) counts.set(r.actor, (counts.get(r.actor) ?? 0) + 1);
   const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
   return {
     today: todays.length,
     sensitiveToday,
+    sensitiveKinds,
     top: top ? { name: lk.staff.get(top[0]) ?? top[0].slice(0, 8), count: top[1] } : null,
   };
 }
