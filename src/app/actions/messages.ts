@@ -7,6 +7,7 @@ import { getDict } from "@/lib/i18n/server";
 import { errorMessage } from "@/lib/errors";
 import type { ActionResult } from "@/components/ActionForm";
 
+import { SUGGESTED_RULES } from "@/lib/automation-suggested";
 const s = (fd: FormData, k: string) => {
   const v = fd.get(k);
   return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
@@ -99,16 +100,19 @@ export async function deleteRule(_: ActionResult, fd: FormData) {
 /** A ready-made starting set; the owner can switch off or change any of them. */
 export async function addSuggestedRules(): Promise<ActionResult> {
   const { t } = await getDict();
-  const base = [
-    { name: t.auto_sug_confirm, trigger: "booking_confirmed", offset_days: 0, action: "whatsapp", template_key: "booking_confirmed" },
-    { name: t.auto_sug_prearrival, trigger: "before_arrival", offset_days: 1, action: "whatsapp", template_key: "pre_arrival" },
-    { name: t.auto_sug_thanks, trigger: "after_checkout", offset_days: 0, action: "whatsapp", template_key: "checkout_thanks" },
-    { name: t.auto_sug_rent, trigger: "rent_overdue", offset_days: 3, action: "whatsapp", template_key: "payment_request" },
-    { name: t.auto_sug_rent_notice, trigger: "rent_overdue", offset_days: 7, action: "notify", template_key: null },
-    { name: t.auto_sug_contract, trigger: "contract_ending", offset_days: 30, action: "whatsapp", template_key: "contract_renewal" },
-    { name: t.auto_sug_weekly, trigger: "after_checkin", offset_days: 7, action: "hk_task", template_key: null, hk_kind: "weekly" },
-  ];
-  return done((c) => c.supabase.from("automation_rules").insert(base.map((b) => ({ tenant_id: c.tenantId, property_id: null, ...b }))), ["/settings/automation"]);
+  return done(
+    (c) => c.supabase.from("automation_rules").insert(SUGGESTED_RULES.map(({ key: _key, name, ...b }) => ({ tenant_id: c.tenantId, property_id: null, name: t[name], ...b }))),
+    ["/settings/automation"],
+  );
+}
+
+/** Turn on one ready-made rule. */
+export async function addSuggestedRule(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const { t } = await getDict();
+  const found = SUGGESTED_RULES.find((x) => x.key === s(fd, "key"));
+  if (!found) return { error: t.err_generic };
+  const { key: _key, name, ...b } = found;
+  return done((c) => c.supabase.from("automation_rules").insert({ tenant_id: c.tenantId, property_id: null, name: t[name], ...b }), ["/settings/automation"]);
 }
 
 // ---------------------------------------------------------------- templates

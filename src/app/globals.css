@@ -226,6 +226,17 @@ a.card:hover { box-shadow: 0 14px 30px rgba(20, 40, 35, 0.12); }
 .page-enter .card:nth-child(n + 6) { animation-delay: 0.25s; }
 @keyframes card-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
 a.card:active, a.rounded-xl:active { transform: scale(0.985); }
+/* on/off switch (a submit button that flips a setting) */
+.switch {
+  width: 2.75rem; height: 1.625rem; flex: none; border-radius: 999px; position: relative;
+  background: color-mix(in srgb, var(--muted) 45%, transparent); transition: background 0.25s ease;
+}
+.switch::after {
+  content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 1.25rem; height: 1.25rem; border-radius: 50%;
+  background: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: inset-inline-start 0.25s ease;
+}
+.switch-on { background: var(--brand); }
+.switch-on::after { inset-inline-start: calc(100% - 1.25rem - 3px); }
 /* light <-> dark: while the switch adds this class, every colour eases to its new value */
 .theme-fade, .theme-fade *, .theme-fade *::before, .theme-fade *::after {
   transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, fill 0.35s ease, stroke 0.35s ease, box-shadow 0.35s ease !important;
