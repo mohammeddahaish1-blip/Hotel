@@ -1,8 +1,10 @@
 import { getPlan } from "@/lib/plan";
 import { PhoneInput } from "@/components/PhoneInput";
-import { Lock, ShieldCheck, FileSpreadsheet, FolderArchive } from "lucide-react";
+import { Check, Lock, ShieldCheck, FileSpreadsheet, FolderArchive } from "lucide-react";
 import Link from "next/link";
-import { AREAS, requireArea } from "@/lib/auth";
+import { AREAS, ROLE_ACCESS, requireArea } from "@/lib/auth";
+import { SettingsTabs, settingsHref, type SettingsView } from "./SettingsTabs";
+import { SettingsSearch } from "./SettingsSearch";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { gregorian, omr, parseRange, plainOmr } from "@/lib/format";
@@ -17,7 +19,7 @@ import {
 const UNIT_KINDS = ["room", "suite", "studio", "apartment"] as const;
 const ROLES = ["owner", "manager", "reception", "accountant", "housekeeping", "maintenance"];
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: PageProps<"/settings">) {
   const ctx = await requireArea("settings");
   const { t, lang } = await getDict();
   const db = ctx.supabase;
@@ -50,205 +52,104 @@ export default async function SettingsPage() {
   for (const u of units ?? []) unitsPerType.set(u.unit_type_id, (unitsPerType.get(u.unit_type_id) ?? 0) + 1);
   const isOwner = ctx.role === "owner";
 
+  // ---- one subject per tab
+  const sp = await searchParams;
+  const VIEWS: SettingsView[] = ["property", "units", "prices", "staff", "money", "plan"];
+  const view: SettingsView = VIEWS.includes(sp.s as SettingsView) ? (sp.s as SettingsView) : "property";
+  // ---- "finish setting up": what a new property still lacks, each step with the tab that fixes it
+  const steps: { done: boolean; label: string; hint: string; s: SettingsView }[] = [
+    { done: !!(prop?.address && prop?.phone), label: t.set_property, hint: t.set_step_property_hint, s: "property" },
+    { done: (units ?? []).length > 0, label: t.set_tab_units, hint: t.set_step_units_hint, s: "units" },
+    { done: (types ?? []).some((x) => Number(x.nightly_rate) > 0), label: t.set_tab_prices, hint: t.set_step_prices_hint, s: "prices" },
+    { done: hotelMembers.length > 1 || (invites ?? []).length > 0, label: t.set_staff, hint: t.set_step_staff_hint, s: "staff" },
+    { done: !!prop?.bank_iban, label: t.set_bank, hint: t.set_bank_hint, s: "money" },
+  ];
+  const stepsDone = steps.filter((x) => x.done).length;
+  // ---- search: every setting by its own label, pointing at its tab
+  const find = (s: SettingsView, tab: string, texts: string[]) => texts.map((text) => ({ text, tab, href: settingsHref(s) }));
+  const searchItems = [
+    ...find("property", t.set_tab_property, [t.set_name_ar, t.set_name_en, t.set_address, t.phone, t.set_whatsapp, t.email, t.onb_municipality, t.set_license, t.vat_no, t.set_retention]),
+    ...find("units", t.set_tab_units, [t.set_units, t.set_floors]),
+    ...find("prices", t.set_tab_prices, [t.set_unit_types, t.set_rate_plans, t.set_nightly, t.set_monthly, t.set_capacity]),
+    ...find("staff", t.set_staff, [t.set_invite, t.role, t.job_title, t.staff_salary, t.staff_civil_id, t.staff_card_no]),
+    ...find("money", t.set_tab_money, [t.set_taxes, t.set_discount_limit, t.set_bank, t.set_bank_name, "IBAN", t.set_pay_instructions]),
+    ...(isOwner || ctx.role === "manager" ? find("plan", t.set_tab_plan, [t.sub_title, t.exp_all]) : []),
+    ...(isOwner ? [{ text: t.nav_permissions, tab: t.set_staff, href: "/settings/permissions" }] : []),
+  ];
+
   return (
     <>
-      <PageHeader title={t.set_title} />
-      {ctx.role === "owner" && plan.code ? (
-        <section className="card mb-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="h2">{t.sub_title}</h2>
-            <Link href="/upgrade" className="btn-ghost btn-sm">{t.sub_compare}</Link>
-          </div>
-          <div className="grid gap-3 text-sm sm:grid-cols-4">
-            <div><div className="label">{t.sub_plan}</div><div className="font-bold">{(lang === "en" || lang === "bn") && plan.nameEn ? plan.nameEn : plan.name}</div></div>
-            <div><div className="label">{t.sub_status}</div><Badge tone={plan.status === "active" ? "ok" : plan.status === "trial" ? "info" : "danger"}>{t[`sub_st_${plan.status}` as DictKey]}</Badge></div>
+      <SettingsTabs ctx={ctx} t={t} current={view} />
+      <PageHeader title={t.set_title} actions={<SettingsSearch items={searchItems} label={t.set_search} none={t.set_search_none} />} />
+
+      {view === "property" && stepsDone < steps.length ? (
+        <section className="mb-4 rounded-3xl bg-brand-soft p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="label">{plan.status === "trial" ? t.sub_trial_until : t.sub_until}</div>
-              <div className="font-semibold">{gregorian(plan.status === "trial" ? plan.trialEndsAt : plan.periodEnd, lang)}</div>
+              <h2 className="h2">{t.set_setup_title}</h2>
+              <p className="mt-0.5 text-sm text-muted">{t.set_setup_progress.replace("{a}", String(stepsDone)).replace("{b}", String(steps.length))}</p>
             </div>
-            <div><div className="label">{t.sub_price}</div><div className="num font-semibold">{plan.price != null ? omr(plan.price, lang) : "—"}</div></div>
+            <div className="h-2 w-40 overflow-hidden rounded-full bg-surface" role="img" aria-label={`${stepsDone} / ${steps.length}`}>
+              <div className="h-full rounded-full bg-brand" style={{ width: `${(stepsDone / steps.length) * 100}%` }} />
+            </div>
           </div>
-          <details className="mt-3 text-sm">
-            <summary className="cursor-pointer text-xs font-semibold text-muted">{t.sub_payments} ({(subPays ?? []).length})</summary>
-            {(subPays ?? []).length === 0 ? <p className="mt-2 text-xs text-muted">{t.sub_no_payments}</p> : (
-              <ul className="mt-2 divide-y divide-line">
-                {(subPays ?? []).map((x) => (
-                  <li key={x.id} className={`flex flex-wrap justify-between gap-2 py-1.5 ${x.voided_at ? "text-muted line-through" : ""}`}>
-                    <span>{gregorian(x.paid_on, lang)}</span>
-                    <span className="text-muted">{gregorian(x.period_start, lang)} → {gregorian(x.period_end, lang)}</span>
-                    <span className="num font-semibold">{omr(x.amount, lang)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </details>
+          <ul className="mt-3 divide-y divide-line rounded-2xl bg-surface px-4">
+            {steps.map((x) => (
+              <li key={x.s} className="flex flex-wrap items-center gap-3 py-2.5">
+                <span className={`grid size-6 shrink-0 place-items-center rounded-full ${x.done ? "bg-ok-soft text-ok" : "border-2 border-line"}`} aria-hidden>
+                  {x.done ? <Check className="size-3.5" strokeWidth={3} /> : null}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={x.done ? "text-muted" : "font-bold"}>{x.label}</span>
+                  {x.done ? null : <span className="block text-sm text-muted">{x.hint}</span>}
+                </span>
+                {x.done ? null : <Link href={settingsHref(x.s)} className="btn-primary btn-sm">{t.set_go}</Link>}
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
-      {ctx.role === "owner" || ctx.role === "manager" ? (
-        <section className="card mb-4 flex flex-wrap items-center gap-3">
-          <div className="flex-1">
-            <h2 className="h2 inline-flex items-center gap-1.5"><ShieldCheck className="size-5 text-brand" /> {t.exp_all}</h2>
-            <p className="text-sm text-muted">{t.exp_all_hint}</p>
-          </div>
-          <a href="/api/export/all?kind=excel" className="btn-primary btn-sm inline-flex items-center gap-1.5"><FileSpreadsheet className="size-4 shrink-0" />{t.exp_excel}</a>
-          <a href="/api/export/all?kind=docs" className="btn-ghost btn-sm inline-flex items-center gap-1.5"><FolderArchive className="size-4 shrink-0" />{t.exp_docs}</a>
-        </section>
-      ) : null}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Section title={t.set_property}>
-          <ActionForm action={updateProperty} className="grid gap-2 sm:grid-cols-2">
+
+      {view === "property" ? (
+        <div className="space-y-4">
+        <section className="card">
+          <h2 className="h2">{t.set_basics}</h2>
+          <p className="mb-4 mt-1 text-sm text-muted">{t.set_basics_hint}</p>
+          <ActionForm action={updateProperty} className="grid gap-3 sm:grid-cols-2">
             <Field label={t.set_name_ar}><input name="name_ar" defaultValue={prop?.name_ar} required className="input" /></Field>
             <Field label={t.set_name_en}><input name="name_en" defaultValue={prop?.name_en ?? ""} dir="ltr" className="input" /></Field>
             <Field label={t.set_address} className="sm:col-span-2"><input name="address" defaultValue={prop?.address ?? ""} className="input" /></Field>
             <Field label={t.phone}><input name="phone" defaultValue={prop?.phone ?? ""} dir="ltr" className="input" /></Field>
             <Field label={t.set_whatsapp}><input name="whatsapp" defaultValue={prop?.whatsapp ?? ""} dir="ltr" className="input" /></Field>
             <Field label={t.email}><input name="email" defaultValue={prop?.email ?? ""} dir="ltr" className="input" /></Field>
+            <div className="sm:col-span-full"><SubmitButton className="btn-primary">{t.save}</SubmitButton></div>
+          </ActionForm>
+        </section>
+        <div className="grid gap-4 lg:grid-cols-2">
+        <section className="card">
+          <h2 className="h2">{t.set_official}</h2>
+          <p className="mb-4 mt-1 text-sm text-muted">{t.set_official_hint}</p>
+          <ActionForm action={updateProperty} className="grid gap-3 sm:grid-cols-2">
             <Field label={t.onb_municipality}><input name="municipality" defaultValue={prop?.municipality ?? ""} className="input" /></Field>
             <Field label={t.set_license}><input name="license_no" defaultValue={prop?.license_no ?? ""} className="input" /></Field>
             <Field label={t.vat_no}><input name="vat_no" defaultValue={prop?.vat_no ?? ""} dir="ltr" className="input" /></Field>
-            <Field label={t.set_bank_name}><input name="bank_name" defaultValue={prop?.bank_name ?? ""} className="input" /></Field>
-            <Field label={t.set_bank_account}><input name="bank_account_name" defaultValue={prop?.bank_account_name ?? ""} className="input" /></Field>
-            <Field label="IBAN" className="sm:col-span-2"><input name="bank_iban" defaultValue={prop?.bank_iban ?? ""} dir="ltr" className="input" /></Field>
-            <Field label={t.set_pay_instructions} className="sm:col-span-2"><textarea name="payment_instructions" defaultValue={prop?.payment_instructions ?? ""} rows={2} maxLength={500} className="input" /></Field>
+            <div className="sm:col-span-full"><SubmitButton className="btn-ghost">{t.save}</SubmitButton></div>
+          </ActionForm>
+        </section>
+        <section className="card">
+          <h2 className="h2">{t.set_docs}</h2>
+          <p className="mb-4 mt-1 text-sm text-muted">{t.set_docs_hint}</p>
+          <ActionForm action={updateProperty} className="grid gap-3 sm:grid-cols-1">
             <Field label={t.set_retention}><input name="doc_retention_days" type="number" min={1} defaultValue={prop?.doc_retention_days ?? 365} className="input" /></Field>
-            <div className="flex items-end"><SubmitButton className="btn-primary w-full">{t.save}</SubmitButton></div>
+            <div className="sm:col-span-full"><SubmitButton className="btn-ghost">{t.save}</SubmitButton></div>
           </ActionForm>
-        </Section>
+        </section>
+        </div>
+        </div>
+      ) : null}
 
-        <Section title={t.set_taxes}>
-          <div className="space-y-2">
-            {(taxes ?? []).map((x) => (
-              <ActionForm key={x.id} action={updateTax} className="grid grid-cols-12 items-center gap-2 text-sm">
-                <input type="hidden" name="id" value={x.id} />
-                <span className="col-span-4">{lang === "ar" ? x.name_ar : x.name_en}</span>
-                <input name="rate" defaultValue={(x.rate_bp / 100).toString()} inputMode="decimal" className="input col-span-2" aria-label={t.set_rate_pct} />
-                <select name="basis" defaultValue={x.basis} className="input col-span-3">
-                  <option value="base">{t.basis_base}</option>
-                  <option value="cumulative">{t.basis_cumulative}</option>
-                </select>
-                <label className="col-span-1 flex items-center"><input type="checkbox" name="active" defaultChecked={x.active} aria-label={t.active} /></label>
-                <div className="col-span-2"><SubmitButton className="btn-ghost btn-sm w-full">{t.save}</SubmitButton></div>
-              </ActionForm>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-muted">
-            {lang === "ar"
-              ? "الترتيب في الفاتورة: رسم الخدمة ← رسم السياحة ← رسم البلدية ← ضريبة القيمة المضافة. أكّد أساس الحساب مع محاسب المنشأة."
-              : "Invoice order: service charge → tourism levy → municipality fee → VAT. Confirm the calculation basis with your accountant."}
-          </p>
-          <ActionForm action={updateTenantPolicy} className="mt-4 flex items-end gap-2">
-            <Field label={t.set_discount_limit} className="flex-1">
-              <input name="discount_pct" defaultValue={((tenant?.max_reception_discount_bp ?? 1000) / 100).toString()} inputMode="decimal" className="input" />
-            </Field>
-            <SubmitButton className="btn-ghost">{t.save}</SubmitButton>
-          </ActionForm>
-        </Section>
-
-        <Section title={t.set_unit_types}>
-          <div className="space-y-2">
-            {(types ?? []).map((x) => {
-              const used = unitsPerType.get(x.id) ?? 0;
-              return (
-                <div key={x.id} className="rounded-xl border border-line p-3">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="font-semibold">{x.name_ar}</span>
-                    {x.name_en ? <span dir="ltr" className="text-xs text-muted">{x.name_en}</span> : null}
-                    <Badge tone="gray">{t[`ukind_${x.kind}` as DictKey] ?? x.kind}</Badge>
-                    <span className="text-xs text-muted">{t.type_units_count.replace("{n}", String(used))}</span>
-                    <span className="ms-auto flex items-start gap-1.5">
-                      <EditDetails label={t.edit}>
-                        <ActionForm action={renameUnitType} className="grid min-w-64 gap-1.5">
-                          <input type="hidden" name="id" value={x.id} />
-                          <input name="name_ar" defaultValue={x.name_ar} required aria-label={t.set_name_ar} placeholder={t.set_name_ar} className="input py-1.5" />
-                          <input name="name_en" defaultValue={x.name_en ?? ""} aria-label={t.set_name_en} placeholder={t.set_name_en} dir="ltr" className="input py-1.5" />
-                          <select name="kind" defaultValue={x.kind} aria-label={t.type} className="input py-1.5">
-                            {UNIT_KINDS.map((k) => <option key={k} value={k}>{t[`ukind_${k}` as DictKey]}</option>)}
-                          </select>
-                          <SubmitButton className="btn-primary btn-sm">{t.save}</SubmitButton>
-                        </ActionForm>
-                      </EditDetails>
-                      <ActionForm action={deleteUnitType}>
-                        <input type="hidden" name="id" value={x.id} />
-                        <SubmitButton className="btn-ghost btn-sm text-danger" confirm={t.type_delete_q.replace("{name}", x.name_ar)}>{t.delete}</SubmitButton>
-                      </ActionForm>
-                    </span>
-                  </div>
-                  <ActionForm action={updateUnitType} className="grid grid-cols-12 items-end gap-2 text-sm">
-                    <input type="hidden" name="id" value={x.id} />
-                    <Field label={t.set_nightly} className="col-span-4"><input name="nightly" defaultValue={plainOmr(x.nightly_rate)} inputMode="decimal" className="input" /></Field>
-                    <Field label={t.set_monthly} className="col-span-4"><input name="monthly" defaultValue={plainOmr(x.monthly_rate)} inputMode="decimal" className="input" /></Field>
-                    <Field label={t.set_capacity} className="col-span-2"><input name="capacity" defaultValue={x.capacity} type="number" min={1} className="input px-2" /></Field>
-                    <div className="col-span-2"><SubmitButton className="btn-ghost btn-sm w-full">{t.save}</SubmitButton></div>
-                  </ActionForm>
-                </div>
-              );
-            })}
-          </div>
-          <ActionForm action={addUnitType} resetOnSuccess className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4 sm:grid-cols-3">
-            <Field label={t.set_name_ar}><input name="name_ar" required className="input" /></Field>
-            <Field label={t.set_name_en}><input name="name_en" dir="ltr" className="input" /></Field>
-            <Field label={t.type}>
-              <select name="kind" className="input">
-                {UNIT_KINDS.map((k) => <option key={k} value={k}>{t[`ukind_${k}` as DictKey]}</option>)}
-              </select>
-            </Field>
-            <Field label={t.set_nightly}><input name="nightly" required inputMode="decimal" className="input" /></Field>
-            <Field label={t.set_monthly}><input name="monthly" inputMode="decimal" className="input" /></Field>
-            <Field label={t.set_capacity}><input name="capacity" type="number" min={1} defaultValue={2} className="input" /></Field>
-            <SubmitButton className="btn-primary sm:col-span-3">{t.add}</SubmitButton>
-          </ActionForm>
-        </Section>
-
-        <Section title={t.set_rate_plans}>
-          <div className="overflow-x-auto"><table className="table mb-3">
-            <tbody>
-              {(plans ?? []).map((p) => {
-                const r = parseRange(p.period as string);
-                return (
-                  <tr key={p.id}>
-                    <td>{p.name}</td>
-                    <td className="text-xs">{typeName.get(p.unit_type_id)}</td>
-                    <td className="text-xs">{gregorian(r.from, lang)} → {gregorian(r.to, lang)}</td>
-                    <td className="num">{p.nightly_rate !== null ? omr(p.nightly_rate, lang) : "—"}</td>
-                    <td>
-                      <EditDetails label={t.edit}>
-                        <ActionForm action={updateRatePlan} className="grid min-w-64 gap-1.5">
-                          <input type="hidden" name="id" value={p.id} />
-                          <input name="name" defaultValue={p.name} required aria-label={t.set_season_name} className="input py-1.5" />
-                          <input type="date" name="from" defaultValue={r.from} required aria-label={t.from} className="input py-1.5" />
-                          <input type="date" name="to" defaultValue={r.to} required aria-label={t.to} className="input py-1.5" />
-                          <input name="nightly" defaultValue={p.nightly_rate !== null ? plainOmr(p.nightly_rate) : ""} placeholder={t.set_nightly} inputMode="decimal" className="input py-1.5" />
-                          <input name="monthly" defaultValue={p.monthly_rate !== null ? plainOmr(p.monthly_rate) : ""} placeholder={t.set_monthly} inputMode="decimal" className="input py-1.5" />
-                          <SubmitButton className="btn-primary btn-sm">{t.save}</SubmitButton>
-                        </ActionForm>
-                      </EditDetails>
-                    </td>
-                    <td>
-                      <ActionForm action={deleteRatePlan}>
-                        <input type="hidden" name="id" value={p.id} />
-                        <SubmitButton className="btn-ghost btn-sm" confirm={t.delete}>{t.delete}</SubmitButton>
-                      </ActionForm>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table></div>
-          <ActionForm action={addRatePlan} resetOnSuccess className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <Field label={t.set_season_name}><input name="name" required className="input" /></Field>
-            <Field label={t.type}>
-              <select name="unit_type" required className="input">
-                {(types ?? []).map((x) => <option key={x.id} value={x.id}>{x.name_ar}</option>)}
-              </select>
-            </Field>
-            <Field label={t.set_nightly}><input name="nightly" inputMode="decimal" className="input" /></Field>
-            <Field label={t.from}><input name="from" type="date" required className="input" /></Field>
-            <Field label={t.to}><input name="to" type="date" required className="input" /></Field>
-            <Field label={t.set_monthly}><input name="monthly" inputMode="decimal" className="input" /></Field>
-            <SubmitButton className="btn-primary sm:col-span-3">{t.add}</SubmitButton>
-          </ActionForm>
-        </Section>
-
+      {view === "units" ? (
+        <div className="space-y-4">
         <Section title={`${t.set_units} (${(units ?? []).length})`}>
           <div className="mb-4 grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -353,6 +254,123 @@ export default async function SettingsPage() {
           )}
         </Section>
 
+        </div>
+      ) : null}
+
+      {view === "prices" ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+        <Section title={t.set_unit_types}>
+          <div className="space-y-2">
+            {(types ?? []).map((x) => {
+              const used = unitsPerType.get(x.id) ?? 0;
+              return (
+                <div key={x.id} className="rounded-xl border border-line p-3">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="font-semibold">{x.name_ar}</span>
+                    {x.name_en ? <span dir="ltr" className="text-xs text-muted">{x.name_en}</span> : null}
+                    <Badge tone="gray">{t[`ukind_${x.kind}` as DictKey] ?? x.kind}</Badge>
+                    <span className="text-xs text-muted">{t.type_units_count.replace("{n}", String(used))}</span>
+                    <span className="ms-auto flex items-start gap-1.5">
+                      <EditDetails label={t.edit}>
+                        <ActionForm action={renameUnitType} className="grid min-w-64 gap-1.5">
+                          <input type="hidden" name="id" value={x.id} />
+                          <input name="name_ar" defaultValue={x.name_ar} required aria-label={t.set_name_ar} placeholder={t.set_name_ar} className="input py-1.5" />
+                          <input name="name_en" defaultValue={x.name_en ?? ""} aria-label={t.set_name_en} placeholder={t.set_name_en} dir="ltr" className="input py-1.5" />
+                          <select name="kind" defaultValue={x.kind} aria-label={t.type} className="input py-1.5">
+                            {UNIT_KINDS.map((k) => <option key={k} value={k}>{t[`ukind_${k}` as DictKey]}</option>)}
+                          </select>
+                          <SubmitButton className="btn-primary btn-sm">{t.save}</SubmitButton>
+                        </ActionForm>
+                      </EditDetails>
+                      <ActionForm action={deleteUnitType}>
+                        <input type="hidden" name="id" value={x.id} />
+                        <SubmitButton className="btn-ghost btn-sm text-danger" confirm={t.type_delete_q.replace("{name}", x.name_ar)}>{t.delete}</SubmitButton>
+                      </ActionForm>
+                    </span>
+                  </div>
+                  <ActionForm action={updateUnitType} className="grid grid-cols-12 items-end gap-2 text-sm">
+                    <input type="hidden" name="id" value={x.id} />
+                    <Field label={t.set_nightly} className="col-span-4"><input name="nightly" defaultValue={plainOmr(x.nightly_rate)} inputMode="decimal" className="input" /></Field>
+                    <Field label={t.set_monthly} className="col-span-4"><input name="monthly" defaultValue={plainOmr(x.monthly_rate)} inputMode="decimal" className="input" /></Field>
+                    <Field label={t.set_capacity} className="col-span-2"><input name="capacity" defaultValue={x.capacity} type="number" min={1} className="input px-2" /></Field>
+                    <div className="col-span-2"><SubmitButton className="btn-ghost btn-sm w-full">{t.save}</SubmitButton></div>
+                  </ActionForm>
+                </div>
+              );
+            })}
+          </div>
+          <ActionForm action={addUnitType} resetOnSuccess className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4 sm:grid-cols-3">
+            <Field label={t.set_name_ar}><input name="name_ar" required className="input" /></Field>
+            <Field label={t.set_name_en}><input name="name_en" dir="ltr" className="input" /></Field>
+            <Field label={t.type}>
+              <select name="kind" className="input">
+                {UNIT_KINDS.map((k) => <option key={k} value={k}>{t[`ukind_${k}` as DictKey]}</option>)}
+              </select>
+            </Field>
+            <Field label={t.set_nightly}><input name="nightly" required inputMode="decimal" className="input" /></Field>
+            <Field label={t.set_monthly}><input name="monthly" inputMode="decimal" className="input" /></Field>
+            <Field label={t.set_capacity}><input name="capacity" type="number" min={1} defaultValue={2} className="input" /></Field>
+            <SubmitButton className="btn-primary sm:col-span-3">{t.add}</SubmitButton>
+          </ActionForm>
+        </Section>
+
+
+        <Section title={t.set_rate_plans}>
+          <p className="mb-3 text-sm text-muted">{t.set_season_hint}</p>
+          <div className="overflow-x-auto"><table className="table mb-3">
+            <tbody>
+              {(plans ?? []).map((p) => {
+                const r = parseRange(p.period as string);
+                return (
+                  <tr key={p.id}>
+                    <td>{p.name}</td>
+                    <td className="text-xs">{typeName.get(p.unit_type_id)}</td>
+                    <td className="text-xs">{gregorian(r.from, lang)} → {gregorian(r.to, lang)}</td>
+                    <td className="num">{p.nightly_rate !== null ? omr(p.nightly_rate, lang) : "—"}</td>
+                    <td>
+                      <EditDetails label={t.edit}>
+                        <ActionForm action={updateRatePlan} className="grid min-w-64 gap-1.5">
+                          <input type="hidden" name="id" value={p.id} />
+                          <input name="name" defaultValue={p.name} required aria-label={t.set_season_name} className="input py-1.5" />
+                          <input type="date" name="from" defaultValue={r.from} required aria-label={t.from} className="input py-1.5" />
+                          <input type="date" name="to" defaultValue={r.to} required aria-label={t.to} className="input py-1.5" />
+                          <input name="nightly" defaultValue={p.nightly_rate !== null ? plainOmr(p.nightly_rate) : ""} placeholder={t.set_nightly} inputMode="decimal" className="input py-1.5" />
+                          <input name="monthly" defaultValue={p.monthly_rate !== null ? plainOmr(p.monthly_rate) : ""} placeholder={t.set_monthly} inputMode="decimal" className="input py-1.5" />
+                          <SubmitButton className="btn-primary btn-sm">{t.save}</SubmitButton>
+                        </ActionForm>
+                      </EditDetails>
+                    </td>
+                    <td>
+                      <ActionForm action={deleteRatePlan}>
+                        <input type="hidden" name="id" value={p.id} />
+                        <SubmitButton className="btn-ghost btn-sm" confirm={t.delete}>{t.delete}</SubmitButton>
+                      </ActionForm>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table></div>
+          <ActionForm action={addRatePlan} resetOnSuccess className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <Field label={t.set_season_name}><input name="name" required className="input" /></Field>
+            <Field label={t.type}>
+              <select name="unit_type" required className="input">
+                {(types ?? []).map((x) => <option key={x.id} value={x.id}>{x.name_ar}</option>)}
+              </select>
+            </Field>
+            <Field label={t.set_nightly}><input name="nightly" inputMode="decimal" className="input" /></Field>
+            <Field label={t.from}><input name="from" type="date" required className="input" /></Field>
+            <Field label={t.to}><input name="to" type="date" required className="input" /></Field>
+            <Field label={t.set_monthly}><input name="monthly" inputMode="decimal" className="input" /></Field>
+            <SubmitButton className="btn-primary sm:col-span-3">{t.add}</SubmitButton>
+          </ActionForm>
+        </Section>
+
+        </div>
+      ) : null}
+
+      {view === "staff" ? (
+        <div className="space-y-4">
         <Section title={t.set_staff}>
           <datalist id="job-titles">
             {["مدير الفندق", "مشرف الوردية", "موظف استقبال", "محاسب", "مشرف التنظيف", "عامل تنظيف", "فني صيانة", "مدير الإيرادات"].map((x) => (
@@ -437,11 +455,6 @@ export default async function SettingsPage() {
               <Field label={t.job_title}>
                 <input name="job_title" list="job-titles" required placeholder={t.job_title_hint} className="input" />
               </Field>
-              <div><span className="label">{t.staff_phone}</span><PhoneInput name="phone" lang={lang} label={t.staff_phone} labels={{ country: t.phone_country, search: t.phone_search, none: t.phone_none }} /></div>
-              <Field label={t.staff_civil_id}><input name="civil_id" dir="ltr" inputMode="numeric" className="input" /></Field>
-              <Field label={t.staff_salary}><input name="salary" inputMode="decimal" placeholder="0.000" className="input" /></Field>
-              <Field label={t.staff_card_no}><input name="work_card_no" dir="ltr" className="input" /></Field>
-              <Field label={t.staff_card_expiry}><input name="work_card_expiry" type="date" className="input" /></Field>
             </div>
             {isOwner ? (
               <div>
@@ -459,17 +472,132 @@ export default async function SettingsPage() {
                 </div>
               </div>
             ) : (
-              <Field label={t.role}>
-                <select name="role" className="input">
-                  {ROLES.filter((r) => !["owner", "manager"].includes(r)).map((r) => <option key={r} value={r}>{t[`role_${r}` as DictKey]}</option>)}
-                </select>
-              </Field>
+              <fieldset>
+                <legend className="label">{t.set_role_q}</legend>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {ROLES.filter((r) => !["owner", "manager"].includes(r)).map((r, i) => (
+                    <label key={r} className="flex items-start gap-2 rounded-xl border border-line px-2.5 py-2 text-xs has-[:checked]:border-brand has-[:checked]:bg-brand-soft/50">
+                      <input type="radio" name="role" value={r} defaultChecked={i === 0} className="mt-0.5" />
+                      <span>
+                        <span className="block text-sm font-semibold">{t[`role_${r}` as DictKey]}</span>
+                        <span className="text-muted">{t.set_role_sees.replace("{x}", AREAS.filter((a) => (ROLE_ACCESS[a] as string[]).includes(r)).map((a) => t[`nav_${a}` as DictKey]).join(lang === "ar" || lang === "ur" ? "، " : ", "))}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
             )}
+            <details className="rounded-2xl bg-surface-2 p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-brand">{t.fin_more_details}</summary>
+              <p className="mt-2 text-xs text-muted">{t.set_invite_later}</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <div><span className="label">{t.staff_phone}</span><PhoneInput name="phone" lang={lang} label={t.staff_phone} labels={{ country: t.phone_country, search: t.phone_search, none: t.phone_none }} /></div>
+              <Field label={t.staff_civil_id}><input name="civil_id" dir="ltr" inputMode="numeric" className="input" /></Field>
+              <Field label={t.staff_salary}><input name="salary" inputMode="decimal" placeholder="0.000" className="input" /></Field>
+              <Field label={t.staff_card_no}><input name="work_card_no" dir="ltr" className="input" /></Field>
+              <Field label={t.staff_card_expiry}><input name="work_card_expiry" type="date" className="input" /></Field>
+              </div>
+            </details>
             <SubmitButton className="btn-primary w-full sm:w-auto sm:px-10">{t.set_invite}</SubmitButton>
             <p className="text-xs text-muted">{t.set_invite_hint}</p>
           </ActionForm>
         </Section>
-      </div>
+        </div>
+      ) : null}
+
+      {view === "money" ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+        <Section title={t.set_taxes}>
+          <div className="space-y-2">
+            {(taxes ?? []).map((x) => (
+              <ActionForm key={x.id} action={updateTax} className="grid grid-cols-12 items-center gap-2 text-sm">
+                <input type="hidden" name="id" value={x.id} />
+                <span className="col-span-4">{lang === "ar" ? x.name_ar : x.name_en}</span>
+                <input name="rate" defaultValue={(x.rate_bp / 100).toString()} inputMode="decimal" className="input col-span-2" aria-label={t.set_rate_pct} />
+                <select name="basis" defaultValue={x.basis} className="input col-span-3">
+                  <option value="base">{t.basis_base}</option>
+                  <option value="cumulative">{t.basis_cumulative}</option>
+                </select>
+                <label className="col-span-1 flex items-center"><input type="checkbox" name="active" defaultChecked={x.active} aria-label={t.active} /></label>
+                <div className="col-span-2"><SubmitButton className="btn-ghost btn-sm w-full">{t.save}</SubmitButton></div>
+              </ActionForm>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-muted">
+            {lang === "ar"
+              ? "الترتيب في الفاتورة: رسم الخدمة ← رسم السياحة ← رسم البلدية ← ضريبة القيمة المضافة. أكّد أساس الحساب مع محاسب المنشأة."
+              : "Invoice order: service charge → tourism levy → municipality fee → VAT. Confirm the calculation basis with your accountant."}
+          </p>
+          <ActionForm action={updateTenantPolicy} className="mt-4 flex items-end gap-2">
+            <Field label={t.set_discount_limit} className="flex-1">
+              <input name="discount_pct" defaultValue={((tenant?.max_reception_discount_bp ?? 1000) / 100).toString()} inputMode="decimal" className="input" />
+            </Field>
+            <SubmitButton className="btn-ghost">{t.save}</SubmitButton>
+          </ActionForm>
+          <p className="mt-2 text-xs text-muted">{t.set_discount_hint}</p>
+        </Section>
+
+
+        <section className="card">
+          <h2 className="h2">{t.set_bank}</h2>
+          <p className="mb-4 mt-1 text-sm text-muted">{t.set_bank_hint}</p>
+          <ActionForm action={updateProperty} className="grid gap-3 sm:grid-cols-2">
+            <Field label={t.set_bank_name}><input name="bank_name" defaultValue={prop?.bank_name ?? ""} className="input" /></Field>
+            <Field label={t.set_bank_account}><input name="bank_account_name" defaultValue={prop?.bank_account_name ?? ""} className="input" /></Field>
+            <Field label="IBAN" className="sm:col-span-2"><input name="bank_iban" defaultValue={prop?.bank_iban ?? ""} dir="ltr" className="input" /></Field>
+            <Field label={t.set_pay_instructions} className="sm:col-span-2"><textarea name="payment_instructions" defaultValue={prop?.payment_instructions ?? ""} rows={2} maxLength={500} className="input" /></Field>
+            <div className="sm:col-span-full"><SubmitButton className="btn-primary">{t.save}</SubmitButton></div>
+          </ActionForm>
+        </section>
+        </div>
+      ) : null}
+
+      {view === "plan" ? (
+        <>
+      {ctx.role === "owner" && plan.code ? (
+        <section className="card mb-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="h2">{t.sub_title}</h2>
+            <Link href="/upgrade" className="btn-ghost btn-sm">{t.sub_compare}</Link>
+          </div>
+          <div className="grid gap-3 text-sm sm:grid-cols-4">
+            <div><div className="label">{t.sub_plan}</div><div className="font-bold">{(lang === "en" || lang === "bn") && plan.nameEn ? plan.nameEn : plan.name}</div></div>
+            <div><div className="label">{t.sub_status}</div><Badge tone={plan.status === "active" ? "ok" : plan.status === "trial" ? "info" : "danger"}>{t[`sub_st_${plan.status}` as DictKey]}</Badge></div>
+            <div>
+              <div className="label">{plan.status === "trial" ? t.sub_trial_until : t.sub_until}</div>
+              <div className="font-semibold">{gregorian(plan.status === "trial" ? plan.trialEndsAt : plan.periodEnd, lang)}</div>
+            </div>
+            <div><div className="label">{t.sub_price}</div><div className="num font-semibold">{plan.price != null ? omr(plan.price, lang) : "—"}</div></div>
+          </div>
+          <details className="mt-3 text-sm">
+            <summary className="cursor-pointer text-xs font-semibold text-muted">{t.sub_payments} ({(subPays ?? []).length})</summary>
+            {(subPays ?? []).length === 0 ? <p className="mt-2 text-xs text-muted">{t.sub_no_payments}</p> : (
+              <ul className="mt-2 divide-y divide-line">
+                {(subPays ?? []).map((x) => (
+                  <li key={x.id} className={`flex flex-wrap justify-between gap-2 py-1.5 ${x.voided_at ? "text-muted line-through" : ""}`}>
+                    <span>{gregorian(x.paid_on, lang)}</span>
+                    <span className="text-muted">{gregorian(x.period_start, lang)} → {gregorian(x.period_end, lang)}</span>
+                    <span className="num font-semibold">{omr(x.amount, lang)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </details>
+        </section>
+      ) : null}
+
+      {ctx.role === "owner" || ctx.role === "manager" ? (
+        <section className="card mb-4 flex flex-wrap items-center gap-3">
+          <div className="flex-1">
+            <h2 className="h2 inline-flex items-center gap-1.5"><ShieldCheck className="size-5 text-brand" /> {t.exp_all}</h2>
+            <p className="text-sm text-muted">{t.exp_all_hint}</p>
+          </div>
+          <a href="/api/export/all?kind=excel" className="btn-primary btn-sm inline-flex items-center gap-1.5"><FileSpreadsheet className="size-4 shrink-0" />{t.exp_excel}</a>
+          <a href="/api/export/all?kind=docs" className="btn-ghost btn-sm inline-flex items-center gap-1.5"><FolderArchive className="size-4 shrink-0" />{t.exp_docs}</a>
+        </section>
+      ) : null}
+        </>
+      ) : null}
     </>
   );
 }

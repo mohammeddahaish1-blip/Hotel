@@ -91,6 +91,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     {
       key: "settings",
       label: t.nav_settings,
+      ownTabs: true,
       tabs: [
         ...tab("settings", t.nav_settings_general),
         ...(ctx.role === "owner" ? [{ href: "/settings/permissions", label: t.nav_permissions }] : []),

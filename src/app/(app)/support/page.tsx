@@ -1,3 +1,4 @@
+import { SettingsTabs } from "../settings/SettingsTabs";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { History, LifeBuoy, ShieldCheck, Wrench } from "lucide-react";
@@ -101,6 +102,7 @@ export default async function SupportPage() {
 
   return (
     <>
+      <SettingsTabs ctx={ctx} t={t} current="support" />
       <PageHeader title={t.sup_title} sub={t.sup_sub} />
       <p className="mb-4 flex items-start gap-2 rounded-xl bg-surface-2 px-3 py-2.5 text-sm text-muted">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden /> {t.sup_hint}

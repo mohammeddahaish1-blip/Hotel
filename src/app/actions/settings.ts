@@ -23,26 +23,19 @@ async function run(fn: (ctx: Awaited<ReturnType<typeof getCtx>>) => PromiseLike<
   return { ok: t.saved };
 }
 
+/** The property details are split over several small forms; each one saves only the fields it sends. */
 export async function updateProperty(_: ActionResult, fd: FormData) {
+  const row: Record<string, string | number | null> = {};
+  for (const k of ["name_en", "address", "phone", "whatsapp", "email", "license_no", "vat_no", "bank_name", "bank_account_name", "payment_instructions"]) {
+    if (fd.has(k)) row[k] = s(fd, k);
+  }
+  if (fd.has("municipality")) row.municipality = s(fd, "municipality") ?? "muscat";
+  if (fd.has("doc_retention_days")) row.doc_retention_days = Number(s(fd, "doc_retention_days") ?? 365);
+  if (fd.has("bank_iban")) row.bank_iban = s(fd, "bank_iban")?.replace(/\s/g, "").toUpperCase() ?? null;
   return run((c) =>
     c.supabase
       .from("properties")
-      .update({
-        name_ar: s(fd, "name_ar") ?? c.property.name_ar,
-        name_en: s(fd, "name_en"),
-        address: s(fd, "address"),
-        phone: s(fd, "phone"),
-        whatsapp: s(fd, "whatsapp"),
-        email: s(fd, "email"),
-        license_no: s(fd, "license_no"),
-        vat_no: s(fd, "vat_no"),
-        municipality: s(fd, "municipality") ?? "muscat",
-        doc_retention_days: Number(s(fd, "doc_retention_days") ?? 365),
-        bank_name: s(fd, "bank_name"),
-        bank_account_name: s(fd, "bank_account_name"),
-        bank_iban: s(fd, "bank_iban")?.replace(/\s/g, "").toUpperCase() ?? null,
-        payment_instructions: s(fd, "payment_instructions"),
-      })
+      .update({ ...row, ...(fd.has("name_ar") ? { name_ar: s(fd, "name_ar") ?? c.property.name_ar } : {}) })
       .eq("id", c.property.id),
   );
 }

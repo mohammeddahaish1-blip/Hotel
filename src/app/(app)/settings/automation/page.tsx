@@ -1,3 +1,4 @@
+import { SettingsTabs } from "../SettingsTabs";
 import { requireFeature } from "@/lib/plan";
 import { Sparkles, Trash2, Zap } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -66,6 +67,7 @@ export default async function AutomationPage() {
 
   return (
     <>
+      <SettingsTabs ctx={ctx} t={t} current="automation" />
       <PageHeader
         title={t.auto_title}
         sub={t.auto_hint}

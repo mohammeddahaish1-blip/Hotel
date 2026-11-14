@@ -1,3 +1,4 @@
+import { SettingsTabs } from "../SettingsTabs";
 import { initial, profileHref } from "@/lib/profile-link";
 import Link from "next/link";
 import { AREAS, ROLE_ACCESS, requireArea, type Role } from "@/lib/auth";
@@ -40,7 +41,7 @@ export default async function PermissionsPage({ searchParams }: PageProps<"/sett
 
   return (
     <>
-      <Crumb href="/settings" label={t.nav_settings} />
+      <SettingsTabs ctx={ctx} t={t} current="permissions" />
       <PageHeader title={t.perm_title} sub={t.perm_intro} />
       {!members.length ? (
         <Empty>{t.perm_none_staff}</Empty>
