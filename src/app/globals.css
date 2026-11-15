@@ -269,3 +269,35 @@ a.card:active, a.rounded-xl:active { transform: scale(0.985); }
   body { background: white; }
   .card { border: none; box-shadow: none; padding: 0; }
 }
+
+/* ---------------------------------------------------------------- public product page */
+.lp-reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); transition-delay: var(--d, 0ms); }
+.lp-reveal.lp-in { opacity: 1; transform: none; }
+.lp-float { animation: lp-float 6s ease-in-out infinite; }
+.lp-float-slow { animation: lp-float 8s ease-in-out -3s infinite; }
+@keyframes lp-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+.lp-blob { animation: lp-blob 14s ease-in-out infinite; }
+.lp-blob-2 { animation: lp-blob 18s ease-in-out -6s infinite reverse; }
+@keyframes lp-blob { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(30px, -24px) scale(1.12); } }
+.lp-ring { animation: lp-ring 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s backwards; }
+@keyframes lp-ring { from { stroke-dasharray: 0 214; } }
+.lp-bar { transform-origin: bottom; animation: lp-bar 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; animation-delay: var(--d, 0ms); }
+@keyframes lp-bar { from { transform: scaleY(0); } }
+.lp-rise { animation: lp-rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; animation-delay: var(--d, 0ms); }
+@keyframes lp-rise { from { opacity: 0; transform: translateY(22px); } }
+.lp-pop { animation: lp-pop 0.6s cubic-bezier(0.2, 1.3, 0.4, 1) backwards; animation-delay: var(--d, 0ms); }
+@keyframes lp-pop { from { opacity: 0; transform: scale(0.7); } }
+.lp-pulse { animation: lp-pulse 2.4s ease-out infinite; }
+@keyframes lp-pulse { 0% { box-shadow: 0 0 0 0 rgba(13, 107, 95, 0.45); } 100% { box-shadow: 0 0 0 16px rgba(13, 107, 95, 0); } }
+.lp-marquee { animation: lp-marquee 40s linear infinite; }
+@keyframes lp-marquee { to { transform: translateX(50%); } }
+html[dir="ltr"] .lp-marquee { animation-name: lp-marquee-ltr; }
+@keyframes lp-marquee-ltr { to { transform: translateX(-50%); } }
+.lp-card { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s; }
+.lp-card:hover { transform: translateY(-6px); box-shadow: 0 22px 44px rgba(20, 40, 35, 0.12); }
+.lp-done { animation: lp-pop 0.5s cubic-bezier(0.2, 1.3, 0.4, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal { opacity: 1; transform: none; transition: none; }
+  .lp-float, .lp-float-slow, .lp-blob, .lp-blob-2, .lp-ring, .lp-bar, .lp-rise, .lp-pop, .lp-pulse, .lp-marquee, .lp-done { animation: none; }
+  .lp-card, .lp-card:hover { transition: none; transform: none; }
+}

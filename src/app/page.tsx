@@ -1,15 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  BedDouble, CalendarRange, Check, ClipboardCheck, FileText, KeyRound, LifeBuoy, MessageCircle, Receipt, ShieldCheck, Wrench,
+  ArrowDown, CalendarRange, Check, CircleCheck, ClipboardCheck, FileText, KeyRound, LifeBuoy, MessageCircle, Receipt, ShieldCheck, Wrench,
 } from "lucide-react";
 import { getCtx, homeFor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getDict } from "@/lib/i18n/server";
 import { LangToggle } from "@/components/LangToggle";
-import { HotelIllustration } from "@/components/HotelIllustration";
-import { SubmitButton } from "@/components/ActionForm";
-import { startDemo } from "@/app/actions/demo";
+import { Reveal } from "@/components/landing/Reveal";
+import { TrialForm } from "@/components/landing/TrialForm";
 
 type PlanRow = { code: string; name_ar: string; name_en: string | null; monthly_price: number; max_units: number | null; max_properties: number | null; features: string[] };
 
@@ -18,11 +17,28 @@ const COPY = {
     login: "تسجيل الدخول",
     title: "أدِر فندقك وشققك الفندقية من مكان واحد",
     sub: "نظام عربي صُمّم لعُمان: الحجوزات والاستقبال، التنظيف والصيانة، الفواتير والرسوم الحكومية، والتقارير — من الكمبيوتر أو الآيباد أو الجوال.",
-    demo: "جرّب النظام الآن",
-    demoNote: "بدون تسجيل — فندق تجريبي ببيانات وهمية",
+    badge: "نظام عربي صُنع في عُمان",
+    demo: "اطلب تجربة النظام",
+    demoNote: "نرسل لك رابطاً خاصاً يفتح فندقاً تجريبياً ببيانات وهمية",
+    nav: ["المزايا", "يومك في نُزُل", "الباقات", "أسئلة"],
+    mock: { caption: "صورة توضيحية بأرقام وهمية", occ: "الإشغال الآن", of: "18 من 23 وحدة", money: "دخل اليوم", week: "آخر 7 أيام", arrivals: "الواصلون اليوم", checkin: "تسجيل دخول", in: "دخل", ready: "الوحدة 204 جاهزة", paid: "دفعة مستلمة", guests: ["سالم الحارثي", "نورة المعمري"] },
+    stats: [["4", "لغات للواجهة: العربية، الإنجليزية، الأردية، البنغالية"], ["3", "أجهزة: الكمبيوتر، الآيباد، الجوال"], ["0", "برامج للتثبيت، يعمل من المتصفح"]],
+    dayTitle: "يوم كامل في نُزُل",
+    daySub: "من أول نزيل يصل حتى إقفال الصندوق، كل خطوة في مكانها.",
+    day: [
+      ["الصباح", "لوحة واحدة تقول لك من يصل ومن يغادر", "الواصلون والمغادرون والتنبيهات أمامك، وتسجيل الدخول بضغطة."],
+      ["الظهر", "العامل ينظف ويصوّر، والاستقبال يعرف فوراً", "حالة الغرفة تتغير لحظياً، والمدير يرى وقت البدء والانتهاء والصورة."],
+      ["العصر", "الدفعات والفواتير بلا حساب يدوي", "الرسوم والضريبة تُحسب تلقائياً، وإثبات التحويل مرفق مع الدفعة."],
+      ["آخر اليوم", "إقفال الصندوق في ثلاث خطوات", "تعدّ النقد، يقارنه النظام بالمفروض، وتقفل ورديتك."],
+    ],
+    trialTitle: "اطلب تجربة النظام",
+    trialSub: "اكتب بياناتك ونرسل لك رابطاً خاصاً على واتساب أو بريدك. الرابط يفتح فندقاً تجريبياً كاملاً لمدة 7 أيام، بدون تسجيل ولا بطاقة دفع.",
+    trialPoints: ["فندق تجريبي ببيانات وهمية", "تجرّب كل الأقسام بنفسك", "بدون أي التزام"],
+    form: { name: "الاسم", company: "اسم الفندق أو الشركة (اختياري)", phone: "رقم الجوال", email: "البريد الإلكتروني", send: "أرسل الطلب", sending: "جارٍ الإرسال…", doneTitle: "وصلنا طلبك", doneBody: "سنرسل لك رابط التجربة على واتساب أو بريدك في أقرب وقت.", errInput: "تأكد من الاسم ورقم الجوال والبريد الإلكتروني.", errBusy: "الطلبات كثيرة الآن، حاول بعد قليل.", errFailed: "تعذّر إرسال الطلب، حاول مرة أخرى.", privacy: "نستخدم رقمك وبريدك لإرسال رابط التجربة والتواصل معك بخصوصه فقط." },
+    expired: "رابط التجربة انتهت مدته أو غير صحيح. اطلب رابطاً جديداً من هنا.",
     trial: "ابدأ شهرك المجاني",
     trialNote: "الشهر الأول مجاناً على الباقة الشاملة، بدون بطاقة دفع",
-    unavailable: "العرض التجريبي غير متاح الآن، حاول بعد قليل.",
+    unavailable: "التجربة غير متاحة الآن، حاول بعد قليل.",
     featuresTitle: "كل ما يحتاجه يومك في الفندق",
     features: [
       [CalendarRange, "الوحدات والتقويم", "حالة كل غرفة وشقة لحظة بلحظة، والحجز مباشرة من التقويم دون حجز مزدوج."],
@@ -55,11 +71,28 @@ const COPY = {
     login: "Sign in",
     title: "Run your hotel and serviced apartments from one place",
     sub: "An Arabic-first system built for Oman: bookings and front desk, housekeeping and maintenance, invoices and government fees, and reports — on a computer, iPad or phone.",
-    demo: "Try it now",
-    demoNote: "No sign-up — a sample hotel with made-up data",
+    badge: "Arabic-first, made in Oman",
+    demo: "Request a trial",
+    demoNote: "We send you a personal link to a sample hotel with made-up data",
+    nav: ["Features", "Your day", "Plans", "Questions"],
+    mock: { caption: "Illustration with made-up numbers", occ: "Occupancy now", of: "18 of 23 units", money: "Income today", week: "Last 7 days", arrivals: "Arriving today", checkin: "Check in", in: "In house", ready: "Unit 204 is ready", paid: "Payment received", guests: ["Salim Al Harthi", "Noura Al Maamari"] },
+    stats: [["4", "interface languages: Arabic, English, Urdu, Bengali"], ["3", "devices: computer, iPad, phone"], ["0", "programs to install, it runs in the browser"]],
+    dayTitle: "A full day in Nuzul",
+    daySub: "From the first arrival to closing the cash drawer, every step has its place.",
+    day: [
+      ["Morning", "One board tells you who arrives and who leaves", "Arrivals, departures and alerts in front of you, and check-in in one press."],
+      ["Midday", "The cleaner cleans and takes a photo, the desk knows at once", "The room's status changes live, and the manager sees start time, finish time and the photo."],
+      ["Afternoon", "Payments and invoices with no hand calculation", "Fees and VAT are worked out for you, and the transfer proof is attached to the payment."],
+      ["End of day", "Close the cash drawer in three steps", "You count the cash, the system compares it with what should be there, and you close your shift."],
+    ],
+    trialTitle: "Request a trial",
+    trialSub: "Leave your details and we send a personal link by WhatsApp or e-mail. It opens a complete sample hotel for 7 days, with no sign-up and no card.",
+    trialPoints: ["A sample hotel with made-up data", "Try every section yourself", "No commitment"],
+    form: { name: "Name", company: "Hotel or company (optional)", phone: "Mobile number", email: "E-mail", send: "Send request", sending: "Sending…", doneTitle: "We have your request", doneBody: "We will send your trial link by WhatsApp or e-mail shortly.", errInput: "Please check the name, mobile number and e-mail.", errBusy: "Too many requests right now, please try again shortly.", errFailed: "The request could not be sent, please try again.", privacy: "We use your number and e-mail only to send the trial link and to contact you about it." },
+    expired: "This trial link has expired or is not valid. Request a new one here.",
     trial: "Start your free month",
     trialNote: "First month free on the full plan, no card needed",
-    unavailable: "The demo is not available right now, please try again shortly.",
+    unavailable: "The trial is not available right now, please try again shortly.",
     featuresTitle: "Everything your hotel's day needs",
     features: [
       [CalendarRange, "Units and calendar", "Every room and apartment's status in real time, and booking straight from the calendar with no double bookings."],
@@ -101,11 +134,56 @@ const FEATURE_NAMES: Record<string, [string, string]> = {
 /** Whole riyals for prices (baisa in the database): "15", or "12.5" for a non-round price */
 const riyals = (baisa: number) => String(Number((baisa / 1000).toFixed(3)));
 
-function DemoButton({ label, light = false }: { label: string; light?: boolean }) {
+/** The product in miniature: an occupancy ring, a week of income and today's arrivals, gently alive. */
+function Mock({ m, en }: { m: (typeof COPY)["ar"]["mock"]; en: boolean }) {
+  const bars = [42, 58, 50, 74, 63, 88, 70];
   return (
-    <form action={startDemo}>
-      <SubmitButton className={light ? "btn bg-white px-5 text-brand hover:bg-white/90" : "btn-primary px-5"}>{label}</SubmitButton>
-    </form>
+    <div className="relative mx-auto w-full max-w-lg" aria-hidden>
+      <div className="lp-rise rounded-[2rem] bg-white p-4 shadow-[0_30px_80px_rgba(13,60,52,0.18)] ring-1 ring-black/5 sm:p-5" style={{ ["--d" as string]: "150ms" }}>
+        <div className="mb-4 flex items-center gap-1.5">
+          <span className="size-2.5 rounded-full bg-[#e7b9b4]" /><span className="size-2.5 rounded-full bg-[#ecd9a8]" /><span className="size-2.5 rounded-full bg-[#b9dcc6]" />
+          <span className="brand-word ms-auto text-xl text-brand">نُزُل</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center gap-3 rounded-3xl bg-[#0d6b5f] p-4 text-white">
+            <svg viewBox="0 0 80 80" className="size-16 shrink-0 -rotate-90">
+              <circle cx="40" cy="40" r="34" fill="none" stroke="#fff" strokeOpacity="0.22" strokeWidth="8" />
+              <circle className="lp-ring" cx="40" cy="40" r="34" fill="none" stroke="#fff" strokeWidth="8" strokeLinecap="round" strokeDasharray="167 214" />
+            </svg>
+            <div><div className="text-xs opacity-85">{m.occ}</div><div className="num text-2xl font-bold leading-tight">78%</div><div className="text-[11px] opacity-85">{m.of}</div></div>
+          </div>
+          <div className="rounded-3xl bg-[#f3f5f3] p-4">
+            <div className="text-xs text-[#66706c]">{m.money}</div>
+            <div className="num text-xl font-bold">{en ? "OMR 385" : "385 ر.ع."}</div>
+            <div className="mt-2 flex h-10 items-end gap-1.5">
+              {bars.map((h, i) => <span key={i} className={`lp-bar flex-1 rounded-full ${i === 5 ? "bg-[#0d6b5f]" : "bg-[#b8d8d1]"}`} style={{ height: `${h}%`, ["--d" as string]: `${700 + i * 90}ms` }} />)}
+            </div>
+            <div className="mt-1 text-[10px] text-[#66706c]">{m.week}</div>
+          </div>
+        </div>
+        <div className="mt-3 rounded-3xl bg-[#f3f5f3] p-4">
+          <div className="mb-2 text-xs font-bold">{m.arrivals}</div>
+          {m.guests.map((g, i) => (
+            <div key={g} className="lp-rise flex items-center gap-2 border-t border-[#e2e6e3] py-2 text-sm first:border-0" style={{ ["--d" as string]: `${1100 + i * 180}ms` }}>
+              <b className="num">{i === 0 ? "204" : "301"}</b><span className="min-w-0 flex-1 truncate">{g}</span>
+              {i === 0
+                ? <span className="lp-pulse rounded-full bg-[#0d6b5f] px-3 py-1 text-xs font-semibold text-white">{m.checkin}</span>
+                : <span className="rounded-full bg-[#e2f3e8] px-3 py-1 text-xs font-semibold text-[#14552e]">{m.in}</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="lp-pop absolute -top-4 start-2 sm:-start-6" style={{ ["--d" as string]: "1500ms" }}>
+        <div className="lp-float flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2.5 text-sm font-semibold shadow-[0_14px_34px_rgba(13,60,52,0.16)] ring-1 ring-black/5">
+          <span className="grid size-7 place-items-center rounded-full bg-[#e2f3e8] text-[#14552e]"><CircleCheck className="size-4" /></span>{m.ready}
+        </div>
+      </div>
+      <div className="lp-pop absolute -bottom-5 end-2 sm:-end-6" style={{ ["--d" as string]: "1900ms" }}>
+        <div className="lp-float-slow flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2.5 text-sm font-semibold shadow-[0_14px_34px_rgba(13,60,52,0.16)] ring-1 ring-black/5">
+          <span className="grid size-7 place-items-center rounded-full bg-[#e3f1ee] text-[#0d6b5f]"><Receipt className="size-4" /></span>{m.paid} <span className="num text-[#14552e]">{en ? "OMR 120" : "120 ر.ع."}</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -123,103 +201,177 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
   const { data } = await supabase.from("plans").select("code, name_ar, name_en, monthly_price, max_units, max_properties, features").eq("active", true).order("sort");
   const plans = (data ?? []) as PlanRow[];
-
+  const notice = sp.trial === "expired" ? c.expired : sp.trial === "unavailable" ? c.unavailable : null;
+  const anchors = ["#features", "#day", "#plans", "#faq"];
+  const ticker = c.features.map(([, title]) => title);
 
   return (
-    <div className="min-h-screen bg-white text-[#1c2321]">
-      <header className="border-b border-[#e6e9e7]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 lg:px-8">
+    <div className="min-h-screen overflow-x-clip bg-[#f6f8f6] text-[#1c2321]">
+      <noscript><style>{".lp-reveal{opacity:1;transform:none}"}</style></noscript>
+      <header className="sticky top-0 z-30 border-b border-black/5 bg-[#f6f8f6]/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 lg:px-8">
           <span className="brand-word text-4xl text-brand">نُزُل</span>
-          <div className="flex items-center gap-2">
+          <nav className="ms-6 hidden gap-1 text-sm font-semibold text-[#4d5753] md:flex" aria-label={c.featuresTitle}>
+            {c.nav.map((label, i) => <a key={label} href={anchors[i]} className="rounded-full px-3 py-2 hover:bg-white hover:text-brand">{label}</a>)}
+          </nav>
+          <div className="ms-auto flex items-center gap-2">
             <LangToggle current={lang} />
             <Link href="/login" className="btn-ghost btn-sm">{c.login}</Link>
+            <a href="#trial" className="btn-primary btn-sm hidden sm:inline-flex">{c.demo}</a>
           </div>
         </div>
       </header>
 
       <main>
-        <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 lg:grid-cols-2 lg:px-8 lg:py-20">
-          <div>
-            <h1 className="text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">{c.title}</h1>
-            <p className="mt-4 max-w-xl text-lg leading-relaxed text-[#4d5753]">{c.sub}</p>
-            {sp.demo === "unavailable" ? <p role="alert" className="mt-4 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger">{c.unavailable}</p> : null}
-            <div className="mt-7 flex flex-wrap items-start gap-3">
-              <div>
-                <DemoButton label={c.demo} />
-                <p className="mt-1.5 text-xs text-[#66706c]">{c.demoNote}</p>
-              </div>
-              <div>
-                <Link href="/login?mode=signup" className="btn-ghost px-5">{c.trial}</Link>
-                <p className="mt-1.5 text-xs text-[#66706c]">{c.trialNote}</p>
+        <section className="relative">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+            <div className="lp-blob absolute -top-24 start-[-10%] size-[28rem] rounded-full bg-[#bfe3da] opacity-60 blur-3xl" />
+            <div className="lp-blob-2 absolute top-40 end-[-8%] size-[24rem] rounded-full bg-[#f3e2b8] opacity-50 blur-3xl" />
+          </div>
+          <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-12 lg:grid-cols-2 lg:px-8 lg:pb-28 lg:pt-20">
+            <div>
+              <span className="lp-rise inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-sm font-semibold text-brand shadow-sm ring-1 ring-black/5"><span className="size-2 rounded-full bg-brand" />{c.badge}</span>
+              <h1 className="lp-rise mt-5 text-4xl font-bold leading-[1.25] sm:text-5xl lg:text-6xl lg:leading-[1.2]" style={{ ["--d" as string]: "120ms" }}>{c.title}</h1>
+              <p className="lp-rise mt-5 max-w-xl text-lg leading-relaxed text-[#4d5753]" style={{ ["--d" as string]: "240ms" }}>{c.sub}</p>
+              {notice ? <p role="alert" className="mt-5 rounded-2xl bg-[#fdf1d6] px-4 py-3 text-sm font-semibold text-[#7a4f00]">{notice}</p> : null}
+              <div className="lp-rise mt-8 flex flex-wrap items-start gap-3" style={{ ["--d" as string]: "360ms" }}>
+                <div>
+                  <a href="#trial" className="btn-primary min-h-12 px-7 text-base">{c.demo}</a>
+                  <p className="mt-2 max-w-56 text-xs text-[#66706c]">{c.demoNote}</p>
+                </div>
+                <div>
+                  <Link href="/login?mode=signup" className="btn-ghost min-h-12 bg-white px-6 text-base">{c.trial}</Link>
+                  <p className="mt-2 max-w-56 text-xs text-[#66706c]">{c.trialNote}</p>
+                </div>
               </div>
             </div>
-          </div>
-          <HotelIllustration className="mx-auto w-full max-w-lg" />
-        </section>
-
-        <section className="border-y border-[#e6e9e7] bg-[#f7f8f6]">
-          <div className="mx-auto max-w-6xl px-4 py-14 lg:px-8">
-            <h2 className="text-2xl font-bold sm:text-3xl">{c.featuresTitle}</h2>
-            <div className="mt-8 grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-              {c.features.map(([Icon, title, body]) => (
-                <div key={title} className="flex gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand"><Icon className="size-5" aria-hidden /></span>
-                  <div>
-                    <h3 className="font-bold">{title}</h3>
-                    <p className="mt-1 text-sm leading-relaxed text-[#4d5753]">{body}</p>
-                  </div>
-                </div>
-              ))}
+            <div>
+              <Mock m={c.mock} en={en} />
+              <p className="mt-8 text-center text-xs text-[#66706c]">{c.mock.caption}</p>
             </div>
           </div>
+          <a href="#features" className="absolute bottom-4 left-1/2 hidden -translate-x-1/2 text-[#66706c] lg:block" aria-label={c.featuresTitle}><ArrowDown className="lp-float size-5" /></a>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-14 lg:px-8" id="plans">
-          <h2 className="text-2xl font-bold sm:text-3xl">{c.plansTitle}</h2>
-          <p className="mt-2 max-w-2xl text-[#4d5753]">{c.plansSub}</p>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {plans.map((p, i) => (
-              <div key={p.code} className={`flex flex-col rounded-2xl border p-6 ${i === plans.length - 1 ? "border-brand" : "border-[#e6e9e7]"}`}>
-                <h3 className="text-lg font-bold">{en ? p.name_en ?? p.name_ar : p.name_ar}</h3>
-                <div className="mt-3 flex items-baseline gap-1.5">
-                  <span className="num text-3xl font-bold">{en ? `OMR ${riyals(p.monthly_price)}` : `${riyals(p.monthly_price)} ر.ع.`}</span>
-                  <span className="text-sm text-[#66706c]">{c.perMonth}</span>
-                </div>
-                <ul className="mt-5 flex-1 space-y-2 text-sm">
-                  {[c.units(p.max_units), c.props(p.max_properties), c.core, ...p.features.filter((f) => f !== "multi_property").map((f) => FEATURE_NAMES[f]?.[en ? 1 : 0] ?? f)].map((line) => (
-                    <li key={line} className="flex items-start gap-2"><Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />{line}</li>
-                  ))}
-                </ul>
-                <Link href="/login?mode=signup" className={`${i === plans.length - 1 ? "btn-primary" : "btn-ghost"} mt-6 w-full`}>{c.choose}</Link>
+        {/* what it covers, drifting past */}
+        <div className="overflow-hidden border-y border-black/5 bg-white py-4" aria-hidden>
+          <div className="lp-marquee flex w-max gap-10 whitespace-nowrap text-sm font-semibold text-[#4d5753]">
+            {[...ticker, ...ticker].map((x, i) => <span key={i} className="flex items-center gap-10">{x}<span className="size-1.5 rounded-full bg-brand" /></span>)}
+          </div>
+        </div>
+
+        <section className="mx-auto grid max-w-6xl gap-4 px-4 py-14 sm:grid-cols-3 lg:px-8">
+          {c.stats.map(([n, label], i) => (
+            <Reveal key={label} delay={i * 120}>
+              <div className="h-full rounded-3xl bg-white p-6 shadow-[0_10px_26px_rgba(20,40,35,0.06)]">
+                <div className="num text-5xl font-bold text-brand">{n}</div>
+                <p className="mt-2 text-sm leading-relaxed text-[#4d5753]">{label}</p>
               </div>
+            </Reveal>
+          ))}
+        </section>
+
+        <section id="features" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-16 lg:px-8">
+          <Reveal><h2 className="text-3xl font-bold sm:text-4xl">{c.featuresTitle}</h2></Reveal>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {c.features.map(([Icon, title, body], i) => (
+              <Reveal key={title} delay={(i % 3) * 110}>
+                <div className="lp-card h-full rounded-3xl bg-white p-6 shadow-[0_10px_26px_rgba(20,40,35,0.06)]">
+                  <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand"><Icon className="size-6" aria-hidden /></span>
+                  <h3 className="mt-4 text-lg font-bold">{title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-[#4d5753]">{body}</p>
+                </div>
+              </Reveal>
             ))}
           </div>
         </section>
 
-        <section className="bg-brand text-white">
-          <div className="mx-auto flex max-w-6xl flex-col items-start gap-4 px-4 py-12 sm:flex-row sm:items-center sm:justify-between lg:px-8">
-            <div className="flex items-center gap-3">
-              <BedDouble className="size-8 shrink-0 opacity-80" aria-hidden />
-              <p className="text-lg font-semibold">{c.demoNote}</p>
-            </div>
-            <DemoButton label={c.demo} light />
+        <section id="day" className="scroll-mt-16 bg-[#0d6b5f] text-white">
+          <div className="mx-auto max-w-6xl px-4 py-16 lg:px-8 lg:py-20">
+            <Reveal>
+              <h2 className="text-3xl font-bold sm:text-4xl">{c.dayTitle}</h2>
+              <p className="mt-2 max-w-2xl text-lg opacity-85">{c.daySub}</p>
+            </Reveal>
+            <ol className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {c.day.map(([when, title, body], i) => (
+                <li key={when}>
+                  <Reveal delay={i * 140} className="h-full">
+                    <div className="h-full rounded-3xl bg-white/10 p-6 ring-1 ring-white/15 backdrop-blur-sm">
+                      <div className="flex items-center gap-3">
+                        <span className="num grid size-9 place-items-center rounded-full bg-white font-bold text-brand">{i + 1}</span>
+                        <span className="text-sm font-semibold opacity-85">{when}</span>
+                      </div>
+                      <h3 className="mt-4 text-lg font-bold leading-snug">{title}</h3>
+                      <p className="mt-2 text-sm leading-relaxed opacity-85">{body}</p>
+                    </div>
+                  </Reveal>
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
 
-        <section className="mx-auto max-w-3xl px-4 py-14 lg:px-8">
-          <h2 className="text-2xl font-bold">{c.faqTitle}</h2>
-          <div className="mt-6 divide-y divide-[#e6e9e7] border-y border-[#e6e9e7]">
-            {c.faq.map(([q, a]) => (
-              <details key={q} className="group py-4">
-                <summary className="cursor-pointer list-none font-semibold">{q}</summary>
-                <p className="mt-2 text-sm leading-relaxed text-[#4d5753]">{a}</p>
-              </details>
+        <section className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16 lg:px-8" id="plans">
+          <Reveal>
+            <h2 className="text-3xl font-bold sm:text-4xl">{c.plansTitle}</h2>
+            <p className="mt-2 max-w-2xl text-[#4d5753]">{c.plansSub}</p>
+          </Reveal>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {plans.map((p, i) => {
+              const top = i === plans.length - 1;
+              return (
+                <Reveal key={p.code} delay={i * 120} className="h-full">
+                  <div className={`lp-card flex h-full flex-col rounded-3xl p-6 ${top ? "bg-[#0d6b5f] text-white shadow-[0_22px_50px_rgba(13,107,95,0.3)]" : "bg-white shadow-[0_10px_26px_rgba(20,40,35,0.06)]"}`}>
+                    <h3 className="text-lg font-bold">{en ? p.name_en ?? p.name_ar : p.name_ar}</h3>
+                    <div className="mt-3 flex items-baseline gap-1.5">
+                      <span className="num text-4xl font-bold">{en ? `OMR ${riyals(p.monthly_price)}` : `${riyals(p.monthly_price)} ر.ع.`}</span>
+                      <span className={`text-sm ${top ? "opacity-80" : "text-[#66706c]"}`}>{c.perMonth}</span>
+                    </div>
+                    <ul className="mt-5 flex-1 space-y-2 text-sm">
+                      {[c.units(p.max_units), c.props(p.max_properties), c.core, ...p.features.filter((f) => f !== "multi_property" && f !== "assistant").map((f) => FEATURE_NAMES[f]?.[en ? 1 : 0] ?? f)].map((line) => (
+                        <li key={line} className="flex items-start gap-2"><Check className={`mt-0.5 size-4 shrink-0 ${top ? "" : "text-brand"}`} aria-hidden />{line}</li>
+                      ))}
+                    </ul>
+                    <Link href="/login?mode=signup" className={`${top ? "btn bg-white text-brand hover:bg-white/90" : "btn-ghost"} mt-6 w-full`}>{c.choose}</Link>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+        </section>
+
+        <section id="trial" className="scroll-mt-16 px-4 pb-16 lg:px-8">
+          <Reveal>
+            <div className="relative mx-auto grid max-w-6xl gap-8 overflow-hidden rounded-[2.5rem] bg-white p-6 shadow-[0_22px_60px_rgba(20,40,35,0.1)] sm:p-10 lg:grid-cols-[1fr_1.1fr] lg:gap-12">
+              <div className="pointer-events-none absolute -top-20 end-[-6rem] size-72 rounded-full bg-[#bfe3da] opacity-50 blur-3xl" aria-hidden />
+              <div className="relative">
+                <h2 className="text-3xl font-bold sm:text-4xl">{c.trialTitle}</h2>
+                <p className="mt-3 leading-relaxed text-[#4d5753]">{c.trialSub}</p>
+                <ul className="mt-6 space-y-3">
+                  {c.trialPoints.map((x) => <li key={x} className="flex items-center gap-3 font-semibold"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-soft text-brand"><Check className="size-4" aria-hidden /></span>{x}</li>)}
+                </ul>
+              </div>
+              <div className="relative"><TrialForm t={c.form} /></div>
+            </div>
+          </Reveal>
+        </section>
+
+        <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-16 lg:px-8">
+          <Reveal><h2 className="text-3xl font-bold">{c.faqTitle}</h2></Reveal>
+          <div className="mt-6 space-y-3">
+            {c.faq.map(([q, a], i) => (
+              <Reveal key={q} delay={i * 80}>
+                <details className="group rounded-3xl bg-white px-6 py-4 shadow-[0_10px_26px_rgba(20,40,35,0.06)]">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold [&::-webkit-details-marker]:hidden">{q}<ArrowDown className="size-4 shrink-0 text-[#66706c] transition-transform group-open:rotate-180" aria-hidden /></summary>
+                  <p className="mt-2 text-sm leading-relaxed text-[#4d5753]">{a}</p>
+                </details>
+              </Reveal>
             ))}
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-[#e6e9e7]">
+      <footer className="border-t border-black/5 bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-[#66706c] lg:px-8">
           <span><span className="brand-word text-xl text-brand">نُزُل</span> · {c.footer}</span>
           <Link href="/login" className="hover:text-brand">{c.login}</Link>

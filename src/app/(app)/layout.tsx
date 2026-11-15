@@ -1,4 +1,4 @@
-import { LogOut, ShieldCheck } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { initial } from "@/lib/profile-link";
 import { getCtx, can, hasRole, AREAS } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -143,13 +143,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <nav className="mt-4 min-h-0 flex-1 overflow-y-auto">
           <NavLinks groups={groups} variant="side" mini={mini} />
         </nav>
-        {plan.isAdmin && !mini ? (
-          <div className="mt-4 border-t border-line pt-3">
-            <Link href="/admin" className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-surface-2">
-              <ShieldCheck className="size-4 shrink-0" aria-hidden /> {t.adm_portal}
-            </Link>
-          </div>
-        ) : null}
       </aside>
       <div className="min-w-0 flex-1">
         <header className="no-print sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur lg:hidden">

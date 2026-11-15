@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, Building2, History, Layers3, LifeBuoy, Wallet } from "lucide-react";
+import { Building2, History, Layers3, LifeBuoy, Wallet } from "lucide-react";
+import { SignOut } from "@/components/SignOut";
 import { requireAdmin } from "@/lib/admin";
 
 /** System owners' portal (the Nuzul team): separate from any hotel, only for platform admins. */
@@ -20,7 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin/support" className="btn-ghost btn-sm inline-flex items-center gap-1.5"><LifeBuoy className="size-4 shrink-0" /> الدعم والصيانة</Link>
             <Link href="/admin/log" className="btn-ghost btn-sm inline-flex items-center gap-1.5"><History className="size-4 shrink-0" /> السجل</Link>
           </nav>
-          <Link href="/" className="btn-ghost btn-sm ms-auto inline-flex items-center gap-1.5"><ArrowRight className="size-4 shrink-0" /> العودة للنظام</Link>
+          <span className="ms-auto"><SignOut label="تسجيل الخروج" /></span>
         </div>
       </header>
       <main className="mx-auto max-w-6xl p-4 lg:p-8">{children}</main>

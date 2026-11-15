@@ -6,8 +6,10 @@ import { gregorian, omr } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { FilterSelect } from "@/components/FilterSelect";
 import { Badge, Empty, Field, PageHeader } from "@/components/ui";
-import { adminAddProspect, adminApplyProspect, adminDropProspect } from "@/app/actions/admin";
+import { adminAddProspect, adminApplyProspect, adminDropProspect, adminTrialDrop, adminTrialExtend, adminTrialSent } from "@/app/actions/admin";
+import { dateTime } from "@/lib/format";
 
+type Trial = { id: string; name: string; company: string | null; phone: string; email: string; token: string; expires_at: string; opened_at: string | null; opens: number; handled_at: string | null; created_at: string };
 type Prospect = { id: string; company: string; email: string; phone: string | null; plan_code: string; trial_days: number; notes: string | null };
 const SORTS: [string, string][] = [["new", "الأحدث"], ["name", "الاسم"], ["end", "الأقرب انتهاءً"], ["price", "الأعلى اشتراكاً"], ["quiet", "الأقل نشاطاً"]];
 
@@ -18,16 +20,20 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
   const filter = typeof sp.s === "string" ? sp.s : "";
   const q = typeof sp.q === "string" ? sp.q.trim().slice(0, 80) : "";
   const sort = typeof sp.o === "string" && SORTS.some(([k]) => k === sp.o) ? sp.o : "new";
-  const [{ data, error }, { data: support }, { data: pros }, { data: plans }, h] = await Promise.all([
+  const [{ data, error }, { data: support }, { data: pros }, { data: plans }, h, { data: tr }] = await Promise.all([
     sb.rpc("admin_overview"),
     sb.rpc("admin_support_list"),
     sb.from("admin_prospects").select("id, company, email, phone, plan_code, trial_days, notes").is("tenant_id", null).order("created_at", { ascending: false }),
     sb.from("plans").select("code, name_ar, monthly_price").eq("active", true).order("sort"),
     headers(),
+    sb.from("trial_requests").select("id, name, company, phone, email, token, expires_at, opened_at, opens, handled_at, created_at").order("created_at", { ascending: false }).limit(60),
   ]);
   if (error) throw new Error(error.message);
   const all = (data ?? []) as AdminRow[];
   const prospects = (pros ?? []) as Prospect[];
+  const trials = (tr ?? []) as Trial[];
+  const waiting = trials.filter((x) => !x.handled_at);
+  const origin = `https://${h.get("host") ?? "nuzul-hotel.vercel.app"}`;
   const signup = `https://${h.get("host") ?? "nuzul-hotel.vercel.app"}/login?mode=signup`;
   const end = (r: AdminRow) => (r.status === "trial" ? r.trial_ends_at : r.current_period_end);
   const needle = q.toLowerCase();
@@ -94,6 +100,52 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
               );
             })}
           </ul>
+        </section>
+      ) : null}
+
+      {trials.length ? (
+        <section className="card mb-4">
+          <details open={waiting.length > 0}>
+            <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 [&::-webkit-details-marker]:hidden">
+              <h2 className="h2">طلبات تجربة النظام</h2>
+              {waiting.length ? <span className="num rounded-full bg-warn-soft px-2.5 py-0.5 text-sm font-bold text-warn">{waiting.length} بانتظار الرابط</span> : <span className="text-sm text-muted">كلها أُرسلت ({trials.length})</span>}
+            </summary>
+            <ul className="mt-3 divide-y divide-line">
+              {trials.map((x) => {
+                const link = `${origin}/t/${x.token}`;
+                const live = x.expires_at > new Date().toISOString();
+                const text = `السلام عليكم ${x.name}،\nهذا رابط تجربة نظام نُزُل الخاص بكم:\n${link}\nيفتح فندقاً تجريبياً ببيانات وهمية، وصالح حتى ${dateTime(x.expires_at, "Asia/Muscat", "ar")}.\nنسعد بأي سؤال.`;
+                return (
+                  <li key={x.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
+                    <span className="min-w-0 flex-1 basis-52">
+                      <b>{x.name}</b>{x.company ? <span className="text-muted"> · {x.company}</span> : null}
+                      <span className="block text-sm text-muted"><span dir="ltr">+{x.phone}</span> · <span dir="ltr">{x.email}</span></span>
+                      <span className="block text-xs text-muted">
+                        طلب {dateTime(x.created_at, "Asia/Muscat", "ar")} · {x.opens ? `فتح الرابط ${x.opens} مرة` : "لم يفتح الرابط بعد"} · {live ? "الرابط صالح" : <span className="font-semibold text-danger">انتهى الرابط</span>}
+                      </span>
+                    </span>
+                    {x.handled_at ? <Badge tone="ok">أُرسل</Badge> : <Badge tone="warn">جديد</Badge>}
+                    <a href={`https://wa.me/${x.phone}?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" className="btn-primary btn-sm inline-flex items-center gap-1.5"><MessageCircle className="size-4 shrink-0" /> واتساب</a>
+                    <a href={`mailto:${x.email}?subject=${encodeURIComponent("رابط تجربة نظام نُزُل")}&body=${encodeURIComponent(text)}`} className="btn-ghost btn-sm inline-flex items-center gap-1.5"><Mail className="size-4 shrink-0" /> بريد</a>
+                    {!x.handled_at ? (
+                      <ActionForm action={adminTrialSent}>
+                        <input type="hidden" name="id" value={x.id} /><input type="hidden" name="name" value={x.name} />
+                        <SubmitButton className="btn-ghost btn-sm">تم الإرسال</SubmitButton>
+                      </ActionForm>
+                    ) : null}
+                    <ActionForm action={adminTrialExtend}>
+                      <input type="hidden" name="id" value={x.id} /><input type="hidden" name="name" value={x.name} />
+                      <SubmitButton className="btn-ghost btn-sm">مدّد 7 أيام</SubmitButton>
+                    </ActionForm>
+                    <ActionForm action={adminTrialDrop}>
+                      <input type="hidden" name="id" value={x.id} /><input type="hidden" name="name" value={x.name} />
+                      <SubmitButton className="btn-ghost btn-sm text-danger" confirm={`حذف طلب «${x.name}»؟ رابطه سيتوقف.`}>حذف</SubmitButton>
+                    </ActionForm>
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
         </section>
       ) : null}
 

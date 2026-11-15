@@ -66,5 +66,5 @@ export async function adminLog(sb: Awaited<ReturnType<typeof createClient>>, act
 export const ACTION_AR: Record<string, string> = {
   subscription: "عدّل الاشتراك", payment: "سجّل دفعة", payment_void: "ألغى دفعة", plan: "حفظ باقة",
   suspend: "أوقف الاشتراك", resume: "أعاد تفعيل الاشتراك", prospect_add: "أضاف شركة متوقعة", prospect_drop: "حذف شركة متوقعة",
-  prospect_apply: "طبّق باقة شركة جديدة", maintenance: "جدول صيانة",
+  prospect_apply: "طبّق باقة شركة جديدة", maintenance: "جدول صيانة", trial_sent: "أرسل رابط تجربة", trial_extend: "مدّد رابط تجربة", trial_drop: "حذف طلب تجربة",
 };

@@ -145,3 +145,23 @@ export async function adminApplyProspect(_: ActionResult, fd: FormData): Promise
   await adminLog(sb, "prospect_apply", tenant, `${pr.plan_code} · تجربة ${pr.trial_days} يوم`);
   return done(null, ["/admin", `/admin/${tenant}`]);
 }
+
+/** A visitor's trial request: mark it answered, give the link another week, or remove it. */
+export async function adminTrialSent(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const sb = await requireAdmin();
+  const { error } = await sb.from("trial_requests").update({ handled_at: new Date().toISOString() }).eq("id", uuid(s(fd, "id")) ?? "");
+  if (!error) await adminLog(sb, "trial_sent", null, s(fd, "name"));
+  return done(error, ["/admin"]);
+}
+export async function adminTrialExtend(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const sb = await requireAdmin();
+  const { error } = await sb.from("trial_requests").update({ expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString() }).eq("id", uuid(s(fd, "id")) ?? "");
+  if (!error) await adminLog(sb, "trial_extend", null, s(fd, "name"));
+  return done(error, ["/admin"]);
+}
+export async function adminTrialDrop(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const sb = await requireAdmin();
+  const { error } = await sb.from("trial_requests").delete().eq("id", uuid(s(fd, "id")) ?? "");
+  if (!error) await adminLog(sb, "trial_drop", null, s(fd, "name"));
+  return done(error, ["/admin"]);
+}
