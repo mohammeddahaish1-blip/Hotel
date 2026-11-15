@@ -1,4 +1,4 @@
-import { LogOut, ShieldCheck, Sparkles } from "lucide-react";
+import { LogOut, ShieldCheck } from "lucide-react";
 import { initial } from "@/lib/profile-link";
 import { getCtx, can, hasRole, AREAS } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -130,51 +130,33 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <LiveAlerts propertyId={ctx.property.id} tenantId={ctx.tenantId} />
       <IdleLogout minutes={ctx.role === "reception" || ctx.role === "housekeeping" ? 15 : 30} />
       <aside className={`no-print sticky top-0 hidden h-screen shrink-0 flex-col border-e border-line bg-surface lg:flex ${mini ? "w-[4.75rem] items-stretch p-3" : "w-60 p-4"}`}>
-        <div className={`brand-word mb-1 text-brand ${mini ? "text-center text-3xl" : "text-4xl"}`}>{mini ? t.appName.charAt(0) : t.appName}</div>
+        {/* the fold button lives at the top, beside the name of the app */}
+        <div className={`mb-1 flex items-center gap-2 ${mini ? "flex-col" : "justify-between"}`}>
+          <div className={`brand-word text-brand ${mini ? "text-center text-3xl" : "text-4xl"}`}>{mini ? t.appName.charAt(0) : t.appName}</div>
+          <SideToggle mini={mini} label={t.nav_collapse} />
+        </div>
         {mini ? null : <PropertySwitcher current={ctx.property.id} properties={ctx.properties.map((p) => ({ id: p.id, name: p.name_ar }))} fallback={propertyName} />}
         <nav className="mt-4 min-h-0 flex-1 overflow-y-auto">
           <NavLinks groups={groups} variant="side" mini={mini} />
         </nav>
-        <div className="mt-4 border-t border-line pt-3 text-xs text-muted">
-          {/* your name opens your account (the former "My account" menu item) */}
-          <Link href="/profile" title={mini ? ctx.fullName || ctx.email : t.nav_profile} className={`flex items-center gap-3 rounded-xl py-1.5 hover:bg-surface-2 ${mini ? "justify-center" : "-mx-2 px-2"}`}>
-            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-soft text-base font-bold text-brand" aria-hidden>
-              {initial(ctx.fullName || ctx.email)}
-            </span>
-            <span className={mini ? "sr-only" : "min-w-0"}>
-              <span className="block truncate text-sm font-bold text-ink">{ctx.fullName || ctx.email}</span>
-              <span className="block truncate">{roleLabel}</span>
-            </span>
-          </Link>
-          {plan.isAdmin && !mini ? (
-            <Link href="/admin" className="mt-2 flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-surface-2">
+        {plan.isAdmin && !mini ? (
+          <div className="mt-4 border-t border-line pt-3">
+            <Link href="/admin" className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-surface-2">
               <ShieldCheck className="size-4 shrink-0" aria-hidden /> {t.adm_portal}
             </Link>
-          ) : null}
-          <div className={`mt-3 flex items-center gap-2 ${mini ? "flex-col" : "flex-wrap"}`}>
-            {mini ? null : <LangToggle current={lang} />}
-            <ThemeToggle />
-            <SideToggle mini={mini} label={t.nav_collapse} />
-            {mini ? null : <SignOut label={t.signOut} />}
           </div>
-        </div>
+        ) : null}
       </aside>
       <div className="min-w-0 flex-1">
         <header className="no-print sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between px-4 py-2">
-            <div className="min-w-0">
-              <div className="brand-word text-2xl text-brand">{t.appName}</div>
-              <Link href="/profile" title={t.nav_profile} className="flex items-center gap-1.5 text-xs text-muted hover:text-brand">
-                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-brand-soft text-[10px] font-bold text-brand" aria-hidden>
-                  {initial(ctx.fullName || ctx.email)}
-                </span>
-                <span className="truncate">{ctx.fullName || ctx.email} · {roleLabel}</span>
-              </Link>
-            </div>
+            <div className="brand-word text-2xl text-brand">{t.appName}</div>
             <div className="flex shrink-0 items-center gap-2">
               <LangToggle current={lang} />
               <ThemeToggle />
-              <SignOut label={t.signOut} />
+              <Link href="/profile" title={t.nav_profile} aria-label={`${t.nav_profile}: ${ctx.fullName || ctx.email}`} className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-soft text-base font-bold text-brand">
+                {initial(ctx.fullName || ctx.email)}
+              </Link>
             </div>
           </div>
         </header>
@@ -185,19 +167,21 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               labels={{ search: t.search, placeholder: t.search_ph, none: t.search_none, unit: t.sk_unit, reservation: t.sk_reservation, guest: t.sk_guest }}
             />
             <div className="ms-auto flex items-center gap-2">
-              {/* the assistant sits in the top bar, next to the alerts, on every page (owner and managers) */}
-              {has("assistant") && hasRole(ctx, ["manager"]) ? (
-                <Link
-                  href="/assistant"
-                  title={t.ai_title}
-                  className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-brand hover:bg-surface-2"
-                >
-                  <Sparkles className="size-4 shrink-0" aria-hidden />
-                  <span className="hidden sm:inline">{t.ai_title}</span>
-                  <span className="sr-only sm:hidden">{t.ai_title}</span>
-                </Link>
-              ) : null}
+              <span className="hidden items-center gap-2 lg:flex">
+                <LangToggle current={lang} />
+                <ThemeToggle />
+              </span>
               <AlertsBell alerts={alerts} labels={{ title: t.alerts_title, none: t.alerts_none, all: t.alerts_all }} />
+              {/* your name opens your account, where signing out lives */}
+              <Link href="/profile" title={t.nav_profile} className="hidden items-center gap-2.5 rounded-full py-1 pe-1 ps-3 hover:bg-surface-2 lg:flex">
+                <span className="min-w-0 text-end leading-tight">
+                  <span className="block max-w-40 truncate text-sm font-bold text-ink">{ctx.fullName || ctx.email}</span>
+                  <span className="block max-w-40 truncate text-xs text-muted">{roleLabel}</span>
+                </span>
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-soft text-base font-bold text-brand" aria-hidden>
+                  {initial(ctx.fullName || ctx.email)}
+                </span>
+              </Link>
             </div>
           </div>
         </div>

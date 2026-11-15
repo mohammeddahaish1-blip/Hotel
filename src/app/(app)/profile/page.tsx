@@ -3,6 +3,7 @@ import { getCtx } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { PageHeader } from "@/components/ui";
 import { ProfileView, type StaffProfile } from "./ProfileView";
+import { SignOut } from "@/components/SignOut";
 
 /** Every employee's own account: name, job title, email, phone, salary and work card. */
 export default async function MyProfilePage() {
@@ -12,7 +13,7 @@ export default async function MyProfilePage() {
   if (!data) notFound();
   return (
     <>
-      <PageHeader title={t.nav_profile} />
+      <PageHeader title={t.nav_profile} actions={<SignOut label={t.signOut} />} />
       <ProfileView ctx={ctx} p={data as StaffProfile} t={t} lang={lang} />
     </>
   );
