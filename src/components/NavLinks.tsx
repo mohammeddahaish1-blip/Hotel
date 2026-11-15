@@ -86,19 +86,20 @@ export function GroupTabs({ groups }: { groups: NavGroup[] }) {
   if (!group || group.ownTabs || group.tabs.length < 2) return null;
   const active = bestTab(path, group.tabs)?.href;
   return (
-    <div className="no-print mb-5 flex gap-1 overflow-x-auto border-b border-line">
+    <nav className="no-print mb-5 flex w-fit max-w-full gap-1 overflow-x-auto rounded-full bg-gray-soft p-1" aria-label={group.label}>
       {group.tabs.map((t) => (
         <Link
           key={t.href}
           href={t.href}
-          className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2 text-sm font-semibold ${
-            t.href === active ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink"
+          aria-current={t.href === active ? "page" : undefined}
+          className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ${
+            t.href === active ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"
           }`}
         >
           {t.label}
         </Link>
       ))}
-    </div>
+    </nav>
   );
 }
 

@@ -78,9 +78,11 @@ export default async function ReservationsPage({ searchParams }: PageProps<"/res
     <>
       <PageHeader title={t.nav_reservations} actions={<Link href="/reservations/new" className="btn-primary">{t.res_new}</Link>} />
       <div className="mb-4 flex flex-wrap items-center gap-2">
+        <nav className="flex max-w-full gap-1 overflow-x-auto rounded-full bg-gray-soft p-1" aria-label={t.nav_reservations}>
         {tabs.map(([k, label]) => (
-          <Link key={k} href={`/reservations?tab=${k}`} className={`btn-sm ${tab === k ? "btn-primary" : "btn-ghost"}`}>{label}</Link>
+          <Link key={k} href={`/reservations?tab=${k}`} aria-current={tab === k ? "page" : undefined} className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ${tab === k ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}>{label}</Link>
         ))}
+        </nav>
         <form className="flex w-full gap-2 sm:ms-auto sm:w-auto">
           <input type="hidden" name="tab" value="all" />
           <input name="q" defaultValue={q} placeholder={`${t.code} / ${t.guest} / ${t.phone} / ${t.unit}`} aria-label={t.search} className="input sm:w-72" />

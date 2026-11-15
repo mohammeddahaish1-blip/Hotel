@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const NAVS = 'nav[class~="bg-gray-soft"]';
+const NAVS = 'nav[class~="bg-gray-soft"], [data-seg]';
 
 /**
  * Makes the white pill of every tab bar slide from the tab you left to the tab you opened. The bars are drawn
@@ -17,7 +17,7 @@ export function TabGlide() {
     const sync = () => {
       queued = false;
       document.querySelectorAll<HTMLElement>(NAVS).forEach((nav, i) => {
-        const active = nav.querySelector<HTMLElement>(":scope > [aria-current]");
+        const active = nav.querySelector<HTMLElement>(':scope > [aria-current], :scope > [aria-pressed="true"]');
         if (!active) return;
         const key = nav.getAttribute("aria-label") ?? `tabs-${i}`;
         const to = { x: active.offsetLeft, y: active.offsetTop, w: active.offsetWidth, h: active.offsetHeight };
@@ -47,7 +47,7 @@ export function TabGlide() {
     };
     const queue = () => { if (!queued) { queued = true; requestAnimationFrame(sync); } };
     const mo = new MutationObserver(queue);
-    mo.observe(document.body, { childList: true, subtree: true });
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-pressed", "aria-current"] });
     window.addEventListener("resize", queue);
     queue();
     return () => { mo.disconnect(); window.removeEventListener("resize", queue); };

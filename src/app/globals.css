@@ -315,7 +315,7 @@ html[dir="ltr"] .lp-marquee { animation-name: lp-marquee-ltr; }
 .tabs-glide { position: relative; }
 .tabs-glide > .tab-pill { position: absolute; inset-block-start: 0; left: 0; z-index: 0; border-radius: 9999px; background: var(--color-surface); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.32s cubic-bezier(0.2, 0.8, 0.2, 1); pointer-events: none; }
 .tabs-glide > a, .tabs-glide > button { position: relative; z-index: 1; }
-.tabs-glide > [aria-current] { background: transparent !important; box-shadow: none !important; }
+.tabs-glide > [aria-current], .tabs-glide > [aria-pressed="true"] { background: transparent !important; box-shadow: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .ring-fill, .bell-ring, .badge-pop { animation: none; }
 }

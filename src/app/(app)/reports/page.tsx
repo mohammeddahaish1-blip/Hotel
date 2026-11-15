@@ -81,7 +81,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
   const sourceData: Datum[] = [...bySource.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ key: k, label: t[`src_${k}` as DictKey], value: v, display: omr(v, lang) }));
 
   const chip = (p: (typeof PERIODS)[number]) => (
-    <Link key={p} href={p === "month" ? "/reports" : `/reports?p=${p}`} aria-current={period === p ? "true" : undefined} className={`btn-sm shrink-0 ${period === p ? "btn-primary" : "btn-ghost"}`}>
+    <Link key={p} href={p === "month" ? "/reports" : `/reports?p=${p}`} aria-current={period === p ? "true" : undefined} className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ${period === p ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
       {t[`rep_p_${p}` as DictKey]}
     </Link>
   );
@@ -111,7 +111,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
         }
       />
       <div className="no-print mb-4 flex flex-wrap items-start gap-2">
-        <div className="flex max-w-full gap-1.5 overflow-x-auto" role="group" aria-label={t.rep_p_custom}>{PERIODS.map(chip)}</div>
+        <nav className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-full bg-gray-soft p-1" aria-label={t.rep_p_custom}>{PERIODS.map(chip)}</nav>
         <details open={period === "custom"} className="min-w-0">
           <summary className={`btn-sm cursor-pointer list-none ${period === "custom" ? "btn-primary" : "btn-ghost"}`}>{t.rep_p_custom}</summary>
           <form className="card mt-2 grid gap-2 sm:grid-cols-3">
