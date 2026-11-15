@@ -77,6 +77,25 @@ export default async function ShopPage({ params, searchParams }: PageProps<"/sho
   const rents = (rental?.[1].data ?? []) as Rent[];
   const methodLabel = (m: string) => t[`shp_m_${m}` as DictKey];
 
+  // a service shop is split into tabs; the till comes first because it is what the cashier opens the page for
+  const tabs: [string, string][] = x.kind !== "service" ? [] : [
+    ["sell", t.shp_tab_sell],
+    ...(manages ? [["receipts", t.shp_tab_receipts] as [string, string]] : []),
+    ...(admin ? [["books", t.shp_tab_books] as [string, string]] : []),
+    ...(manages ? [["workers", t.shp_tab_workers], ["settings", t.shp_tab_settings]] as [string, string][] : []),
+  ];
+  const tab = typeof sp.tab === "string" && tabs.some(([k]) => k === sp.tab) ? sp.tab : "sell";
+  const nav = tabs.length > 1 ? (
+    <nav className="no-print flex max-w-full gap-1 overflow-x-auto rounded-full bg-gray-soft p-1" aria-label={x.name}>
+      {tabs.map(([k, label]) => (
+        <Link
+          key={k} href={`/shops/${x.id}?tab=${k}${typeof sp.d === "string" && day === sp.d ? `&d=${day}` : ""}`} aria-current={tab === k ? "page" : undefined}
+          className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${tab === k ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}
+        >{label}</Link>
+      ))}
+    </nav>
+  ) : null;
+
   return (
     <>
       {admin || ctx.shops.length > 1 ? <Crumb href="/shops" label={t.nav_shops} /> : null}
@@ -120,13 +139,12 @@ export default async function ShopPage({ params, searchParams }: PageProps<"/sho
       />
 
       {x.kind === "service" && manages ? (
-        <ShopBooks ctx={ctx} shop={{ ...x, kind: "service" }} day={day} admin={admin} t={t} lang={lang} names={names} />
+        <ShopBooks ctx={ctx} shop={{ ...x, kind: "service" }} day={day} admin={admin} t={t} lang={lang} names={names} view={tab} nav={nav} />
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          {x.kind === "service" ? (
-            <>
+      {x.kind === "service" ? (
+        tab === "sell" ? (
+          <div className="space-y-4">
               {x.active ? (
                 <Section title={t.shp_sell}>
                   <ShopSale
@@ -179,9 +197,70 @@ export default async function ShopPage({ params, searchParams }: PageProps<"/sho
                   </ul>
                 )}
               </Section>
-            </>
-          ) : (
-            <>
+          </div>
+        ) : tab === "settings" ? (
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+          {x.kind === "service" && manages ? (
+            <Section title={t.shp_items}>
+              <ul className="space-y-2">
+                {items.map((i) => (
+                  <li key={i.id}>
+                    <ActionForm action={saveShopItem} className="flex flex-wrap items-center gap-2">
+                      <input type="hidden" name="shop" value={x.id} /><input type="hidden" name="id" value={i.id} />
+                      <input name="name" required maxLength={80} defaultValue={i.name} aria-label={t.shp_item_name} className="input min-w-0 flex-1 py-1.5" />
+                      <input name="price" inputMode="decimal" dir="ltr" defaultValue={plainOmr(i.price)} aria-label={t.shp_price} className="input w-24 py-1.5" />
+                      <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="active" defaultChecked={i.active} /> {t.shp_item_active}</label>
+                      <SubmitButton className="btn-ghost btn-sm">{t.save}</SubmitButton>
+                    </ActionForm>
+                  </li>
+                ))}
+              </ul>
+              <ActionForm action={saveShopItem} resetOnSuccess className="mt-4 grid grid-cols-[1fr_6rem] gap-2 border-t border-line pt-4">
+                <input type="hidden" name="shop" value={x.id} />
+                <Field label={t.shp_item_name}><input name="name" required maxLength={80} className="input" /></Field>
+                <Field label={t.shp_price}><input name="price" required inputMode="decimal" dir="ltr" placeholder="0.000" className="input" /></Field>
+                <SubmitButton className="btn-primary col-span-2">{t.shp_add_item}</SubmitButton>
+              </ActionForm>
+            </Section>
+          ) : null}
+
+          {admin ? (
+            <Section title={t.shp_people}>
+              <p className="mb-3 text-xs text-muted">{t.shp_people_hint} <Link href="/shops/staff" className="font-semibold text-brand">{t.ss_title}</Link></p>
+              {(members ?? []).length === 0 ? <p className="text-sm text-muted">{t.shp_people_none}</p> : (
+                <ul className="mb-3 divide-y divide-line text-sm">
+                  {(members ?? []).map((m) => (
+                    <li key={m.user_id} className="flex flex-wrap items-center gap-2 py-2">
+                      <span className="font-semibold">{names.get(m.user_id) ?? "—"}</span>
+                      <span className="text-xs text-muted">{accessLabel(m.access)}</span>
+                      <ActionForm action={removeShopMember} className="ms-auto">
+                        <input type="hidden" name="shop" value={x.id} /><input type="hidden" name="user_id" value={m.user_id} />
+                        <SubmitButton className="btn-ghost btn-sm text-danger" confirm={t.shp_remove_q}>{t.shp_remove}</SubmitButton>
+                      </ActionForm>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <ActionForm action={addShopMember} className="space-y-2">
+                <input type="hidden" name="shop" value={x.id} />
+                <Field label={t.shp_person}>
+                  <select name="user_id" required className="input">
+                    {(staff ?? []).filter((m) => m.active && !m.support_until && m.staff_kind === "shop" && !(members ?? []).some((x2) => x2.user_id === m.user_id))
+                      .map((m) => <option key={m.user_id} value={m.user_id}>{m.full_name || "—"}</option>)}
+                  </select>
+                </Field>
+                <select name="access" aria-label={t.shp_people} className="input">
+                  {(x.kind === "rental" ? ["renter"] : ["seller", "manager"]).map((a) => <option key={a} value={a}>{accessLabel(a)}</option>)}
+                </select>
+                <SubmitButton className="btn-primary w-full">{t.shp_add_person}</SubmitButton>
+              </ActionForm>
+            </Section>
+          ) : null}
+          </div>
+        ) : null
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="space-y-4 lg:col-span-2">
               <Section title={t.shp_contract}>
                 {!x.contract_start ? <Empty>{t.shp_no_contract}</Empty> : (
                   <>
@@ -231,35 +310,8 @@ export default async function ShopPage({ params, searchParams }: PageProps<"/sho
                   </ul>
                 )}
               </Section>
-            </>
-          )}
-        </div>
-
-        <div className="space-y-4">
-          {x.kind === "service" && manages ? (
-            <Section title={t.shp_items}>
-              <ul className="space-y-2">
-                {items.map((i) => (
-                  <li key={i.id}>
-                    <ActionForm action={saveShopItem} className="flex flex-wrap items-center gap-2">
-                      <input type="hidden" name="shop" value={x.id} /><input type="hidden" name="id" value={i.id} />
-                      <input name="name" required maxLength={80} defaultValue={i.name} aria-label={t.shp_item_name} className="input min-w-0 flex-1 py-1.5" />
-                      <input name="price" inputMode="decimal" dir="ltr" defaultValue={plainOmr(i.price)} aria-label={t.shp_price} className="input w-24 py-1.5" />
-                      <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="active" defaultChecked={i.active} /> {t.shp_item_active}</label>
-                      <SubmitButton className="btn-ghost btn-sm">{t.save}</SubmitButton>
-                    </ActionForm>
-                  </li>
-                ))}
-              </ul>
-              <ActionForm action={saveShopItem} resetOnSuccess className="mt-4 grid grid-cols-[1fr_6rem] gap-2 border-t border-line pt-4">
-                <input type="hidden" name="shop" value={x.id} />
-                <Field label={t.shp_item_name}><input name="name" required maxLength={80} className="input" /></Field>
-                <Field label={t.shp_price}><input name="price" required inputMode="decimal" dir="ltr" placeholder="0.000" className="input" /></Field>
-                <SubmitButton className="btn-primary col-span-2">{t.shp_add_item}</SubmitButton>
-              </ActionForm>
-            </Section>
-          ) : null}
-
+          </div>
+          <div className="space-y-4">
           {x.kind === "rental" && admin ? (
             <Section title={t.shp_record_rent}>
               <ActionForm action={recordShopRent} resetOnSuccess className="space-y-3">
@@ -312,8 +364,9 @@ export default async function ShopPage({ params, searchParams }: PageProps<"/sho
               </ActionForm>
             </Section>
           ) : null}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Camera, TriangleAlert } from "lucide-react";
 import type { Ctx } from "@/lib/auth";
 import type { Dict, Lang } from "@/lib/i18n/dict";
@@ -27,8 +28,10 @@ const nextMonth = (m: string) => {
  * The shop's books, for the owner, managers and the shop's cashier: the red box for days without invoice
  * photos, the invoice camera, the day's photos, the month day by day (owner and managers) and the workers.
  */
-export async function ShopBooks({ ctx, shop, day, admin, t, lang, names }: {
+export async function ShopBooks({ ctx, shop, day, admin, t, lang, names, view, nav }: {
   ctx: Ctx; shop: ShopRow; day: string; admin: boolean; t: Dict; lang: Lang; names: Map<string, string>;
+  /** which tab is open: only that part is drawn, under the red box and the tabs */
+  view: string; nav?: ReactNode;
 }) {
   const tz = ctx.property.timezone;
   const today = todayIn(tz);
@@ -72,7 +75,7 @@ export async function ShopBooks({ ctx, shop, day, admin, t, lang, names }: {
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {missed.map((d) => (
-              <Link key={d} href={`/shops/${shop.id}?d=${d}#upload`} className="btn-danger btn-sm">{gregorian(d, lang)}</Link>
+              <Link key={d} href={`/shops/${shop.id}?tab=receipts&d=${d}#upload`} className="btn-danger btn-sm">{gregorian(d, lang)}</Link>
             ))}
           </div>
         </div>
@@ -80,17 +83,30 @@ export async function ShopBooks({ ctx, shop, day, admin, t, lang, names }: {
         <p className="rounded-xl bg-warn-soft px-4 py-2.5 text-sm font-semibold text-warn">{t.bk_today_pending}</p>
       ) : null}
 
+      {nav}
+
+      {view === "receipts" ? (
       <div className="grid gap-4 lg:grid-cols-3">
         <Section title={t.bk_upload}>
           <div id="upload" />
           <ActionForm action={uploadShopReceipt} resetOnSuccess className="space-y-3">
             <input type="hidden" name="shop" value={shop.id} />
-            <Field label={t.bk_kind}>
-              <select name="kind" defaultValue="sales" className="input">
-                {["sales", "purchase", "expense"].map((k) => <option key={k} value={k}>{kindLabel(k)}</option>)}
-              </select>
-            </Field>
-            <Field label={t.bk_day_for}><input type="date" name="day" defaultValue={day} max={today} className="input" /></Field>
+            <fieldset>
+              <legend className="label">{t.bk_kind}</legend>
+              <div className="grid grid-cols-3 gap-2">
+                {["sales", "purchase", "expense"].map((k) => (
+                  <label key={k} className="cursor-pointer">
+                    <input type="radio" name="kind" value={k} defaultChecked={k === "sales"} className="peer sr-only" />
+                    <span className="block rounded-full border border-line bg-surface px-2 py-2.5 text-center text-sm font-semibold peer-checked:border-brand peer-checked:bg-brand peer-checked:text-brand-ink peer-focus-visible:ring-2 peer-focus-visible:ring-brand">{kindLabel(k)}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {/* today unless said otherwise */}
+            <details open={day !== today}>
+              <summary className="cursor-pointer text-sm font-semibold text-brand">{t.bk_other_day}</summary>
+              <div className="mt-2"><Field label={t.bk_day_for}><input type="date" name="day" defaultValue={day} max={today} className="input" /></Field></div>
+            </details>
             <ReceiptInput name="photo" label={t.bk_photo} ready={t.bk_photo_ready} accept="image/*,application/pdf" />
             <Field label={ai ? t.bk_amount_ai : t.bk_amount}>
               <input name="amount" inputMode="decimal" dir="ltr" placeholder="0.000" required={!ai} className="input" />
@@ -136,8 +152,9 @@ export async function ShopBooks({ ctx, shop, day, admin, t, lang, names }: {
           </Section>
         </div>
       </div>
+      ) : null}
 
-      {admin ? (
+      {admin && view === "books" ? (
         <Section title={`${t.bk_daily} · ${new Intl.DateTimeFormat(lang === "ar" ? "ar-OM-u-nu-latn" : "en-GB", { month: "long", year: "numeric" }).format(new Date(`${month}T00:00:00`))}`}>
           <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Stat label={t.bk_income} value={<span className="num">{money(monthSum.income)}</span>} hint={`${t.bk_till}: ${money(monthSum.till)}`} />
@@ -161,7 +178,7 @@ export async function ShopBooks({ ctx, shop, day, admin, t, lang, names }: {
                   const miss = missed.includes(d);
                   return (
                     <tr key={d} className={`border-b border-line last:border-0 ${miss ? "bg-danger-soft text-danger" : ""}`}>
-                      <td className="py-1.5"><Link href={`/shops/${shop.id}?d=${d}`} className="hover:text-brand">{gregorian(d, lang)}</Link>{miss ? " ⚠" : ""}</td>
+                      <td className="py-1.5"><Link href={`/shops/${shop.id}?tab=receipts&d=${d}`} className="hover:text-brand">{gregorian(d, lang)}</Link>{miss ? " ⚠" : ""}</td>
                       <td className="num py-1.5">{money(b?.income ?? 0)}</td>
                       <td className="num py-1.5">{money(b?.costs ?? 0)}</td>
                       <td className="num py-1.5 font-semibold">{money((b?.income ?? 0) - (b?.costs ?? 0))}</td>
@@ -174,6 +191,7 @@ export async function ShopBooks({ ctx, shop, day, admin, t, lang, names }: {
         </Section>
       ) : null}
 
+      {view === "workers" ? (
       <Section title={`${t.wk_title} (${workers.filter((w) => w.active).length})`}>
         {workers.length === 0 ? <Empty>{t.wk_none}</Empty> : (
           <ul className="divide-y divide-line text-sm">
@@ -202,6 +220,7 @@ export async function ShopBooks({ ctx, shop, day, admin, t, lang, names }: {
           <WorkerForm shop={shop.id} t={t} />
         </details>
       </Section>
+      ) : null}
     </div>
   );
 }

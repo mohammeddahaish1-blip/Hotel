@@ -55,15 +55,18 @@ export function ShopSale({ shop, items, guests, action, lang, t }: {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
+        <div>
           <span className="label">{t.method}</span>
-          <select name="method" value={method} onChange={(e) => setMethod(e.target.value)} className="input">
-            <option value="cash">{t.cash}</option>
-            <option value="card">{t.card}</option>
-            <option value="transfer">{t.transfer}</option>
-            <option value="room" disabled={guests.length === 0}>{t.room}</option>
-          </select>
-        </label>
+          <input type="hidden" name="method" value={method} />
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label={t.method}>
+            {([["cash", t.cash], ["card", t.card], ["transfer", t.transfer], ["room", t.room]] as const).map(([k, label]) => (
+              <button
+                key={k} type="button" onClick={() => setMethod(k)} disabled={k === "room" && guests.length === 0} aria-pressed={method === k}
+                className={`btn-sm ${method === k ? "btn-primary" : "btn-ghost"} disabled:opacity-40`}
+              >{label}</button>
+            ))}
+          </div>
+        </div>
         {method === "room" ? (
           <label className="block">
             <span className="label">{t.roomPick}</span>

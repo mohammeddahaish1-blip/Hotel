@@ -7,7 +7,7 @@ import type { DictKey } from "@/lib/i18n/dict";
 import { addDays, gregorian, omr, todayIn } from "@/lib/format";
 import { loadShopBooks, missingPhotoDays, sumBook, type ShopRow } from "@/lib/shop-books";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge, Empty, Field, PageHeader, Section, Stat } from "@/components/ui";
+import { Badge, Empty, Field, PageHeader } from "@/components/ui";
 import { createShop } from "@/app/actions/shops";
 import { ShopKindFields } from "./ShopKindFields";
 
@@ -72,29 +72,67 @@ export default async function ShopsPage({ searchParams }: PageProps<"/shops">) {
   const tot = rows.reduce((a, r) => ({ today: a.today + r.today, income: a.income + r.income, costs: a.costs + r.costs, salaries: a.salaries + r.salaries, net: a.net + r.net }),
     { today: 0, income: 0, costs: 0, salaries: 0, net: 0 });
 
+  const netOf = new Map(rows.map((r) => [r.x.id, r.net]));
+  // two tabs when the hotel has both kinds; rented shops that owe come first
+  const both = service.length > 0 && service.length < shops.length;
+  const kind = sp.k === "rental" ? "rental" : "service";
+  const list = (both ? shops.filter((x) => x.kind === kind) : shops)
+    .slice().sort((a, b) => (rentBy.get(b.id)?.balance ?? 0) - (rentBy.get(a.id)?.balance ?? 0));
+  const href = (m: string | null, k: string) => {
+    const q = new URLSearchParams();
+    if (m) q.set("m", m);
+    if (k === "rental") q.set("k", "rental");
+    const str = q.toString();
+    return str ? `/shops?${str}` : "/shops";
+  };
+  const curM = typeof sp.m === "string" && month !== monthStart(today) ? month.slice(0, 7) : null;
+  const monthName = new Intl.DateTimeFormat(lang === "ar" ? "ar-OM-u-nu-latn" : lang === "ur" ? "ur-PK-u-nu-latn" : lang === "bn" ? "bn-BD-u-nu-latn" : "en-GB", { month: "long", year: "numeric" }).format(new Date(`${month}T00:00:00`));
+
   return (
     <>
       <PageHeader title={t.nav_shops} sub={t.shp_sub} />
 
-      {admin && service.length ? (
-        <Section
-          title={`${t.bk_title} · ${new Intl.DateTimeFormat(lang === "ar" ? "ar-OM-u-nu-latn" : lang === "ur" ? "ur-PK-u-nu-latn" : lang === "bn" ? "bn-BD-u-nu-latn" : "en-GB", { month: "long", year: "numeric" }).format(new Date(`${month}T00:00:00`))}`}
-          actions={
-            <div className="flex gap-1.5">
-              <Link href={`/shops?m=${prevMonth(month).slice(0, 7)}`} className="btn-ghost btn-sm" aria-label={t.fin_prev_month}><ChevronRight className="size-4 rtl:rotate-0 ltr:rotate-180" /></Link>
-              <Link href="/shops" className="btn-ghost btn-sm">{t.fin_this_month}</Link>
-              <Link href={`/shops?m=${monthEnd.slice(0, 7)}`} className="btn-ghost btn-sm" aria-label={t.fin_next_month}><ChevronLeft className="size-4 rtl:rotate-0 ltr:rotate-180" /></Link>
-            </div>
-          }
-        >
-          <p className="mb-3 text-xs text-muted">{t.bk_sub}</p>
-          <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-5">
-            <Stat label={t.bk_today} value={<span className="num">{money(tot.today)}</span>} />
-            <Stat label={t.bk_income} value={<span className="num">{money(tot.income)}</span>} />
-            <Stat label={t.bk_costs} value={<span className="num">{money(tot.costs)}</span>} />
-            <Stat label={t.bk_salaries} value={<span className="num">{money(tot.salaries)}</span>} />
-            <Stat label={t.bk_net} value={<span className="num">{money(tot.net)}</span>} tone={tot.net >= 0 ? "ok" : "danger"} />
+      {admin ? (
+        <details className="group mb-4">
+          <summary className="btn-primary inline-flex cursor-pointer list-none [&::-webkit-details-marker]:hidden">{t.shp_add}</summary>
+          <div className="card mt-3 max-w-xl">
+            <ActionForm action={createShop} className="space-y-3">
+              <Field label={t.shp_name}><input name="name" required maxLength={80} className="input" /></Field>
+              <ShopKindFields
+                t={{
+                  kind: t.shp_kind, service: t.shp_kind_service, rental: t.shp_kind_rental, category: t.shp_category,
+                  renterName: t.shp_renter_name, renterPhone: t.shp_renter_phone, rent: t.shp_rent, start: t.shp_start, end: t.shp_end,
+                  daily: t.bk_daily_photos,
+                }}
+                categories={["laundry", "cafe", "restaurant", "minimarket", "salon", "office", "other"].map((c) => ({ value: c, label: cat(c) }))}
+              />
+              <Field label={t.shp_number}><input name="number" maxLength={30} className="input" /></Field>
+              <SubmitButton className="btn-primary w-full">{t.shp_add}</SubmitButton>
+            </ActionForm>
           </div>
+        </details>
+      ) : null}
+
+      {admin && service.length ? (
+        <section className="card mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="h2">{monthName}</h2>
+            <div className="flex gap-1.5">
+              <Link href={href(prevMonth(month).slice(0, 7), kind)} className="btn-ghost btn-sm" aria-label={t.fin_prev_month}><ChevronRight className="size-4 rtl:rotate-0 ltr:rotate-180" /></Link>
+              <Link href={href(null, kind)} className="btn-ghost btn-sm">{t.fin_this_month}</Link>
+              <Link href={href(monthEnd.slice(0, 7), kind)} className="btn-ghost btn-sm" aria-label={t.fin_next_month}><ChevronLeft className="size-4 rtl:rotate-0 ltr:rotate-180" /></Link>
+            </div>
+          </div>
+          {/* the whole month in one line; the table is one press away */}
+          <p className="mt-2 text-sm">
+            {t.bk_today} <b className="num">{money(tot.today)}</b>
+            <span className="text-muted"> · </span>{t.bk_income} <b className="num">{money(tot.income)}</b>
+            <span className="text-muted"> · </span>{t.bk_net} <b className={`num text-lg ${tot.net < 0 ? "text-danger" : "text-ok"}`}>{money(tot.net)}</b>
+            {shops.some((x) => x.kind === "rental") ? <><span className="text-muted"> · </span>{t.bk_rent} <b className="num">{money(rentMonth)}</b></> : null}
+          </p>
+          <details className="mt-3">
+            <summary className="cursor-pointer text-sm font-semibold text-brand">{t.shp_table}</summary>
+            <p className="my-2 text-xs text-muted">{t.bk_sub}</p>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[34rem] text-sm">
               <thead className="text-xs text-muted">
@@ -124,20 +162,27 @@ export default async function ShopsPage({ searchParams }: PageProps<"/shops">) {
               </tbody>
             </table>
           </div>
-          {shops.some((x) => x.kind === "rental") ? (
-            <p className="mt-3 text-sm"><span className="text-muted">{t.bk_rent}:</span> <span className="num font-semibold">{money(rentMonth)}</span></p>
-          ) : null}
-        </Section>
+          </details>
+        </section>
       ) : null}
 
-      <div className={`grid gap-4 lg:grid-cols-3 ${admin && service.length ? "mt-4" : ""}`}>
-        <div className={admin ? "lg:col-span-2" : "lg:col-span-3"}>
-          {shops.length === 0 ? <Empty>{admin ? t.shp_none : t.shp_none_staff}</Empty> : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {shops.map((x) => {
-                const st = rentBy.get(x.id);
-                const miss = missing.get(x.id);
-                return (
+      {both ? (
+        <nav className="mb-4 flex max-w-full gap-1 overflow-x-auto rounded-full bg-gray-soft p-1" aria-label={t.nav_shops}>
+          {([["service", t.shp_tab_ours, service.length], ["rental", t.shp_tab_rented, shops.length - service.length]] as const).map(([k, label, n]) => (
+            <Link key={k} href={href(curM, k)} aria-current={kind === k ? "page" : undefined}
+              className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${kind === k ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
+              {label} <span className="num text-xs">{n}</span>
+            </Link>
+          ))}
+        </nav>
+      ) : null}
+
+      {list.length === 0 ? <Empty>{admin ? t.shp_none : t.shp_none_staff}</Empty> : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {list.map((x) => {
+            const st = rentBy.get(x.id);
+            const miss = missing.get(x.id);
+            return (
                   <Link key={x.id} href={`/shops/${x.id}`} className={`card flex flex-col gap-2 hover:border-brand ${miss?.length ? "border-danger" : ""}`}>
                     <div className="flex items-start gap-3">
                       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
@@ -155,10 +200,18 @@ export default async function ShopsPage({ searchParams }: PageProps<"/shops">) {
                       </div>
                     ) : null}
                     {x.kind === "service" ? (
+                      <>
                       <div className="flex items-baseline justify-between text-sm">
                         <span className="text-muted">{t.shp_today}</span>
                         <span className="num font-semibold">{money(sumBook(todayBooks.get(x.id)).income)}</span>
                       </div>
+                      {admin && netOf.has(x.id) ? (
+                        <div className="flex items-baseline justify-between text-sm">
+                          <span className="text-muted">{t.shp_net_month}</span>
+                          <span className={`num font-bold ${netOf.get(x.id)! < 0 ? "text-danger" : "text-ok"}`}>{money(netOf.get(x.id)!)}</span>
+                        </div>
+                      ) : null}
+                      </>
                     ) : (
                       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                         <span className="truncate text-muted">{x.renter_name ?? t.shp_renter}</span>
@@ -170,29 +223,10 @@ export default async function ShopsPage({ searchParams }: PageProps<"/shops">) {
                       </div>
                     )}
                   </Link>
-                );
-              })}
-            </div>
-          )}
+            );
+          })}
         </div>
-        {admin ? (
-          <Section title={t.shp_add}>
-            <ActionForm action={createShop} className="space-y-3">
-              <Field label={t.shp_name}><input name="name" required maxLength={80} className="input" /></Field>
-              <ShopKindFields
-                t={{
-                  kind: t.shp_kind, service: t.shp_kind_service, rental: t.shp_kind_rental, category: t.shp_category,
-                  renterName: t.shp_renter_name, renterPhone: t.shp_renter_phone, rent: t.shp_rent, start: t.shp_start, end: t.shp_end,
-                  daily: t.bk_daily_photos,
-                }}
-                categories={["laundry", "cafe", "restaurant", "minimarket", "salon", "office", "other"].map((c) => ({ value: c, label: cat(c) }))}
-              />
-              <Field label={t.shp_number}><input name="number" maxLength={30} className="input" /></Field>
-              <SubmitButton className="btn-primary w-full">{t.shp_add}</SubmitButton>
-            </ActionForm>
-          </Section>
-        ) : null}
-      </div>
+      )}
     </>
   );
 }
