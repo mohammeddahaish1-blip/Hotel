@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  ArrowDown, CalendarRange, Check, CircleCheck, ClipboardCheck, FileText, KeyRound, LifeBuoy, MessageCircle, Receipt, ShieldCheck, Wrench,
+  ArrowDown, CalendarRange, Check, ClipboardCheck, FileText, KeyRound, LifeBuoy, MessageCircle, Receipt, ShieldCheck, Wrench,
 } from "lucide-react";
 import { getCtx, homeFor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +9,7 @@ import { getDict } from "@/lib/i18n/server";
 import { LangToggle } from "@/components/LangToggle";
 import { Reveal } from "@/components/landing/Reveal";
 import { TrialForm } from "@/components/landing/TrialForm";
+import { Automation, HeroStage, Journey, Pocket, Replaces, Solutions } from "@/components/landing/Showcase";
 
 type PlanRow = { code: string; name_ar: string; name_en: string | null; monthly_price: number; max_units: number | null; max_properties: number | null; features: string[] };
 
@@ -16,7 +17,7 @@ const COPY = {
   ar: {
     login: "تسجيل الدخول",
     title: "أدِر فندقك وشققك الفندقية من مكان واحد",
-    sub: "نظام عربي صُمّم لعُمان: الحجوزات والاستقبال، التنظيف والصيانة، الفواتير والرسوم الحكومية، والتقارير — من الكمبيوتر أو الآيباد أو الجوال.",
+    sub: "الحجوزات والاستقبال، التنظيف والصيانة، الفواتير والرسوم الحكومية، والتقارير — من الكمبيوتر أو الآيباد أو الجوال.",
     badge: "نظام عربي صُنع في عُمان",
     demo: "اطلب تجربة النظام",
     demoNote: "نرسل لك رابطاً خاصاً يفتح فندقاً تجريبياً ببيانات وهمية",
@@ -65,12 +66,12 @@ const COPY = {
       ["ماذا يحدث بعد الشهر المجاني؟", "تختار الباقة المناسبة وتدفع شهرياً. إن لم تشترك لا يُخصم منك شيء."],
       ["هل يناسب الشقق الفندقية والإيجار الشهري؟", "نعم: عقود شهرية، جدول دفعات، شيكات مؤجلة، وكشوف لملاك الوحدات."],
     ] as const,
-    footer: "نظام عربي لإدارة الفنادق والشقق الفندقية — صُنع في عُمان",
+    footer: "نظام عربي لإدارة الفنادق والشقق الفندقية",
   },
   en: {
     login: "Sign in",
     title: "Run your hotel and serviced apartments from one place",
-    sub: "An Arabic-first system built for Oman: bookings and front desk, housekeeping and maintenance, invoices and government fees, and reports — on a computer, iPad or phone.",
+    sub: "Bookings and front desk, housekeeping and maintenance, invoices and government fees, and reports — on a computer, iPad or phone.",
     badge: "Arabic-first, made in Oman",
     demo: "Request a trial",
     demoNote: "We send you a personal link to a sample hotel with made-up data",
@@ -119,7 +120,7 @@ const COPY = {
       ["What happens after the free month?", "You choose a plan and pay monthly. If you don't subscribe, nothing is charged."],
       ["Does it suit serviced apartments and monthly rentals?", "Yes: monthly contracts, payment schedules, post-dated cheques and statements for unit owners."],
     ] as const,
-    footer: "Arabic-first hotel and serviced-apartment management — made in Oman",
+    footer: "Arabic-first hotel and serviced-apartment management",
   },
 };
 
@@ -133,59 +134,6 @@ const FEATURE_NAMES: Record<string, [string, string]> = {
 
 /** Whole riyals for prices (baisa in the database): "15", or "12.5" for a non-round price */
 const riyals = (baisa: number) => String(Number((baisa / 1000).toFixed(3)));
-
-/** The product in miniature: an occupancy ring, a week of income and today's arrivals, gently alive. */
-function Mock({ m, en }: { m: (typeof COPY)["ar"]["mock"]; en: boolean }) {
-  const bars = [42, 58, 50, 74, 63, 88, 70];
-  return (
-    <div className="relative mx-auto w-full max-w-lg" aria-hidden>
-      <div className="lp-rise rounded-[2rem] bg-white p-4 shadow-[0_30px_80px_rgba(13,60,52,0.18)] ring-1 ring-black/5 sm:p-5" style={{ ["--d" as string]: "150ms" }}>
-        <div className="mb-4 flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-[#e7b9b4]" /><span className="size-2.5 rounded-full bg-[#ecd9a8]" /><span className="size-2.5 rounded-full bg-[#b9dcc6]" />
-          <span className="brand-word ms-auto text-xl text-brand">نُزُل</span>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-3 rounded-3xl bg-[#0d6b5f] p-4 text-white">
-            <svg viewBox="0 0 80 80" className="size-16 shrink-0 -rotate-90">
-              <circle cx="40" cy="40" r="34" fill="none" stroke="#fff" strokeOpacity="0.22" strokeWidth="8" />
-              <circle className="lp-ring" cx="40" cy="40" r="34" fill="none" stroke="#fff" strokeWidth="8" strokeLinecap="round" strokeDasharray="167 214" />
-            </svg>
-            <div><div className="text-xs opacity-85">{m.occ}</div><div className="num text-2xl font-bold leading-tight">78%</div><div className="text-[11px] opacity-85">{m.of}</div></div>
-          </div>
-          <div className="rounded-3xl bg-[#f3f5f3] p-4">
-            <div className="text-xs text-[#66706c]">{m.money}</div>
-            <div className="num text-xl font-bold">{en ? "OMR 385" : "385 ر.ع."}</div>
-            <div className="mt-2 flex h-10 items-end gap-1.5">
-              {bars.map((h, i) => <span key={i} className={`lp-bar flex-1 rounded-full ${i === 5 ? "bg-[#0d6b5f]" : "bg-[#b8d8d1]"}`} style={{ height: `${h}%`, ["--d" as string]: `${700 + i * 90}ms` }} />)}
-            </div>
-            <div className="mt-1 text-[10px] text-[#66706c]">{m.week}</div>
-          </div>
-        </div>
-        <div className="mt-3 rounded-3xl bg-[#f3f5f3] p-4">
-          <div className="mb-2 text-xs font-bold">{m.arrivals}</div>
-          {m.guests.map((g, i) => (
-            <div key={g} className="lp-rise flex items-center gap-2 border-t border-[#e2e6e3] py-2 text-sm first:border-0" style={{ ["--d" as string]: `${1100 + i * 180}ms` }}>
-              <b className="num">{i === 0 ? "204" : "301"}</b><span className="min-w-0 flex-1 truncate">{g}</span>
-              {i === 0
-                ? <span className="lp-pulse rounded-full bg-[#0d6b5f] px-3 py-1 text-xs font-semibold text-white">{m.checkin}</span>
-                : <span className="rounded-full bg-[#e2f3e8] px-3 py-1 text-xs font-semibold text-[#14552e]">{m.in}</span>}
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="lp-pop absolute -top-4 start-2 sm:-start-6" style={{ ["--d" as string]: "1500ms" }}>
-        <div className="lp-float flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2.5 text-sm font-semibold shadow-[0_14px_34px_rgba(13,60,52,0.16)] ring-1 ring-black/5">
-          <span className="grid size-7 place-items-center rounded-full bg-[#e2f3e8] text-[#14552e]"><CircleCheck className="size-4" /></span>{m.ready}
-        </div>
-      </div>
-      <div className="lp-pop absolute -bottom-5 end-2 sm:-end-6" style={{ ["--d" as string]: "1900ms" }}>
-        <div className="lp-float-slow flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2.5 text-sm font-semibold shadow-[0_14px_34px_rgba(13,60,52,0.16)] ring-1 ring-black/5">
-          <span className="grid size-7 place-items-center rounded-full bg-[#e3f1ee] text-[#0d6b5f]"><Receipt className="size-4" /></span>{m.paid} <span className="num text-[#14552e]">{en ? "OMR 120" : "120 ر.ع."}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /** Visitors see the product page; signed-in staff go straight to their home page. */
 export default async function Home({ searchParams }: PageProps<"/">) {
@@ -202,8 +150,10 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const { data } = await supabase.from("plans").select("code, name_ar, name_en, monthly_price, max_units, max_properties, features").eq("active", true).order("sort");
   const plans = (data ?? []) as PlanRow[];
   const notice = sp.trial === "expired" ? c.expired : sp.trial === "unavailable" ? c.unavailable : null;
-  const anchors = ["#features", "#day", "#plans", "#faq"];
-  const ticker = c.features.map(([, title]) => title);
+  const anchors = ["#journey", "#features", "#day", "#plans", "#faq"];
+  const hero = en
+    ? { title: "Know what is happening in your hotel, minute by minute", caption: "A real screen from the system, with sample data", nav: ["Journey", "What it does", "No chasing", "Plans", "Questions"] }
+    : { title: "اعرف ما يجري في فندقك، لحظة بلحظة", caption: "شاشة حقيقية من النظام ببيانات تجريبية", nav: ["المحطات", "ماذا يفعل", "بلا متابعة", "الباقات", "أسئلة"] };
 
   return (
     <div className="min-h-screen overflow-x-clip bg-[#f6f8f6] text-[#1c2321]">
@@ -212,7 +162,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 lg:px-8">
           <span className="brand-word text-4xl text-brand">نُزُل</span>
           <nav className="ms-6 hidden gap-1 text-sm font-semibold text-[#4d5753] md:flex" aria-label={c.featuresTitle}>
-            {c.nav.map((label, i) => <a key={label} href={anchors[i]} className="rounded-full px-3 py-2 hover:bg-white hover:text-brand">{label}</a>)}
+            {hero.nav.map((label, i) => <a key={label} href={anchors[i]} className="rounded-full px-3 py-2 hover:bg-white hover:text-brand">{label}</a>)}
           </nav>
           <div className="ms-auto flex items-center gap-2">
             <LangToggle current={lang} />
@@ -230,8 +180,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </div>
           <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-12 lg:grid-cols-2 lg:px-8 lg:pb-28 lg:pt-20">
             <div>
-              <span className="lp-rise inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-sm font-semibold text-brand shadow-sm ring-1 ring-black/5"><span className="size-2 rounded-full bg-brand" />{c.badge}</span>
-              <h1 className="lp-rise mt-5 text-4xl font-bold leading-[1.25] sm:text-5xl lg:text-6xl lg:leading-[1.2]" style={{ ["--d" as string]: "120ms" }}>{c.title}</h1>
+              <h1 className="lp-rise text-4xl font-bold leading-[1.25] sm:text-5xl lg:text-6xl lg:leading-[1.2]" style={{ ["--d" as string]: "120ms" }}>{hero.title}</h1>
               <p className="lp-rise mt-5 max-w-xl text-lg leading-relaxed text-[#4d5753]" style={{ ["--d" as string]: "240ms" }}>{c.sub}</p>
               {notice ? <p role="alert" className="mt-5 rounded-2xl bg-[#fdf1d6] px-4 py-3 text-sm font-semibold text-[#7a4f00]">{notice}</p> : null}
               <div className="lp-rise mt-8 flex flex-wrap items-start gap-3" style={{ ["--d" as string]: "360ms" }}>
@@ -246,21 +195,15 @@ export default async function Home({ searchParams }: PageProps<"/">) {
               </div>
             </div>
             <div>
-              <Mock m={c.mock} en={en} />
-              <p className="mt-8 text-center text-xs text-[#66706c]">{c.mock.caption}</p>
+              <HeroStage en={en} />
+              <p className="mt-2 text-center text-xs text-[#66706c]">{hero.caption}</p>
             </div>
           </div>
-          <a href="#features" className="absolute bottom-4 left-1/2 hidden -translate-x-1/2 text-[#66706c] lg:block" aria-label={c.featuresTitle}><ArrowDown className="lp-float size-5" /></a>
         </section>
 
-        {/* what it covers, drifting past */}
-        <div className="overflow-hidden border-y border-black/5 bg-white py-4" aria-hidden>
-          <div className="lp-marquee flex w-max gap-10 whitespace-nowrap text-sm font-semibold text-[#4d5753]">
-            {[...ticker, ...ticker].map((x, i) => <span key={i} className="flex items-center gap-10">{x}<span className="size-1.5 rounded-full bg-brand" /></span>)}
-          </div>
-        </div>
+        <Journey en={en} />
 
-        <section className="mx-auto grid max-w-6xl gap-4 px-4 py-14 sm:grid-cols-3 lg:px-8">
+        <section className="mx-auto grid max-w-6xl gap-4 px-4 pb-4 pt-10 sm:grid-cols-3 lg:px-8">
           {c.stats.map(([n, label], i) => (
             <Reveal key={label} delay={i * 120}>
               <div className="h-full rounded-3xl bg-white p-6 shadow-[0_10px_26px_rgba(20,40,35,0.06)]">
@@ -271,45 +214,13 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           ))}
         </section>
 
-        <section id="features" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-16 lg:px-8">
-          <Reveal><h2 className="text-3xl font-bold sm:text-4xl">{c.featuresTitle}</h2></Reveal>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {c.features.map(([Icon, title, body], i) => (
-              <Reveal key={title} delay={(i % 3) * 110}>
-                <div className="lp-card h-full rounded-3xl bg-white p-6 shadow-[0_10px_26px_rgba(20,40,35,0.06)]">
-                  <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand"><Icon className="size-6" aria-hidden /></span>
-                  <h3 className="mt-4 text-lg font-bold">{title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-[#4d5753]">{body}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </section>
+        <Solutions en={en} />
 
-        <section id="day" className="scroll-mt-16 bg-[#0d6b5f] text-white">
-          <div className="mx-auto max-w-6xl px-4 py-16 lg:px-8 lg:py-20">
-            <Reveal>
-              <h2 className="text-3xl font-bold sm:text-4xl">{c.dayTitle}</h2>
-              <p className="mt-2 max-w-2xl text-lg opacity-85">{c.daySub}</p>
-            </Reveal>
-            <ol className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {c.day.map(([when, title, body], i) => (
-                <li key={when}>
-                  <Reveal delay={i * 140} className="h-full">
-                    <div className="h-full rounded-3xl bg-white/10 p-6 ring-1 ring-white/15 backdrop-blur-sm">
-                      <div className="flex items-center gap-3">
-                        <span className="num grid size-9 place-items-center rounded-full bg-white font-bold text-brand">{i + 1}</span>
-                        <span className="text-sm font-semibold opacity-85">{when}</span>
-                      </div>
-                      <h3 className="mt-4 text-lg font-bold leading-snug">{title}</h3>
-                      <p className="mt-2 text-sm leading-relaxed opacity-85">{body}</p>
-                    </div>
-                  </Reveal>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
+        <Automation en={en} />
+
+        <Replaces en={en} />
+
+        <Pocket en={en} />
 
         <section className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16 lg:px-8" id="plans">
           <Reveal>
