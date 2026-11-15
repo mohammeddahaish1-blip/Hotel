@@ -70,6 +70,7 @@ export async function adminCreateMaintenance(_: ActionResult, fd: FormData): Pro
     p_tenant: tenant, p_title: s(fd, "title") ?? "", p_details: s(fd, "details") as string,
     p_scheduled_for: at as string, p_hours: hours(s(fd, "hours")) ?? 0,
   });
+  if (!error) await sb.from("admin_log").insert({ action: "maintenance", tenant_id: tenant, detail: (s(fd, "title") ?? "").slice(0, 500) });
   return done(error, ["/admin/support", `/admin/${tenant}`]);
 }
 
