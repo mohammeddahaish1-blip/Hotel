@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
-export type AlertItem = { key: string; severity: number; title: string; detail: string; href: string };
+export type AlertGroup = "guests" | "cheques" | "payments" | "contracts" | "docs" | "ops" | "other";
+export type AlertItem = { key: string; severity: number; title: string; detail: string; href: string; group: AlertGroup };
 
 const DOT = ["", "bg-danger", "bg-warn", "bg-info"];
 
-export function AlertsBell({ alerts, labels }: { alerts: AlertItem[]; labels: { title: string; none: string } }) {
+export function AlertsBell({ alerts, labels }: { alerts: AlertItem[]; labels: { title: string; none: string; all: string } }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -57,6 +58,7 @@ export function AlertsBell({ alerts, labels }: { alerts: AlertItem[]; labels: { 
               ))}
             </ul>
           )}
+          <Link href="/alerts" onClick={() => setOpen(false)} className="block border-t border-line px-3 py-2.5 text-center text-sm font-semibold text-brand hover:bg-surface-2">{labels.all}</Link>
         </div>
       ) : null}
     </div>

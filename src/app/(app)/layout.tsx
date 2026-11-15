@@ -197,7 +197,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
                   <span className="sr-only sm:hidden">{t.ai_title}</span>
                 </Link>
               ) : null}
-              <AlertsBell alerts={alerts} labels={{ title: t.alerts_title, none: t.alerts_none }} />
+              <AlertsBell alerts={alerts} labels={{ title: t.alerts_title, none: t.alerts_none, all: t.alerts_all }} />
             </div>
           </div>
         </div>

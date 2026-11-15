@@ -4,13 +4,37 @@ import type { Ctx } from "./auth";
 import { can } from "./auth";
 import type { Dict, DictKey } from "./i18n/dict";
 import { gregorian, omr, todayIn, zonedStart } from "./format";
-import type { AlertItem } from "@/components/AlertsBell";
+import type { AlertGroup, AlertItem } from "@/components/AlertsBell";
+import type { Role } from "./auth";
 import { hasRole } from "./auth";
 import { expiringWorkers, missingPhotoDays, type ShopRow } from "./shop-books";
 
 // Isolate each part so Latin names and dates don't reorder inside Arabic text
 const iso = (x: string) => `\u2068${x}\u2069`;
 const join = (parts: (string | null | undefined)[]) => parts.filter(Boolean).map((x) => iso(x!)).join(" · ");
+
+/** Which tab of the alerts page each kind belongs to (anything not listed is "other"). */
+const GROUP: Record<string, AlertGroup> = {
+  late_checkout: "guests", possible_no_show: "guests", messages_due: "guests",
+  cheque_due: "cheques", cheque_bounced: "cheques",
+  rent_due: "payments", payment_proof: "payments", shift_open_long: "payments", cash_shortage: "payments", correction_pending: "payments",
+  contract_ending: "contracts",
+  document_expired: "docs", work_card_expiring: "docs",
+  arrival_unit_not_ready: "ops", urgent_maintenance: "ops",
+};
+
+/**
+ * Who each kind is for, on top of what the database already allows: every job gets only what it acts on.
+ * Reception: guests and rooms. Accountant: money. Housekeeping and maintenance: rooms. Owner and managers: everything.
+ * Kinds not listed keep the database's own rule.
+ */
+const AUDIENCE: Record<string, Role[]> = {
+  late_checkout: ["manager", "reception"], possible_no_show: ["manager", "reception"], document_expired: ["manager", "reception"],
+  messages_due: ["manager", "reception"], contract_ending: ["manager", "reception"],
+  rent_due: ["manager", "accountant"], cheque_due: ["manager", "accountant"], cheque_bounced: ["manager", "accountant"], payment_proof: ["manager", "accountant"],
+  arrival_unit_not_ready: ["manager", "reception", "housekeeping"],
+  urgent_maintenance: ["manager", "reception", "housekeeping", "maintenance"],
+};
 
 type Row = { kind: string; severity: number; ref_id: string; unit: string | null; guest: string | null; info: string | null };
 
@@ -24,7 +48,7 @@ export const loadAlerts = cache(async (ctx: Ctx, t: Dict, lang: "ar" | "en" | "u
       : Promise.resolve(0),
   ]);
   const extraAlerts: AlertItem[] = complaints > 0
-    ? [{ key: "staff-complaints", severity: 1, title: t.al_staff_complaint, detail: String(complaints), href: "/complaints" }]
+    ? [{ key: "staff-complaints", severity: 1, title: t.al_staff_complaint, detail: String(complaints), href: "/complaints", group: "other" }]
     : [];
   // shops: missing invoice photos and residence cards running out — for the owner, managers and each shop's cashier
   const cashierOf = new Set(ctx.shops.filter((x) => x.access === "manager").map((x) => x.id));
@@ -37,14 +61,14 @@ export const loadAlerts = cache(async (ctx: Ctx, t: Dict, lang: "ar" | "en" | "u
       const days = missing.get(x.id);
       if (days?.length) extraAlerts.push({
         key: `shop-photos-${x.id}`, severity: 1, title: t.al_shop_photos_missing,
-        detail: join([x.name, days.map((d) => gregorian(d, lang)).join("، ")]), href: `/shops/${x.id}`,
+        detail: join([x.name, days.map((d) => gregorian(d, lang)).join("، ")]), href: `/shops/${x.id}`, group: "other",
       });
     }
     const names = new Map(mine.map((x) => [x.id, x.name]));
     for (const w of workers) {
       extraAlerts.push({
         key: `iqama-${w.id}`, severity: 2, title: t.al_iqama_expiring,
-        detail: join([w.full_name, names.get(w.shop_id) ?? null, gregorian(w.iqama_expiry, lang)]), href: `/shops/${w.shop_id}`,
+        detail: join([w.full_name, names.get(w.shop_id) ?? null, gregorian(w.iqama_expiry, lang)]), href: `/shops/${w.shop_id}`, group: "docs",
       });
     }
   }
@@ -58,12 +82,12 @@ export const loadAlerts = cache(async (ctx: Ctx, t: Dict, lang: "ar" | "en" | "u
       const { data: coming } = await ctx.supabase.rpc("today_board_rows", { p_property: ctx.property.id, p_today: today });
       for (const r of (coming ?? []) as { id: string; stay_from: string; status: string; unit: string | null; guest: string | null }[]) {
         if (r.stay_from === today && r.status !== "checked_in" && r.unit && ready.has(r.unit)) {
-          extraAlerts.push({ key: `unit-ready-${r.id}`, severity: 3, title: t.al_unit_ready, detail: join([`${t.unit} ${r.unit}`, r.guest]), href: `/reservations/${r.id}` });
+          extraAlerts.push({ key: `unit-ready-${r.id}`, severity: 3, title: t.al_unit_ready, detail: join([`${t.unit} ${r.unit}`, r.guest]), href: `/reservations/${r.id}`, group: "guests" });
         }
       }
     }
   }
-  return extraAlerts.concat(((data ?? []) as Row[]).map((r, i) => {
+  return extraAlerts.concat(((data ?? []) as Row[]).filter((r) => !AUDIENCE[r.kind] || hasRole(ctx, AUDIENCE[r.kind])).map((r, i) => {
     const unit = r.unit ? `${t.unit} ${r.unit}` : "";
     const who = r.guest ?? "";
     let extra: string | null = null;
@@ -135,6 +159,6 @@ export const loadAlerts = cache(async (ctx: Ctx, t: Dict, lang: "ar" | "en" | "u
         break;
     }
     const detail = r.kind === "urgent_maintenance" ? join([unit, extra]) : join([unit, who, extra]);
-    return { key: `${r.kind}-${r.ref_id}-${i}`, severity: r.severity, title: t[`al_${r.kind}` as DictKey] ?? r.kind, detail, href };
+    return { key: `${r.kind}-${r.ref_id}-${i}`, severity: r.severity, title: t[`al_${r.kind}` as DictKey] ?? r.kind, detail, href, group: GROUP[r.kind] ?? "other" };
   }));
 });
