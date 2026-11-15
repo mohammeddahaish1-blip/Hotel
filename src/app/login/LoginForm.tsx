@@ -1,17 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type T = Record<
   | "login_title" | "signup_title" | "email" | "password" | "login_btn" | "signup_btn" | "have_account" | "no_account"
   | "check_email" | "already_registered" | "forgot_password" | "reset_title" | "reset_btn" | "reset_sent"
-  | "invalid_login" | "email_not_confirmed" | "show_password" | "link_other_device",
+  | "invalid_login" | "email_not_confirmed" | "show_password" | "link_other_device"
+  | "welcome_back" | "sub_back" | "sub_new" | "safe",
   string
 >;
 
 type Mode = "login" | "signup" | "reset";
+
+/** Set on this device after a successful sign-in: only someone who has been in before is welcomed back. */
+const SEEN = "nuzul:signed-in-before";
+const noSubscribe = () => () => {};
+const readSeen = () => { try { return localStorage.getItem(SEEN) === "1"; } catch { return false; } };
 
 export function LoginForm({ t, notice, initialMode = "login" }: { t: T; notice?: string; initialMode?: Mode }) {
   const router = useRouter();
@@ -20,6 +26,7 @@ export function LoginForm({ t, notice, initialMode = "login" }: { t: T; notice?:
   const [info, setInfo] = useState<string | null>(notice === "link" ? t.link_other_device : null);
   const [pending, setPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const returning = useSyncExternalStore(noSubscribe, readSeen, () => false);
 
   const switchMode = (m: Mode) => {
     setMode(m);
@@ -49,6 +56,7 @@ export function LoginForm({ t, notice, initialMode = "login" }: { t: T; notice?:
       }
       // One full navigation: the server sends the user straight to their home page (one request
       // instead of two client round trips), and the button keeps spinning until it opens.
+      try { localStorage.setItem(SEEN, "1"); } catch { /* private mode: no greeting next time */ }
       window.location.replace("/");
     } else if (mode === "signup") {
       const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callback } });
@@ -72,20 +80,23 @@ export function LoginForm({ t, notice, initialMode = "login" }: { t: T; notice?:
     }
   }
 
-  const title = mode === "login" ? t.login_title : mode === "signup" ? t.signup_title : t.reset_title;
+  const title = mode === "login" ? (returning ? t.welcome_back : t.login_title) : mode === "signup" ? t.signup_title : t.reset_title;
   const button = mode === "login" ? t.login_btn : mode === "signup" ? t.signup_btn : t.reset_btn;
+  const input = "w-full rounded-2xl border-[1.5px] border-[#e4e0d6] bg-white px-4 py-3 text-base outline-none transition focus:border-brand focus:shadow-[0_0_0_4px_#e3f1ee]";
 
   return (
-    <form onSubmit={onSubmit} className="relative w-full max-w-sm space-y-4 text-center">
-      <h1 className="text-4xl font-bold lg:text-5xl">{title}</h1>
-      <div className="mx-auto h-1 w-16 rounded-full bg-white/90" />
-      <label className="block pt-4">
-        <span className="mb-2 block text-sm text-white/85">{t.email}</span>
-        <input name="email" type="email" required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} dir="ltr" placeholder="name@hotel.om" className="pill-input" />
+    <form onSubmit={onSubmit} className="lp-rise w-full space-y-4">
+      <div className="pb-2">
+        <h1 className="text-3xl font-bold sm:text-4xl">{title}</h1>
+        {mode === "login" ? <p className="mt-2 text-[#66706c]">{returning ? t.sub_back : t.sub_new}</p> : null}
+      </div>
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-semibold">{t.email}</span>
+        <input name="email" type="email" required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} dir="ltr" placeholder="name@hotel.om" className={input} />
       </label>
       {mode !== "reset" ? (
         <label className="block">
-          <span className="mb-2 block text-sm text-white/85">{t.password}</span>
+          <span className="mb-1.5 block text-sm font-semibold">{t.password}</span>
           <input
             name="password"
             type={showPassword ? "text" : "password"}
@@ -97,33 +108,36 @@ export function LoginForm({ t, notice, initialMode = "login" }: { t: T; notice?:
             spellCheck={false}
             dir="ltr"
             placeholder="••••••••"
-            className="pill-input"
+            className={input}
           />
-          <span className="mt-2 flex items-center justify-center gap-2 text-xs text-white/80">
-            <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} className="accent-white" />
-            {t.show_password}
-          </span>
         </label>
       ) : null}
-      {error ? <div role="alert" className="rounded-2xl bg-white px-3 py-2 text-sm text-danger">{error}</div> : null}
-      {info ? <div className="rounded-2xl bg-white/15 px-3 py-2 text-sm text-white">{info}</div> : null}
-      <div className="pt-2">
-        <button className="pill-button" disabled={pending}>
-          {pending ? "…" : button}
-        </button>
-      </div>
-      {mode === "login" ? (
-        <button type="button" className="block w-full text-xs text-white/75 hover:text-white" onClick={() => switchMode("reset")}>
-          {t.forgot_password}
-        </button>
+      {mode !== "reset" ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <label className="flex items-center gap-2 text-[#4d5753]">
+            <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} className="size-4 accent-[#0d6b5f]" />
+            {t.show_password}
+          </label>
+          {mode === "login" ? (
+            <button type="button" className="font-semibold text-brand hover:underline" onClick={() => switchMode("reset")}>{t.forgot_password}</button>
+          ) : null}
+        </div>
       ) : null}
+      {error ? <div role="alert" className="rounded-2xl bg-[#fdecea] px-4 py-3 text-sm font-semibold text-danger">{error}</div> : null}
+      {info ? <div className="rounded-2xl bg-[#e3f1ee] px-4 py-3 text-sm font-semibold text-[#0a4f46]">{info}</div> : null}
+      <button className="btn-primary min-h-13 w-full rounded-2xl text-base shadow-[0_12px_24px_-12px_rgba(13,107,95,0.8)]" disabled={pending}>
+        {pending ? "…" : button}
+      </button>
       <button
         type="button"
-        className="block w-full text-sm font-semibold text-white hover:underline"
+        className="block w-full text-center text-sm font-semibold text-brand hover:underline"
         onClick={() => switchMode(mode === "signup" ? "login" : mode === "reset" ? "login" : "signup")}
       >
         {mode === "login" ? t.no_account : t.have_account}
       </button>
+      <p className="flex items-center gap-2 border-t border-[#e4e0d6] pt-4 text-xs text-[#66706c]">
+        <span className="lp-pulse size-2 shrink-0 rounded-full bg-[#157f3b]" />{t.safe}
+      </p>
     </form>
   );
 }
