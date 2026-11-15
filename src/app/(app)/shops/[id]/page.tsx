@@ -250,7 +250,7 @@ export default async function ShopPage({ params, searchParams }: PageProps<"/sho
                   </select>
                 </Field>
                 <select name="access" aria-label={t.shp_people} className="input">
-                  {(x.kind === "rental" ? ["renter"] : ["seller", "manager"]).map((a) => <option key={a} value={a}>{accessLabel(a)}</option>)}
+                  {((x.kind as string) === "rental" ? ["renter"] : ["seller", "manager"]).map((a) => <option key={a} value={a}>{accessLabel(a)}</option>)}
                 </select>
                 <SubmitButton className="btn-primary w-full">{t.shp_add_person}</SubmitButton>
               </ActionForm>
@@ -358,7 +358,7 @@ export default async function ShopPage({ params, searchParams }: PageProps<"/sho
                   </select>
                 </Field>
                 <select name="access" aria-label={t.shp_people} className="input">
-                  {(x.kind === "rental" ? ["renter"] : ["seller", "manager"]).map((a) => <option key={a} value={a}>{accessLabel(a)}</option>)}
+                  {((x.kind as string) === "rental" ? ["renter"] : ["seller", "manager"]).map((a) => <option key={a} value={a}>{accessLabel(a)}</option>)}
                 </select>
                 <SubmitButton className="btn-primary w-full">{t.shp_add_person}</SubmitButton>
               </ActionForm>
