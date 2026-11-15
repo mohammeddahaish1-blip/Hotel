@@ -392,3 +392,18 @@ html[dir="ltr"] .lp-marquee { animation-name: lp-marquee-ltr; }
   .lp2-lines path { stroke-dashoffset: 0; } .lp2-jr::after { width: 80%; } .lp2-ev, .lp2-bub, .lp2-step { opacity: 1; } .lp2-bars > i, .lp2-yes::before { transform: none; }
   .lp2-cycle small > span:nth-child(3) { opacity: 1; }
 }
+
+/* product page on phones: a smaller phone, lighter chips, tighter stage */
+@media (max-width: 640px) {
+  .lp2-stage { min-height: 440px; }
+  .lp2-glow { width: 300px; height: 300px; }
+  .lp2-phone { width: 204px; height: 420px; border-radius: 36px; padding: 7px; }
+  .lp2-phone::before { top: 14px; width: 62px; height: 18px; }
+  .lp2-screen { border-radius: 29px; }
+  .lp2-chip { gap: 7px; padding: 7px 10px; border-radius: 13px; font-size: 12.5px; }
+  .lp2-chip small { display: none; }
+  .lp2-chip > i { width: 24px; height: 24px; border-radius: 8px; font-size: 12px; }
+  .lp2-c1 { top: 5%; } .lp2-c2 { bottom: 20%; } .lp2-c3 { bottom: 1%; inset-inline-start: 2%; }
+  .lp2-st > b { width: 46px; height: 46px; font-size: 18px; }
+  .lp2-st { grid-template-columns: 46px 1fr; }
+}

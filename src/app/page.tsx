@@ -160,7 +160,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <noscript><style>{".lp-reveal{opacity:1;transform:none}"}</style></noscript>
       <header className="sticky top-0 z-30 border-b border-black/5 bg-[#f6f8f6]/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 lg:px-8">
-          <span className="brand-word text-4xl text-brand">نُزُل</span>
+          <span className="brand-word text-3xl text-brand sm:text-4xl">نُزُل</span>
           <nav className="ms-6 hidden gap-1 text-sm font-semibold text-[#4d5753] md:flex" aria-label={c.featuresTitle}>
             {hero.nav.map((label, i) => <a key={label} href={anchors[i]} className="rounded-full px-3 py-2 hover:bg-white hover:text-brand">{label}</a>)}
           </nav>
@@ -178,19 +178,20 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             <div className="lp-blob absolute -top-24 start-[-10%] size-[28rem] rounded-full bg-[#bfe3da] opacity-60 blur-3xl" />
             <div className="lp-blob-2 absolute top-40 end-[-8%] size-[24rem] rounded-full bg-[#f3e2b8] opacity-50 blur-3xl" />
           </div>
-          <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-12 lg:grid-cols-2 lg:px-8 lg:pb-28 lg:pt-20">
+          <div className="relative mx-auto grid max-w-6xl items-center gap-6 px-4 pb-10 pt-8 sm:gap-14 sm:pb-20 sm:pt-12 lg:grid-cols-2 lg:px-8 lg:pb-28 lg:pt-20">
             <div>
-              <h1 className="lp-rise text-4xl font-bold leading-[1.25] sm:text-5xl lg:text-6xl lg:leading-[1.2]" style={{ ["--d" as string]: "120ms" }}>{hero.title}</h1>
-              <p className="lp-rise mt-5 max-w-xl text-lg leading-relaxed text-[#4d5753]" style={{ ["--d" as string]: "240ms" }}>{c.sub}</p>
+              <h1 className="lp-rise text-[2rem] font-bold leading-[1.3] sm:text-5xl sm:leading-[1.25] lg:text-6xl lg:leading-[1.2]" style={{ ["--d" as string]: "120ms" }}>{hero.title}</h1>
+              <p className="lp-rise mt-4 max-w-xl text-base leading-relaxed text-[#4d5753] sm:mt-5 sm:text-lg" style={{ ["--d" as string]: "240ms" }}>{c.sub}</p>
               {notice ? <p role="alert" className="mt-5 rounded-2xl bg-[#fdf1d6] px-4 py-3 text-sm font-semibold text-[#7a4f00]">{notice}</p> : null}
-              <div className="lp-rise mt-8 flex flex-wrap items-start gap-3" style={{ ["--d" as string]: "360ms" }}>
-                <div>
-                  <a href="#trial" className="btn-primary min-h-12 px-7 text-base">{c.demo}</a>
-                  <p className="mt-2 max-w-56 text-xs text-[#66706c]">{c.demoNote}</p>
+              {/* phones: two full-width buttons, one under the other */}
+              <div className="lp-rise mt-6 flex flex-wrap items-start gap-3 sm:mt-8" style={{ ["--d" as string]: "360ms" }}>
+                <div className="w-full sm:w-auto">
+                  <a href="#trial" className="btn-primary min-h-12 w-full px-7 text-base sm:w-auto">{c.demo}</a>
+                  <p className="mt-2 text-center text-xs text-[#66706c] sm:max-w-56 sm:text-start">{c.demoNote}</p>
                 </div>
-                <div>
-                  <Link href="/login?mode=signup" className="btn-ghost min-h-12 bg-white px-6 text-base">{c.trial}</Link>
-                  <p className="mt-2 max-w-56 text-xs text-[#66706c]">{c.trialNote}</p>
+                <div className="w-full sm:w-auto">
+                  <Link href="/login?mode=signup" className="btn-ghost min-h-12 w-full bg-white px-6 text-base sm:w-auto">{c.trial}</Link>
+                  <p className="mt-2 text-center text-xs text-[#66706c] sm:max-w-56 sm:text-start">{c.trialNote}</p>
                 </div>
               </div>
             </div>
@@ -203,12 +204,12 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
         <Journey en={en} />
 
-        <section className="mx-auto grid max-w-6xl gap-4 px-4 pb-4 pt-10 sm:grid-cols-3 lg:px-8">
+        <section className="mx-auto grid max-w-6xl grid-cols-3 gap-2.5 px-4 pb-4 pt-8 sm:gap-4 sm:pt-10 lg:px-8">
           {c.stats.map(([n, label], i) => (
             <Reveal key={label} delay={i * 120}>
-              <div className="h-full rounded-3xl bg-white p-6 shadow-[0_10px_26px_rgba(20,40,35,0.06)]">
-                <div className="num text-5xl font-bold text-brand">{n}</div>
-                <p className="mt-2 text-sm leading-relaxed text-[#4d5753]">{label}</p>
+              <div className="h-full rounded-2xl bg-white p-3.5 shadow-[0_10px_26px_rgba(20,40,35,0.06)] sm:rounded-3xl sm:p-6">
+                <div className="num text-3xl font-bold text-brand sm:text-5xl">{n}</div>
+                <p className="mt-1.5 text-xs leading-relaxed text-[#4d5753] sm:mt-2 sm:text-sm">{label}</p>
               </div>
             </Reveal>
           ))}
@@ -222,7 +223,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
         <Pocket en={en} />
 
-        <section className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16 lg:px-8" id="plans">
+        <section className="mx-auto max-w-6xl scroll-mt-20 px-4 py-10 sm:py-16 lg:px-8" id="plans">
           <Reveal>
             <h2 className="text-3xl font-bold sm:text-4xl">{c.plansTitle}</h2>
             <p className="mt-2 max-w-2xl text-[#4d5753]">{c.plansSub}</p>
@@ -251,12 +252,12 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </div>
         </section>
 
-        <section id="trial" className="scroll-mt-16 px-4 pb-16 lg:px-8">
+        <section id="trial" className="scroll-mt-16 px-3 pb-12 sm:px-4 sm:pb-16 lg:px-8">
           <Reveal>
-            <div className="relative mx-auto grid max-w-6xl gap-8 overflow-hidden rounded-[2.5rem] bg-white p-6 shadow-[0_22px_60px_rgba(20,40,35,0.1)] sm:p-10 lg:grid-cols-[1fr_1.1fr] lg:gap-12">
+            <div className="relative mx-auto grid max-w-6xl gap-8 overflow-hidden rounded-[1.75rem] bg-white p-5 shadow-[0_22px_60px_rgba(20,40,35,0.1)] sm:rounded-[2.5rem] sm:p-10 lg:grid-cols-[1fr_1.1fr] lg:gap-12">
               <div className="pointer-events-none absolute -top-20 end-[-6rem] size-72 rounded-full bg-[#bfe3da] opacity-50 blur-3xl" aria-hidden />
               <div className="relative">
-                <h2 className="text-3xl font-bold sm:text-4xl">{c.trialTitle}</h2>
+                <h2 className="text-2xl font-bold sm:text-4xl">{c.trialTitle}</h2>
                 <p className="mt-3 leading-relaxed text-[#4d5753]">{c.trialSub}</p>
                 <ul className="mt-6 space-y-3">
                   {c.trialPoints.map((x) => <li key={x} className="flex items-center gap-3 font-semibold"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-soft text-brand"><Check className="size-4" aria-hidden /></span>{x}</li>)}
@@ -267,7 +268,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </Reveal>
         </section>
 
-        <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-16 lg:px-8">
+        <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-24 sm:pb-16 lg:px-8">
           <Reveal><h2 className="text-3xl font-bold">{c.faqTitle}</h2></Reveal>
           <div className="mt-6 space-y-3">
             {c.faq.map(([q, a], i) => (
@@ -282,7 +283,10 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </section>
       </main>
 
-      <footer className="border-t border-black/5 bg-white">
+      {/* phones: the trial request stays one press away while reading */}
+      <a href="#trial" className="btn-primary fixed inset-x-3 bottom-3 z-30 min-h-12 text-base shadow-[0_14px_30px_rgba(13,107,95,0.35)] sm:hidden">{c.demo}</a>
+
+      <footer className="border-t border-black/5 bg-white pb-16 sm:pb-0">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-[#66706c] lg:px-8">
           <span><span className="brand-word text-xl text-brand">نُزُل</span> · {c.footer}</span>
           <Link href="/login" className="hover:text-brand">{c.login}</Link>
