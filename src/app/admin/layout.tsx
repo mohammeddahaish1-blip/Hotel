@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Building2, History, Layers3, LifeBuoy, Wallet } from "lucide-react";
 import { SignOut } from "@/components/SignOut";
+import { TabGlide } from "@/components/TabGlide";
 import { requireAdmin } from "@/lib/admin";
 
 /** System owners' portal (the Nuzul team): separate from any hotel, only for platform admins. */
@@ -8,6 +9,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   await requireAdmin();
   return (
     <div className="min-h-screen" dir="rtl">
+      <TabGlide />
       <header className="sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
           <div className="flex items-baseline gap-2">

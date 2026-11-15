@@ -7,6 +7,7 @@ import { BottomNav, GroupTabs, NavLinks, type NavGroup } from "@/components/NavL
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SideToggle } from "@/components/SideToggle";
 import { LiveAlerts } from "@/components/LiveAlerts";
+import { TabGlide } from "@/components/TabGlide";
 import { cookies } from "next/headers";
 import { LangToggle } from "@/components/LangToggle";
 import { SignOut } from "@/components/SignOut";
@@ -132,6 +133,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <div className="min-h-screen lg:flex">
       {/* the bell updates by itself for everyone: each role hears only what it is allowed to read */}
       <LiveAlerts propertyId={ctx.property.id} tenantId={ctx.tenantId} />
+      <TabGlide />
       <IdleLogout minutes={ctx.role === "reception" || ctx.role === "housekeeping" ? 15 : 30} />
       <aside className={`no-print sticky top-0 hidden h-screen shrink-0 flex-col border-e border-line bg-surface lg:flex ${mini ? "w-[4.75rem] items-stretch p-3" : "w-60 p-4"}`}>
         {/* the fold button lives at the top, beside the name of the app */}

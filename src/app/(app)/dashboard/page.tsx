@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { CountUp } from "@/components/CountUp";
 import { KeyRound } from "lucide-react";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { checkInFromDashboard } from "@/app/actions/ops";
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import { can, hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
@@ -49,6 +50,9 @@ export default async function DashboardPage() {
   const expensesToday = ((spent ?? []) as { amount: number }[]).reduce((sum, x) => sum + Number(x.amount), 0);
 
   const tomorrow = addDays(d.date, 1);
+  // the day's figures count up when the board opens
+  const numLocale = lang === "ar" ? "ar-OM" : lang === "ur" ? "ur-PK-u-nu-latn" : "en-OM";
+  const money3 = (baisa: number) => <CountUp text={omr(baisa, lang)} value={baisa / 1000} locale={numLocale} decimals={3} />;
   // tomorrow's leavers after today's, in one list
   const leavingTomorrow = d.freeing_soon.filter((f) => f.date === tomorrow);
   const unitsLine = (["available", "reserved", "dirty", "maintenance", "out_of_service"] as const)
@@ -83,7 +87,7 @@ export default async function DashboardPage() {
     </div>
   ) : null;
   const occupancy = (
-    <OccupancyTile href={can(ctx, "board") ? "/board" : undefined} label={t.dash_occupancy} value={pct(d.occupancy_bp)} share={d.occupancy_bp / 10000} hint={`${d.in_house} / ${d.units}`} line={unitsLine} />
+    <OccupancyTile href={can(ctx, "board") ? "/board" : undefined} label={t.dash_occupancy} value={<CountUp text={pct(d.occupancy_bp)} value={d.occupancy_bp / 100} locale="en" decimals={1} />} share={d.occupancy_bp / 10000} hint={`${d.in_house} / ${d.units}`} line={unitsLine} />
   );
   const movement = (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -148,14 +152,14 @@ export default async function DashboardPage() {
             {week.length > 1 ? <span className="w-24"><Spark values={week} label={t.last7} /></span> : null}
           </div>
           <Link href="/finance?v=received" className="mt-2 flex justify-between gap-3 py-1 text-sm hover:text-brand">
-            <span>{t.dash_income}</span><span className="num font-bold text-ok">{omr(d.income_today, lang)}</span>
+            <span>{t.dash_income}</span><span className="num font-bold text-ok">{money3(d.income_today)}</span>
           </Link>
           <Link href="/finance?v=expenses" className="flex justify-between gap-3 py-1 text-sm hover:text-brand">
-            <span>{t.dash_spent}</span><span className="num font-bold text-danger">{omr(expensesToday, lang)}</span>
+            <span>{t.dash_spent}</span><span className="num font-bold text-danger">{money3(expensesToday)}</span>
           </Link>
           <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-line pt-2">
             <span className="font-bold">{t.net}</span>
-            <span className={`num text-3xl font-bold leading-tight ${d.income_today - expensesToday < 0 ? "text-danger" : ""}`}>{omr(d.income_today - expensesToday, lang)}</span>
+            <span className={`num text-3xl font-bold leading-tight ${d.income_today - expensesToday < 0 ? "text-danger" : ""}`}>{money3(d.income_today - expensesToday)}</span>
           </div>
           <p className="mt-3 rounded-2xl bg-surface-2 px-3 py-2 text-sm">
             <b>{t.dash_this_month}:</b> {t.dash_income} <b className="num">{omr(d.income_month, lang)}</b> · {t.dash_spent} <b className="num">{omr(d.expenses_month, lang)}</b> · {t.net} <b className="num">{omr(d.income_month - d.expenses_month, lang)}</b>
@@ -195,7 +199,7 @@ function MovementList({ items, t, empty, checkInLabel }: { items: Dash["arrivals
 }
 
 /** Occupancy as a ring on the brand colour: the first thing read on the page. */
-function OccupancyTile({ href, label, value, share, hint, line }: { href?: string; label: string; value: string; share: number; hint: string; line?: string }) {
+function OccupancyTile({ href, label, value, share, hint, line }: { href?: string; label: string; value: ReactNode; share: number; hint: string; line?: string }) {
   const c = 2 * Math.PI * 34;
   const filled = Math.max(0, Math.min(1, share)) * c;
   const cls = "flex flex-wrap items-center gap-4 rounded-3xl bg-brand p-5 text-brand-ink shadow-[0_10px_26px_rgba(20,40,35,0.15)]";
@@ -203,7 +207,7 @@ function OccupancyTile({ href, label, value, share, hint, line }: { href?: strin
     <>
       <svg viewBox="0 0 80 80" className="size-20 shrink-0 -rotate-90" aria-hidden>
         <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeOpacity="0.22" strokeWidth="8" />
-        <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${filled} ${c}`} />
+        <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${filled} ${c}`} className="ring-fill" />
       </svg>
       <span className="min-w-0">
         <span className="block text-sm font-semibold opacity-85">{label}</span>
