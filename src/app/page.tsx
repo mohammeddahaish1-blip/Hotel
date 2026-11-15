@@ -17,7 +17,7 @@ const COPY = {
   ar: {
     login: "تسجيل الدخول",
     title: "أدِر فندقك وشققك الفندقية من مكان واحد",
-    sub: "نظام عربي صُمّم لعُمان: الحجوزات والاستقبال، التنظيف والصيانة، الفواتير والرسوم الحكومية، والتقارير — من الكمبيوتر أو الآيباد أو الجوال.",
+    sub: "الحجوزات والاستقبال، التنظيف والصيانة، الفواتير والرسوم الحكومية، والتقارير — من الكمبيوتر أو الآيباد أو الجوال.",
     badge: "نظام عربي صُنع في عُمان",
     demo: "اطلب تجربة النظام",
     demoNote: "نرسل لك رابطاً خاصاً يفتح فندقاً تجريبياً ببيانات وهمية",
@@ -66,12 +66,12 @@ const COPY = {
       ["ماذا يحدث بعد الشهر المجاني؟", "تختار الباقة المناسبة وتدفع شهرياً. إن لم تشترك لا يُخصم منك شيء."],
       ["هل يناسب الشقق الفندقية والإيجار الشهري؟", "نعم: عقود شهرية، جدول دفعات، شيكات مؤجلة، وكشوف لملاك الوحدات."],
     ] as const,
-    footer: "نظام عربي لإدارة الفنادق والشقق الفندقية — صُنع في عُمان",
+    footer: "نظام عربي لإدارة الفنادق والشقق الفندقية",
   },
   en: {
     login: "Sign in",
     title: "Run your hotel and serviced apartments from one place",
-    sub: "An Arabic-first system built for Oman: bookings and front desk, housekeeping and maintenance, invoices and government fees, and reports — on a computer, iPad or phone.",
+    sub: "Bookings and front desk, housekeeping and maintenance, invoices and government fees, and reports — on a computer, iPad or phone.",
     badge: "Arabic-first, made in Oman",
     demo: "Request a trial",
     demoNote: "We send you a personal link to a sample hotel with made-up data",
@@ -120,7 +120,7 @@ const COPY = {
       ["What happens after the free month?", "You choose a plan and pay monthly. If you don't subscribe, nothing is charged."],
       ["Does it suit serviced apartments and monthly rentals?", "Yes: monthly contracts, payment schedules, post-dated cheques and statements for unit owners."],
     ] as const,
-    footer: "Arabic-first hotel and serviced-apartment management — made in Oman",
+    footer: "Arabic-first hotel and serviced-apartment management",
   },
 };
 
