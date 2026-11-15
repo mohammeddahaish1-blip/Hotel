@@ -200,7 +200,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
         }))
     : [];
   if (withoutProof && month === thisMonth) {
-    todo.push({ key: "no-proof", severity: 3, title: t.fin_todo_noproof.replace("{n}", String(withoutProof)), detail: t.fin_todo_noproof_hint, href: "/finance?v=received&noproof=1" });
+    todo.push({ key: "no-proof", severity: 3, title: t.fin_todo_noproof.replace("{n}", String(withoutProof)), detail: t.fin_todo_noproof_hint, href: "/finance?v=received&noproof=1", group: "payments" });
   }
   const oldest = agingRows.reduce((a, r) => Math.max(a, r.age_days), 0);
   const monthNav = (
