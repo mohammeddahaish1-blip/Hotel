@@ -151,10 +151,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const plans = (data ?? []) as PlanRow[];
   const notice = sp.trial === "expired" ? c.expired : sp.trial === "unavailable" ? c.unavailable : null;
   const anchors = ["#journey", "#features", "#day", "#plans", "#faq"];
-  const ticker = c.features.map(([, title]) => title);
   const hero = en
-    ? { hello: "Hello, I'm", engine: "the engine that runs", words: ["your hotel", "your serviced apartments", "your hotel's shops"], caption: "A real screen from the system, with sample data", nav: ["Journey", "Solutions", "Automation", "Plans", "Questions"] }
-    : { hello: "مرحباً، أنا", engine: "محرّك تشغيل", words: ["فندقك", "شققك الفندقية", "محلات فندقك"], caption: "شاشة حقيقية من النظام ببيانات تجريبية", nav: ["الرحلة", "الحلول", "الأتمتة", "الباقات", "أسئلة"] };
+    ? { title: "Know what is happening in your hotel, minute by minute", caption: "A real screen from the system, with sample data", nav: ["Journey", "What it does", "No chasing", "Plans", "Questions"] }
+    : { title: "اعرف ما يجري في فندقك، لحظة بلحظة", caption: "شاشة حقيقية من النظام ببيانات تجريبية", nav: ["المحطات", "ماذا يفعل", "بلا متابعة", "الباقات", "أسئلة"] };
 
   return (
     <div className="min-h-screen overflow-x-clip bg-[#f6f8f6] text-[#1c2321]">
@@ -181,11 +180,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </div>
           <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-12 lg:grid-cols-2 lg:px-8 lg:pb-28 lg:pt-20">
             <div>
-              <span className="lp-rise inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-sm font-semibold text-brand shadow-sm ring-1 ring-black/5"><span className="size-2 rounded-full bg-brand" />{c.badge}</span>
-              <h1 className="lp-rise mt-5 text-4xl font-bold leading-[1.25] sm:text-5xl lg:text-6xl lg:leading-[1.2]" style={{ ["--d" as string]: "120ms" }}>
-                {hero.hello} <span className="brand-word text-brand">نُزُل</span><br />{hero.engine}
-                <span className="lp2-rot">{[...hero.words, hero.words[0]].map((w, i) => <span key={i} aria-hidden={i > 0}>{w}</span>)}</span>
-              </h1>
+              <h1 className="lp-rise text-4xl font-bold leading-[1.25] sm:text-5xl lg:text-6xl lg:leading-[1.2]" style={{ ["--d" as string]: "120ms" }}>{hero.title}</h1>
               <p className="lp-rise mt-5 max-w-xl text-lg leading-relaxed text-[#4d5753]" style={{ ["--d" as string]: "240ms" }}>{c.sub}</p>
               {notice ? <p role="alert" className="mt-5 rounded-2xl bg-[#fdf1d6] px-4 py-3 text-sm font-semibold text-[#7a4f00]">{notice}</p> : null}
               <div className="lp-rise mt-8 flex flex-wrap items-start gap-3" style={{ ["--d" as string]: "360ms" }}>
@@ -204,15 +199,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
               <p className="mt-2 text-center text-xs text-[#66706c]">{hero.caption}</p>
             </div>
           </div>
-          <a href="#journey" className="absolute bottom-4 left-1/2 hidden -translate-x-1/2 text-[#66706c] lg:block" aria-label={c.featuresTitle}><ArrowDown className="lp-float size-5" /></a>
         </section>
-
-        {/* what it covers, drifting past */}
-        <div className="overflow-hidden border-y border-black/5 bg-white py-4" aria-hidden>
-          <div className="lp-marquee flex w-max gap-10 whitespace-nowrap text-sm font-semibold text-[#4d5753]">
-            {[...ticker, ...ticker].map((x, i) => <span key={i} className="flex items-center gap-10">{x}<span className="size-1.5 rounded-full bg-brand" /></span>)}
-          </div>
-        </div>
 
         <Journey en={en} />
 
