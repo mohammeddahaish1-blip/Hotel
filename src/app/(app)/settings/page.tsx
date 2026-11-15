@@ -1,6 +1,6 @@
 import { getPlan } from "@/lib/plan";
 import { PhoneInput } from "@/components/PhoneInput";
-import { Check, Lock, ShieldCheck, FileSpreadsheet, FolderArchive } from "lucide-react";
+import { ArrowLeftRight, Check, Lock, ShieldCheck, FileSpreadsheet, FolderArchive } from "lucide-react";
 import Link from "next/link";
 import { AREAS, ROLE_ACCESS, requireArea } from "@/lib/auth";
 import { SettingsTabs, settingsHref, type SettingsView } from "./SettingsTabs";
@@ -56,6 +56,18 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   const sp = await searchParams;
   const VIEWS: SettingsView[] = ["property", "units", "prices", "staff", "money", "plan"];
   const view: SettingsView = VIEWS.includes(sp.s as SettingsView) ? (sp.s as SettingsView) : "property";
+  // how much of the plan is in use (only read for the subscription tab)
+  const [unitCount, userCount] = view === "plan" && ctx.role === "owner"
+    ? await Promise.all([
+        ctx.supabase.from("units").select("id", { count: "exact", head: true }).eq("tenant_id", ctx.tenantId).eq("active", true).then((r) => r.count ?? 0),
+        ctx.supabase.from("memberships").select("user_id", { count: "exact", head: true }).eq("tenant_id", ctx.tenantId).eq("active", true).is("support_until", null).then((r) => r.count ?? 0),
+      ])
+    : [0, 0];
+  const usage: { label: string; n: number; max: number | null }[] = [
+    { label: t.sub_units, n: unitCount, max: plan.maxUnits },
+    { label: t.sub_props, n: ctx.properties.length, max: plan.maxProperties },
+    { label: t.sub_users, n: userCount, max: null },
+  ];
   // ---- "finish setting up": what a new property still lacks, each step with the tab that fixes it
   const steps: { done: boolean; label: string; hint: string; s: SettingsView }[] = [
     { done: !!(prop?.address && prop?.phone), label: t.set_property, hint: t.set_step_property_hint, s: "property" },
@@ -555,21 +567,21 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
       {view === "plan" ? (
         <>
       {ctx.role === "owner" && plan.code ? (
-        <section className="card mb-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="h2">{t.sub_title}</h2>
-            <Link href="/upgrade" className="btn-ghost btn-sm">{t.sub_compare}</Link>
-          </div>
-          <div className="grid gap-3 text-sm sm:grid-cols-4">
-            <div><div className="label">{t.sub_plan}</div><div className="font-bold">{(lang === "en" || lang === "bn") && plan.nameEn ? plan.nameEn : plan.name}</div></div>
-            <div><div className="label">{t.sub_status}</div><Badge tone={plan.status === "active" ? "ok" : plan.status === "trial" ? "info" : "danger"}>{t[`sub_st_${plan.status}` as DictKey]}</Badge></div>
-            <div>
-              <div className="label">{plan.status === "trial" ? t.sub_trial_until : t.sub_until}</div>
-              <div className="font-semibold">{gregorian(plan.status === "trial" ? plan.trialEndsAt : plan.periodEnd, lang)}</div>
+        <div className="mb-4 grid items-start gap-4 lg:grid-cols-2">
+          <section className="card">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-muted">{t.sub_current}</h2>
+              <Link href="/upgrade" className="btn-ghost btn-sm inline-flex items-center gap-1.5"><ArrowLeftRight className="size-4 shrink-0" aria-hidden />{t.sub_change}</Link>
             </div>
-            <div><div className="label">{t.sub_price}</div><div className="num font-semibold">{plan.price != null ? omr(plan.price, lang) : "—"}</div></div>
-          </div>
-          <details className="mt-3 text-sm">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-2xl font-bold">{(lang === "en" || lang === "bn") && plan.nameEn ? plan.nameEn : plan.name}</span>
+              <Badge tone={plan.status === "active" ? "ok" : plan.status === "trial" ? "info" : "danger"}>{t[`sub_st_${plan.status}` as DictKey]}</Badge>
+            </div>
+            <div className="mt-1"><span className="num text-lg font-bold">{plan.price != null ? omr(plan.price, lang) : "—"}</span> <span className="text-sm text-muted">{t.sub_monthly}</span></div>
+            <p className="mt-2 text-sm text-muted">
+              {plan.status === "trial" ? t.sub_trial_until : t.sub_until}: <b className="text-ink">{gregorian(plan.status === "trial" ? plan.trialEndsAt : plan.periodEnd, lang)}</b>
+            </p>
+          <details className="mt-4 border-t border-line pt-3 text-sm">
             <summary className="cursor-pointer text-xs font-semibold text-muted">{t.sub_payments} ({(subPays ?? []).length})</summary>
             {(subPays ?? []).length === 0 ? <p className="mt-2 text-xs text-muted">{t.sub_no_payments}</p> : (
               <ul className="mt-2 divide-y divide-line">
@@ -583,7 +595,30 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
               </ul>
             )}
           </details>
-        </section>
+          </section>
+          <section className="card">
+            <h2 className="text-sm font-semibold text-muted">{t.sub_usage}</h2>
+            <div className="mt-3 space-y-5">
+              {usage.map((u) => {
+                const over = u.max != null && u.n > u.max;
+                return (
+                  <div key={u.label}>
+                    <div className="text-sm text-muted">{u.label}</div>
+                    <div className="num text-lg font-bold">{u.max != null ? t.sub_of.replace("{n}", String(u.n)).replace("{max}", String(u.max)) : u.n}</div>
+                    {u.max != null ? (
+                      <>
+                        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-label={u.label} aria-valuemin={0} aria-valuemax={u.max} aria-valuenow={Math.min(u.n, u.max)}>
+                          <div className={`h-full rounded-full ${over ? "bg-danger" : u.n / u.max >= 0.9 ? "bg-warn" : "bg-brand"}`} style={{ width: `${Math.min(100, Math.round((u.n / u.max) * 100))}%` }} />
+                        </div>
+                        {over ? <div className="mt-1 text-xs font-semibold text-danger">{t.sub_over}</div> : null}
+                      </>
+                    ) : <div className="text-xs text-muted">{t.sub_no_limit}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
       ) : null}
 
       {ctx.role === "owner" || ctx.role === "manager" ? (
