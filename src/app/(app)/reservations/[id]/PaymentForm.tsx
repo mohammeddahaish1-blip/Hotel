@@ -28,14 +28,14 @@ export function PaymentForm({ balance, methods, kinds, labels: l }: {
       <fieldset>
         <legend className="label">{l.how}</legend>
         <input type="hidden" name="method" value={method} />
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div data-seg role="group" aria-label={l.how} className="flex max-w-full gap-1 overflow-x-auto rounded-full bg-gray-soft p-1">
           {methods.map((x) => (
             <button
               key={x.value}
               type="button"
               aria-pressed={method === x.value}
               onClick={() => setMethod(x.value)}
-              className={`min-h-12 rounded-2xl border px-2 text-sm font-semibold ${method === x.value ? "border-brand bg-brand-soft text-brand" : "border-line bg-surface text-ink"}`}
+              className={`min-h-11 flex-1 shrink-0 whitespace-nowrap rounded-full px-4 text-sm font-semibold ${method === x.value ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}
             >
               {x.label}
             </button>
