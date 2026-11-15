@@ -101,6 +101,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     // one log: everyone's operations for owner/manager/accountant, your own for everyone else
     { key: "audit", label: t.nav_activity, tabs: [{ href: "/audit", label: t.nav_activity }], also: ["/activity"] },
   ].filter((g) => g.tabs.length > 0);
+  // one order for the menu: the day's work, then money, then follow-up, then tools; the dashboard first and settings last
+  const ORDER = ["dashboard", "reservations", "units", "ops", "finance", "shops", "reports", "feedback", "complaints", "audit", "import", "settings"];
+  const rank = (k: string) => (ORDER.indexOf(k) === -1 ? ORDER.length - 1.5 : ORDER.indexOf(k));
+  groups.sort((a, b) => rank(a.key) - rank(b.key));
   const [alerts, supportWaiting] = await Promise.all([
     loadAlerts(ctx, t, lang),
     // the Nuzul team waiting for this hotel's approval (maintenance visit or access)
@@ -173,13 +177,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               </span>
               <AlertsBell alerts={alerts} labels={{ title: t.alerts_title, none: t.alerts_none, all: t.alerts_all }} />
               {/* your name opens your account, where signing out lives */}
-              <Link href="/profile" title={t.nav_profile} className="hidden items-center gap-2.5 rounded-full py-1 pe-1 ps-3 hover:bg-surface-2 lg:flex">
-                <span className="min-w-0 text-end leading-tight">
-                  <span className="block max-w-40 truncate text-sm font-bold text-ink">{ctx.fullName || ctx.email}</span>
-                  <span className="block max-w-40 truncate text-xs text-muted">{roleLabel}</span>
-                </span>
+              <Link href="/profile" title={t.nav_profile} className="ms-1 hidden items-center gap-2.5 rounded-full py-1 pe-3 ps-1 hover:bg-surface-2 lg:flex">
                 <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-soft text-base font-bold text-brand" aria-hidden>
                   {initial(ctx.fullName || ctx.email)}
+                </span>
+                <span className="min-w-0 text-start leading-tight">
+                  <span className="block max-w-40 truncate text-sm font-bold text-ink">{ctx.fullName || ctx.email}</span>
+                  <span className="block max-w-40 truncate text-xs text-muted">{roleLabel}</span>
                 </span>
               </Link>
             </div>
