@@ -301,3 +301,13 @@ html[dir="ltr"] .lp-marquee { animation-name: lp-marquee-ltr; }
   .lp-float, .lp-float-slow, .lp-blob, .lp-blob-2, .lp-ring, .lp-bar, .lp-rise, .lp-pop, .lp-pulse, .lp-marquee, .lp-done { animation: none; }
   .lp-card, .lp-card:hover { transition: none; transform: none; }
 }
+
+/* ---------------------------------------------------------------- small confirmations */
+/* a new alert: the bell swings once, the count pops */
+.bell-ring { transform-origin: 50% 10%; animation: bell-ring 0.9s ease-in-out; }
+@keyframes bell-ring { 0%, 100% { transform: rotate(0); } 15% { transform: rotate(16deg); } 30% { transform: rotate(-14deg); } 45% { transform: rotate(10deg); } 60% { transform: rotate(-7deg); } 80% { transform: rotate(3deg); } }
+.badge-pop { animation: badge-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) 2; }
+@keyframes badge-pop { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.45); } }
+@media (prefers-reduced-motion: reduce) {
+  .bell-ring, .badge-pop { animation: none; }
+}

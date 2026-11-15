@@ -19,6 +19,17 @@ export function AlertsBell({ alerts, labels }: { alerts: AlertItem[]; labels: { 
     return () => window.removeEventListener("mousedown", onClick);
   }, []);
   const urgent = alerts.some((a) => a.severity === 1);
+  // a new alert arriving while the page is open: the bell shakes once and the count pops
+  const seen = useRef(alerts.length);
+  const [ring, setRing] = useState(false);
+  useEffect(() => {
+    const more = alerts.length > seen.current;
+    seen.current = alerts.length;
+    if (!more) return;
+    setRing(true);
+    const id = setTimeout(() => setRing(false), 1200);
+    return () => clearTimeout(id);
+  }, [alerts.length]);
 
   return (
     <div ref={box} className="relative">
@@ -28,12 +39,12 @@ export function AlertsBell({ alerts, labels }: { alerts: AlertItem[]; labels: { 
         aria-label={`${labels.title} (${alerts.length})`}
         className="relative grid h-10 w-10 place-items-center rounded-xl border border-line bg-surface hover:bg-surface-2"
       >
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <svg viewBox="0 0 24 24" className={`h-5 w-5 ${ring ? "bell-ring" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.7 21a2 2 0 0 1-3.4 0" />
         </svg>
         {alerts.length ? (
-          <span className={`num absolute -end-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold text-white ${urgent ? "bg-danger" : "bg-warn"}`}>
+          <span className={`num absolute -end-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold text-white ${urgent ? "bg-danger" : "bg-warn"} ${ring ? "badge-pop" : ""}`}>
             {alerts.length}
           </span>
         ) : null}

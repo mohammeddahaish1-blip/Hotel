@@ -98,7 +98,7 @@ export default async function BoardPage({ searchParams }: PageProps<"/board">) {
                     : r.status === "maintenance" && can(ctx, "maintenance") ? ["/maintenance", t.board_go_fix]
                     : null;
                   const body = (
-                    <div className={`flex h-full min-h-28 flex-col rounded-2xl p-3 ${TILE[r.status] ?? "bg-surface-2"} ${overdue ? "ring-2 ring-danger" : ""}`}>
+                    <div className={`flex h-full min-h-28 flex-col rounded-2xl p-3 transition-colors duration-700 ${TILE[r.status] ?? "bg-surface-2"} ${overdue ? "ring-2 ring-danger" : ""}`}>
                       <span className="num text-2xl font-bold leading-tight">{r.number}</span>
                       <span className="text-xs font-semibold"><span aria-hidden>{UNIT_STATUS_EMOJI[r.status]}</span> {t[`st_${r.status}` as DictKey]}</span>
                       <span className="mt-1.5 truncate text-sm">{r.guest_name ?? r.type_name}</span>
