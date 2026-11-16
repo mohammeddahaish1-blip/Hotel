@@ -5,10 +5,10 @@ import { LangToggle } from "@/components/LangToggle";
 import { GoldLines, Phone } from "@/components/landing/Showcase";
 
 const EXTRA = {
-  ar: { welcome_back: "أهلاً بعودتك", sub_back: "ادخل لإدارة فندقك وشققك الفندقية.", sub_new: "ادخل بالبريد وكلمة المرور الخاصة بمنشأتك.", safe: "اتصال مشفّر، وبيانات كل منشأة معزولة عن غيرها.", tag: "لإدارة الفنادق والشقق الفندقية", head: "خمس محطات يمر بها كل نزيل", steps: ["الحجز", "الوصول", "الإقامة", "الدفع", "المغادرة"], alt: "لوحة حالة الوحدات في نُزُل على الجوال" },
-  en: { welcome_back: "Welcome back", sub_back: "Sign in to run your hotel and serviced apartments.", sub_new: "Sign in with your property's email and password.", safe: "Encrypted connection, and each company's data is kept apart.", tag: "Hotels & serviced apartments", head: "Five stops every guest passes", steps: ["Booking", "Arrival", "Stay", "Payment", "Departure"], alt: "The Nuzul units board on a phone" },
-  ur: { welcome_back: "خوش آمدید، دوبارہ", sub_back: "اپنے ہوٹل اور اپارٹمنٹس کے انتظام کے لیے داخل ہوں۔", sub_new: "اپنے ادارے کے ای میل اور پاس ورڈ سے داخل ہوں۔", safe: "محفوظ کنکشن، اور ہر ادارے کا ڈیٹا الگ رکھا جاتا ہے۔", tag: "ہوٹلوں اور سروسڈ اپارٹمنٹس کے لیے", head: "ہر مہمان کے پانچ مرحلے", steps: ["بکنگ", "آمد", "قیام", "ادائیگی", "روانگی"], alt: "فون پر نُزُل کا یونٹ بورڈ" },
-  bn: { welcome_back: "আবার স্বাগতম", sub_back: "আপনার হোটেল ও অ্যাপার্টমেন্ট পরিচালনা করতে প্রবেশ করুন।", sub_new: "আপনার প্রতিষ্ঠানের ইমেইল ও পাসওয়ার্ড দিয়ে প্রবেশ করুন।", safe: "এনক্রিপ্টেড সংযোগ, এবং প্রতিটি প্রতিষ্ঠানের ডেটা আলাদা রাখা হয়।", tag: "হোটেল ও সার্ভিসড অ্যাপার্টমেন্টের জন্য", head: "প্রতিটি অতিথির পাঁচটি ধাপ", steps: ["বুকিং", "আগমন", "অবস্থান", "পেমেন্ট", "প্রস্থান"], alt: "ফোনে নুজুলের ইউনিট বোর্ড" },
+  ar: { err_busy: "طلبات كثيرة في وقت قصير. انتظر بضع دقائق ثم حاول مرة أخرى، أو تواصل معنا لنفتح لك الحساب.", err_weak: "كلمة المرور ضعيفة. اختر كلمة أطول فيها حروف وأرقام.", err_generic: "تعذّر إتمام الطلب الآن. حاول مرة أخرى بعد قليل.", welcome_back: "أهلاً بعودتك", sub_back: "ادخل لإدارة فندقك وشققك الفندقية.", sub_new: "ادخل بالبريد وكلمة المرور الخاصة بمنشأتك.", safe: "اتصال مشفّر، وبيانات كل منشأة معزولة عن غيرها.", tag: "لإدارة الفنادق والشقق الفندقية", head: "خمس محطات يمر بها كل نزيل", steps: ["الحجز", "الوصول", "الإقامة", "الدفع", "المغادرة"], alt: "لوحة حالة الوحدات في نُزُل على الجوال" },
+  en: { err_busy: "Too many requests in a short time. Wait a few minutes and try again, or contact us and we will open the account for you.", err_weak: "That password is too weak. Choose a longer one with letters and numbers.", err_generic: "We could not complete that just now. Please try again shortly.", welcome_back: "Welcome back", sub_back: "Sign in to run your hotel and serviced apartments.", sub_new: "Sign in with your property's email and password.", safe: "Encrypted connection, and each company's data is kept apart.", tag: "Hotels & serviced apartments", head: "Five stops every guest passes", steps: ["Booking", "Arrival", "Stay", "Payment", "Departure"], alt: "The Nuzul units board on a phone" },
+  ur: { err_busy: "کم وقت میں بہت زیادہ درخواستیں۔ چند منٹ انتظار کر کے دوبارہ کوشش کریں، یا ہم سے رابطہ کریں۔", err_weak: "پاس ورڈ کمزور ہے۔ حروف اور اعداد والا لمبا پاس ورڈ چنیں۔", err_generic: "ابھی یہ مکمل نہیں ہو سکا۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔", welcome_back: "خوش آمدید، دوبارہ", sub_back: "اپنے ہوٹل اور اپارٹمنٹس کے انتظام کے لیے داخل ہوں۔", sub_new: "اپنے ادارے کے ای میل اور پاس ورڈ سے داخل ہوں۔", safe: "محفوظ کنکشن، اور ہر ادارے کا ڈیٹا الگ رکھا جاتا ہے۔", tag: "ہوٹلوں اور سروسڈ اپارٹمنٹس کے لیے", head: "ہر مہمان کے پانچ مرحلے", steps: ["بکنگ", "آمد", "قیام", "ادائیگی", "روانگی"], alt: "فون پر نُزُل کا یونٹ بورڈ" },
+  bn: { err_busy: "অল্প সময়ে অনেক অনুরোধ। কয়েক মিনিট অপেক্ষা করে আবার চেষ্টা করুন, অথবা আমাদের সাথে যোগাযোগ করুন।", err_weak: "পাসওয়ার্ডটি দুর্বল। অক্ষর ও সংখ্যা সহ লম্বা পাসওয়ার্ড বেছে নিন।", err_generic: "এখন এটি সম্পন্ন করা যায়নি। একটু পরে আবার চেষ্টা করুন।", welcome_back: "আবার স্বাগতম", sub_back: "আপনার হোটেল ও অ্যাপার্টমেন্ট পরিচালনা করতে প্রবেশ করুন।", sub_new: "আপনার প্রতিষ্ঠানের ইমেইল ও পাসওয়ার্ড দিয়ে প্রবেশ করুন।", safe: "এনক্রিপ্টেড সংযোগ, এবং প্রতিটি প্রতিষ্ঠানের ডেটা আলাদা রাখা হয়।", tag: "হোটেল ও সার্ভিসড অ্যাপার্টমেন্টের জন্য", head: "প্রতিটি অতিথির পাঁচটি ধাপ", steps: ["বুকিং", "আগমন", "অবস্থান", "পেমেন্ট", "প্রস্থান"], alt: "ফোনে নুজুলের ইউনিট বোর্ড" },
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
@@ -51,6 +51,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               sub_back: x.sub_back,
               sub_new: x.sub_new,
               safe: x.safe,
+              err_busy: x.err_busy,
+              err_weak: x.err_weak,
+              err_generic: x.err_generic,
             }}
             notice={typeof sp.notice === "string" ? sp.notice : undefined}
             initialMode={sp.mode === "signup" ? "signup" : "login"}

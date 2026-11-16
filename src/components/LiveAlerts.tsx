@@ -33,14 +33,24 @@ export function LiveAlerts({ propertyId, tenantId }: { propertyId: string; tenan
       window.clearTimeout(wait);
       wait = window.setTimeout(refresh, Math.max(0, Math.min(1500, first + 5000 - now)));
     };
-    let channel = supabase.channel(`alerts-${propertyId}`);
-    for (const table of BY_PROPERTY) {
-      channel = channel.on("postgres_changes", { event: "*", schema: "public", table, filter: `property_id=eq.${propertyId}` }, changed);
-    }
-    for (const table of BY_TENANT) {
-      channel = channel.on("postgres_changes", { event: "*", schema: "public", table, filter: `tenant_id=eq.${tenantId}` }, changed);
-    }
-    channel.subscribe();
+    // The live connection must carry the signed-in person's token before it subscribes: without it
+    // the database treats the listener as a visitor and row security hides every change from it.
+    let channel: ReturnType<typeof supabase.channel> | undefined;
+    let gone = false;
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (gone) return;
+      if (data.session) await supabase.realtime.setAuth(data.session.access_token);
+      if (gone) return;
+      let ch = supabase.channel(`alerts-${propertyId}`);
+      for (const table of BY_PROPERTY) {
+        ch = ch.on("postgres_changes", { event: "*", schema: "public", table, filter: `property_id=eq.${propertyId}` }, changed);
+      }
+      for (const table of BY_TENANT) {
+        ch = ch.on("postgres_changes", { event: "*", schema: "public", table, filter: `tenant_id=eq.${tenantId}` }, changed);
+      }
+      channel = ch.subscribe();
+    })();
     const onShow = () => { if (!document.hidden) changed(); };
     document.addEventListener("visibilitychange", onShow);
     const timer = window.setInterval(changed, 60_000);
@@ -48,7 +58,8 @@ export function LiveAlerts({ propertyId, tenantId }: { propertyId: string; tenan
       document.removeEventListener("visibilitychange", onShow);
       window.clearInterval(timer);
       window.clearTimeout(wait);
-      void supabase.removeChannel(channel);
+      gone = true;
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [propertyId, tenantId, router]);
   return null;

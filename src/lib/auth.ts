@@ -154,6 +154,23 @@ export function can(ctx: Pick<Ctx, "areas">, area: Area) {
   return ctx.areas.includes(area);
 }
 
+/** Which section a page belongs to (pages outside the sections are open to everyone signed in). */
+const PAGE_AREA: [string, Area][] = [
+  ["/finance", "finance"], ["/housekeeping", "housekeeping"], ["/maintenance", "maintenance"], ["/reservations", "reservations"],
+  ["/night-audit", "reservations"], ["/messages", "reservations"], ["/guests", "guests"], ["/feedback", "feedback"],
+  ["/settings", "settings"], ["/support", "settings"], ["/reports", "reports"], ["/compliance", "compliance"],
+  ["/calendar", "calendar"], ["/dashboard", "dashboard"], ["/import", "import"],
+];
+
+/** False when a link would only lead this person to the "not allowed" page: such links are not shown. */
+export function canOpen(ctx: Pick<Ctx, "areas" | "role" | "roles">, href: string | null | undefined): boolean {
+  if (!href) return false;
+  // the daily close and guest messages are for the front office only, whatever sections someone has
+  if (/^\/(night-audit|messages)(\/|\?|#|$)/.test(href) && !hasRole(ctx, ["manager", "reception"])) return false;
+  const hit = PAGE_AREA.find(([p]) => href === p || href.startsWith(`${p}/`) || href.startsWith(`${p}?`) || href.startsWith(`${p}#`));
+  return !hit || can(ctx, hit[1]);
+}
+
 /** True when any of the given roles is in effect for this user (owner always qualifies) */
 export function hasRole(ctx: Pick<Ctx, "role" | "roles">, roles: Role[]) {
   return ctx.role === "owner" || ctx.roles.some((r) => roles.includes(r));

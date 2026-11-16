@@ -1,6 +1,6 @@
 import { ChevronDown, Download, ExternalLink, Filter, TriangleAlert } from "lucide-react";
 import Link from "next/link";
-import { can, getCtx } from "@/lib/auth";
+import { canOpen, can, getCtx } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import { intlLocale, isRtl, type DictKey } from "@/lib/i18n/dict";
 import { addDays, todayIn, zonedStart } from "@/lib/format";
@@ -190,7 +190,8 @@ export default async function LogPage({ searchParams }: PageProps<"/audit">) {
                   const job = e.actor ? jobOf.get(e.actor) ?? "" : "";
                   const href = profileHref(ctx, e.actor);
                   const tag = auditTag(e, al);
-                  const more = e.changes.length > 0 || !!e.href;
+                  const link = canOpen(ctx, e.href) ? e.href : null;
+                  const more = e.changes.length > 0 || !!link;
                   const line = (
                     <>
                       {/* tablets and desktops: time, person, sentence, tag in one row */}
@@ -260,8 +261,8 @@ export default async function LogPage({ searchParams }: PageProps<"/audit">) {
                               </ul>
                             ) : null}
                             <div className="flex flex-wrap gap-x-4 gap-y-1">
-                              {e.href ? (
-                                <Link href={e.href} className="inline-flex items-center gap-1 font-semibold text-brand hover:underline">
+                              {link ? (
+                                <Link href={link} className="inline-flex items-center gap-1 font-semibold text-brand hover:underline">
                                   <ExternalLink className="size-3.5 shrink-0" /> {t.log_open}
                                 </Link>
                               ) : null}
