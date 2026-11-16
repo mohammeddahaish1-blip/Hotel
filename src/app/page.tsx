@@ -156,7 +156,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     : { title: "اعرف ما يجري في فندقك، لحظة بلحظة", caption: "شاشة حقيقية من النظام ببيانات تجريبية", nav: ["المحطات", "ماذا يفعل", "بلا متابعة", "الباقات", "أسئلة"] };
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-[#f6f8f6] text-[#1c2321]">
+    <div className="lp-root min-h-screen overflow-x-clip bg-[#f6f8f6] text-[#1c2321]">
       <noscript><style>{".lp-reveal{opacity:1;transform:none}"}</style></noscript>
       <header className="sticky top-0 z-30 border-b border-black/5 bg-[#f6f8f6]/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 lg:px-8">
@@ -268,7 +268,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </Reveal>
         </section>
 
-        <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-24 sm:pb-16 lg:px-8">
+        <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-12 sm:pb-16 lg:px-8">
           <Reveal><h2 className="text-3xl font-bold">{c.faqTitle}</h2></Reveal>
           <div className="mt-6 space-y-3">
             {c.faq.map(([q, a], i) => (
@@ -283,10 +283,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </section>
       </main>
 
-      {/* phones: the trial request stays one press away while reading */}
-      <a href="#trial" className="btn-primary fixed inset-x-3 bottom-3 z-30 min-h-12 text-base shadow-[0_14px_30px_rgba(13,107,95,0.35)] sm:hidden">{c.demo}</a>
-
-      <footer className="border-t border-black/5 bg-white pb-16 sm:pb-0">
+      <footer className="border-t border-black/5 bg-white pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-[#66706c] lg:px-8">
           <span><span className="brand-word text-xl text-brand">نُزُل</span> · {c.footer}</span>
           <Link href="/login" className="hover:text-brand">{c.login}</Link>
