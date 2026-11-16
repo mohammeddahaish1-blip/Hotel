@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import type { Ctx } from "./auth";
-import { can } from "./auth";
+import { canOpen, can } from "./auth";
 import type { Dict, DictKey } from "./i18n/dict";
 import { gregorian, omr, todayIn, zonedStart } from "./format";
 import type { AlertGroup, AlertItem } from "@/components/AlertsBell";
@@ -160,5 +160,5 @@ export const loadAlerts = cache(async (ctx: Ctx, t: Dict, lang: "ar" | "en" | "u
     }
     const detail = r.kind === "urgent_maintenance" ? join([unit, extra]) : join([unit, who, extra]);
     return { key: `${r.kind}-${r.ref_id}-${i}`, severity: r.severity, title: t[`al_${r.kind}` as DictKey] ?? r.kind, detail, href, group: GROUP[r.kind] ?? "other" };
-  }));
+   })).filter((a) => canOpen(ctx, a.href));  // an alert is only useful to someone who can open where it is handled
 });

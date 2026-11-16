@@ -3,7 +3,7 @@ import { Ellipsis, FileSignature, Link2 as LinkIcon, MessageCircle, Paperclip, P
 import { PaymentForm } from "./PaymentForm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { hasRole, requireArea } from "@/lib/auth";
+import { can, hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
 import { dateTime, gregorian, hijri, nights, omr, parseRange, todayIn, whatsappLink } from "@/lib/format";
@@ -119,7 +119,7 @@ export default async function ReservationPage({ params, searchParams }: PageProp
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="h1"><Link href={`/guests/${guest.id}`}>{guest.full_name}</Link></h1>
+              <h1 className="h1">{can(ctx, "guests") ? <Link href={`/guests/${guest.id}`}>{guest.full_name}</Link> : guest.full_name}</h1>
               <Badge tone={RES_STATUS_TONE[r.status]}><span aria-hidden>{RES_STATUS_EMOJI[r.status]}</span> {t[`rs_${r.status}` as DictKey]}</Badge>
             </div>
             <p className="mt-1.5">
