@@ -97,8 +97,8 @@ function Head({ kicker, title, sub, light = false }: { kicker: string; title: st
   return (
     <Reveal>
       <div className="lp2-kicker" style={light ? { color: "#f0cf7a" } : undefined}>{kicker}</div>
-      <h2 className="text-3xl font-bold leading-tight sm:text-4xl lg:text-[2.75rem]">{title}</h2>
-      {sub ? <p className={`mt-3 max-w-2xl text-lg ${light ? "text-[#b9d6d0]" : "text-[#4d5753]"}`}>{sub}</p> : null}
+      <h2 className="text-[1.65rem] font-bold leading-tight sm:text-4xl lg:text-[2.75rem]">{title}</h2>
+      {sub ? <p className={`mt-3 max-w-2xl text-base sm:text-lg ${light ? "text-[#b9d6d0]" : "text-[#4d5753]"}`}>{sub}</p> : null}
     </Reveal>
   );
 }
@@ -106,7 +106,7 @@ function Head({ kicker, title, sub, light = false }: { kicker: string; title: st
 function Card({ title, sub, span, delay = 0, children }: { title: string; sub: string; span: string; delay?: number; children: ReactNode }) {
   return (
     <Reveal delay={delay} className={span}>
-      <div className="lp-card h-full overflow-hidden rounded-[1.6rem] border border-[#e4e0d6] bg-white p-6">
+      <div className="lp-card h-full overflow-hidden rounded-[1.6rem] border border-[#e4e0d6] bg-white p-5 sm:p-6">
         <h3 className="text-xl font-bold">{title}</h3>
         <p className="mb-4 mt-1 text-[15px] text-[#66706c]">{sub}</p>
         {children}
@@ -118,9 +118,9 @@ function Card({ title, sub, span, delay = 0, children }: { title: string; sub: s
 export function Journey({ en }: { en: boolean }) {
   const t = en ? T.en : T.ar;
   return (
-    <section id="journey" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-16 lg:px-8 lg:pt-20">
+    <section id="journey" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-10 sm:pt-16 lg:px-8 lg:pt-20">
       <Head kicker={t.jKicker} title={t.jTitle} sub={t.jSub} />
-      <Reveal className="mt-12">
+      <Reveal className="mt-8 sm:mt-12">
         <ol className="lp2-jr">
           {t.steps.map(([a, b], k) => (
             <li key={a} className="lp2-st" style={i(k)}>
@@ -143,7 +143,7 @@ export function Solutions({ en }: { en: boolean }) {
   const amounts = ["50.000", "2.000", "2.500", "2.500", "57.000"];
   const bars = [45, 62, 38, 78, 55, 96, 70];
   return (
-    <section id="features" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16 lg:px-8 lg:py-20">
+    <section id="features" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-10 sm:py-16 lg:px-8 lg:py-20">
       <Head kicker={t.sKicker} title={t.sTitle} sub={t.sSub} />
       <div className="mt-10 grid gap-4 lg:grid-cols-6">
         <Card title={t.units[0]} sub={t.units[1]} span="lg:col-span-4">
@@ -209,8 +209,8 @@ export function Automation({ en }: { en: boolean }) {
   );
   return (
     <section id="day" className="scroll-mt-16 px-3 lg:px-4">
-      <div className="rounded-[2.5rem] bg-[#083f39] text-white">
-        <div className="mx-auto max-w-6xl px-4 py-16 lg:px-8 lg:py-20">
+      <div className="rounded-[1.75rem] bg-[#083f39] text-white sm:rounded-[2.5rem]">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:py-16 lg:px-8 lg:py-20">
           <Head kicker={t.aKicker} title={t.aTitle} sub={t.aSub} light />
           <div className="mt-10 grid gap-4 md:grid-cols-2">
             <Reveal className="h-full">{lane(t.manual, false)}</Reveal>
@@ -225,7 +225,7 @@ export function Automation({ en }: { en: boolean }) {
 export function Replaces({ en }: { en: boolean }) {
   const t = en ? T.en : T.ar;
   return (
-    <section className="mx-auto max-w-6xl px-4 py-16 lg:px-8 lg:py-20">
+    <section className="mx-auto max-w-6xl px-4 py-10 sm:py-16 lg:px-8 lg:py-20">
       <Head kicker={t.rKicker} title={t.rTitle} />
       <Reveal className="mt-9">
         <div className="overflow-hidden rounded-[1.6rem] border border-[#e4e0d6] bg-white">
