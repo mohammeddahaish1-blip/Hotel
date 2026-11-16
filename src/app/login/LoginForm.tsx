@@ -8,7 +8,7 @@ type T = Record<
   | "login_title" | "signup_title" | "email" | "password" | "login_btn" | "signup_btn" | "have_account" | "no_account"
   | "check_email" | "already_registered" | "forgot_password" | "reset_title" | "reset_btn" | "reset_sent"
   | "invalid_login" | "email_not_confirmed" | "show_password" | "link_other_device"
-  | "welcome_back" | "sub_back" | "sub_new" | "safe",
+  | "welcome_back" | "sub_back" | "sub_new" | "safe" | "err_busy" | "err_weak" | "err_generic",
   string
 >;
 
@@ -52,7 +52,7 @@ export function LoginForm({ t, notice, initialMode = "login" }: { t: T; notice?:
         setPending(false);
         if (error.code === "invalid_credentials") return setError(t.invalid_login);
         if (error.code === "email_not_confirmed") return setError(t.email_not_confirmed);
-        return setError(error.message);
+        return setError(/rate.?limit/i.test(`${error.code} ${error.message}`) ? t.err_busy : t.err_generic);
       }
       // One full navigation: the server sends the user straight to their home page (one request
       // instead of two client round trips), and the button keeps spinning until it opens.
@@ -61,7 +61,8 @@ export function LoginForm({ t, notice, initialMode = "login" }: { t: T; notice?:
     } else if (mode === "signup") {
       const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callback } });
       setPending(false);
-      if (error) return setError(error.message);
+      // plain words in the person's language, never the service's raw English message
+      if (error) return setError(/rate.?limit/i.test(`${error.code} ${error.message}`) ? t.err_busy : error.code === "weak_password" ? t.err_weak : t.err_generic);
       if (data.session) {
         router.replace("/onboarding");
         router.refresh();
@@ -75,7 +76,7 @@ export function LoginForm({ t, notice, initialMode = "login" }: { t: T; notice?:
         redirectTo: `${callback}?next=/auth/update-password`,
       });
       setPending(false);
-      if (error) return setError(error.message);
+      if (error) return setError(/rate.?limit/i.test(`${error.code} ${error.message}`) ? t.err_busy : t.err_generic);
       setInfo(t.reset_sent);
     }
   }
