@@ -191,7 +191,7 @@ export async function adminSavePlanPrices(_: ActionResult, fd: FormData): Promis
       return parseAmount(raw, c) ?? undefined;
     };
     const row = { currency: c, monthly: read("monthly", true), yearly: read("yearly", true), offer_monthly: read("offer_monthly", false), offer_yearly: read("offer_yearly", false) };
-    if (row.monthly === undefined || row.yearly === undefined) return { error: `أسعار ${CUR[c].country}: اكتب السعر الشهري والسنوي بأرقام صحيحة.` };
+    if (row.monthly == null || row.yearly == null) return { error: `أسعار ${CUR[c].country}: اكتب السعر الشهري والسنوي بأرقام صحيحة.` };
     if (row.offer_monthly === undefined || row.offer_yearly === undefined) return { error: `سعر العرض في ${CUR[c].country}: رقم صحيح أو اتركه فارغاً.` };
     if ((row.offer_monthly != null && row.offer_monthly >= row.monthly) || (row.offer_yearly != null && row.offer_yearly >= row.yearly))
       return { error: `سعر العرض في ${CUR[c].country} لازم يكون أقل من السعر الأصلي.` };
