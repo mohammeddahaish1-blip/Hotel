@@ -40,8 +40,11 @@ export async function updateSession(request: NextRequest) {
 
   if (!data?.claims && !isPublic) {
     const url = request.nextUrl.clone();
+    const back = request.nextUrl.pathname + request.nextUrl.search;
     url.pathname = "/login";
     url.search = "";
+    // remember the page they asked for, so signing in opens it instead of the home page
+    if (request.nextUrl.pathname !== "/login") url.searchParams.set("next", back);
     return NextResponse.redirect(url);
   }
   return response;

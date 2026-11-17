@@ -57,7 +57,9 @@ export function LoginForm({ t, notice, initialMode = "login" }: { t: T; notice?:
       // One full navigation: the server sends the user straight to their home page (one request
       // instead of two client round trips), and the button keeps spinning until it opens.
       try { localStorage.setItem(SEEN, "1"); } catch { /* private mode: no greeting next time */ }
-      window.location.replace("/");
+      // back to the page they asked for (only a page on this site), otherwise their home page
+      const next = new URLSearchParams(window.location.search).get("next");
+      window.location.replace(next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : "/");
     } else if (mode === "signup") {
       const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callback } });
       setPending(false);
