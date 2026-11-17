@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import {
   ArrowDown, CalendarRange, Check, ClipboardCheck, FileText, KeyRound, LifeBuoy, MessageCircle, Receipt, ShieldCheck, Wrench,
 } from "lucide-react";
+import { headers } from "next/headers";
 import { getCtx, homeFor } from "@/lib/auth";
+import { amount, CUR, currencyForCountry, type Currency } from "@/lib/currency";
+import { Money } from "@/components/CurrencySign";
 import { createClient } from "@/lib/supabase/server";
 import { getDict } from "@/lib/i18n/server";
 import { LangToggle } from "@/components/LangToggle";
@@ -11,7 +14,11 @@ import { Reveal } from "@/components/landing/Reveal";
 import { TrialForm } from "@/components/landing/TrialForm";
 import { Automation, HeroStage, Journey, Pocket, Replaces, Solutions } from "@/components/landing/Showcase";
 
-type PlanRow = { code: string; name_ar: string; name_en: string | null; monthly_price: number; max_units: number | null; max_properties: number | null; features: string[] };
+type PlanRow = {
+  code: string; name_ar: string; name_en: string | null; monthly_price: number; max_units: number | null; max_properties: number | null; features: string[];
+  offer_active: boolean; offer_ends_on: string | null; offer_label: string | null;
+};
+type PriceRow = { plan_code: string; currency: Currency; monthly: number; yearly: number; offer_monthly: number | null; offer_yearly: number | null };
 
 const COPY = {
   ar: {
@@ -55,6 +62,15 @@ const COPY = {
     plansTitle: "باقات واضحة، والشهر الأول مجاناً",
     plansSub: "تبدأ كل شركة بشهر مجاني كامل على الباقة الشاملة، ثم تختار الباقة التي تناسبها. لا يُخصم شيء تلقائياً.",
     perMonth: "شهرياً",
+    perYear: "سنوياً",
+    billMonth: "شهري",
+    billYear: "سنوي",
+    offerLabel: "عرض لفترة محدودة",
+    was: "بدلاً من",
+    offerOff: (n: string, y: boolean) => `خصم ${n} ${y ? "كل سنة" : "كل شهر"}`,
+    saveYear: (n: string) => `وفّر ${n} في السنة`,
+    until: "حتى",
+    inCur: (c: string) => `الأسعار بعملة بلدك: ${c}`,
     units: (n: number | null) => (n ? `حتى ${n} وحدة` : "وحدات غير محدودة"),
     props: (n: number | null) => (n == null ? "عقارات غير محدودة" : n === 1 ? "عقار واحد" : `حتى ${n} عقار`),
     core: "كل أساسيات التشغيل: الحجوزات، الاستقبال، الفواتير، التنظيف، الصيانة، التقارير",
@@ -109,6 +125,15 @@ const COPY = {
     plansTitle: "Clear plans, first month free",
     plansSub: "Every company starts with a full free month on the complete plan, then picks the plan that fits. Nothing is charged automatically.",
     perMonth: "per month",
+    perYear: "per year",
+    billMonth: "Monthly",
+    billYear: "Yearly",
+    offerLabel: "Limited-time offer",
+    was: "was",
+    offerOff: (n: string, y: boolean) => `${n} off every ${y ? "year" : "month"}`,
+    saveYear: (n: string) => `Save ${n} a year`,
+    until: "until",
+    inCur: (c: string) => `Prices in ${c}`,
     units: (n: number | null) => (n ? `Up to ${n} units` : "Unlimited units"),
     props: (n: number | null) => (n == null ? "Unlimited properties" : n === 1 ? "One property" : `Up to ${n} properties`),
     core: "All the essentials: bookings, front desk, invoices, housekeeping, maintenance, reports",
@@ -132,8 +157,6 @@ const FEATURE_NAMES: Record<string, [string, string]> = {
   assistant: ["المساعد الذكي", "AI assistant"], multi_property: ["تعدد العقارات", "Multiple properties"],
 };
 
-/** Whole riyals for prices (baisa in the database): "15", or "12.5" for a non-round price */
-const riyals = (baisa: number) => String(Number((baisa / 1000).toFixed(3)));
 
 /** Visitors see the product page; signed-in staff go straight to their home page. */
 export default async function Home({ searchParams }: PageProps<"/">) {
@@ -147,8 +170,28 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const en = lang === "en" || lang === "bn";   // Bengali visitors read the English page
   const c = en ? COPY.en : COPY.ar;
   const sp = await searchParams;
-  const { data } = await supabase.from("plans").select("code, name_ar, name_en, monthly_price, max_units, max_properties, features").eq("active", true).order("sort");
+  const [{ data }, { data: priceRows }, h] = await Promise.all([
+    supabase.from("plans").select("code, name_ar, name_en, monthly_price, max_units, max_properties, features, offer_active, offer_ends_on, offer_label").eq("active", true).order("sort"),
+    supabase.from("plan_prices").select("plan_code, currency, monthly, yearly, offer_monthly, offer_yearly"),
+    headers(),
+  ]);
   const plans = (data ?? []) as PlanRow[];
+  // prices in the visitor's own currency: Saudi riyals from Saudi Arabia, dirhams from the UAE, Omani rials otherwise
+  const cur = currencyForCountry(h.get("x-vercel-ip-country"));
+  const yearly = sp.bill === "year";
+  const today = new Date(Date.now() + 4 * 3_600_000).toISOString().slice(0, 10);
+  const priceOf = (p: PlanRow) => {
+    const rows = (priceRows ?? []) as PriceRow[];
+    const row = rows.find((r) => r.plan_code === p.code && r.currency === cur);
+    const c = row ? cur : "OMR";
+    const r = row ?? rows.find((x) => x.plan_code === p.code && x.currency === "OMR");
+    const list = r ? (yearly ? r.yearly : r.monthly) : p.monthly_price * (yearly ? 10 : 1);
+    const offerOn = p.offer_active && (!p.offer_ends_on || p.offer_ends_on >= today);
+    const offer = offerOn && r ? (yearly ? r.offer_yearly : r.offer_monthly) : null;
+    const twelve = r ? r.monthly * 12 : 0;
+    return { c, list, now: offer != null && offer < list ? offer : list, was: offer != null && offer < list ? list : null, save: yearly && r && twelve > r.yearly ? twelve - r.yearly : 0 };
+  };
+  const fmt = (minor: number, c: Currency) => amount(minor, c, "en-US");
   const notice = sp.trial === "expired" ? c.expired : sp.trial === "unavailable" ? c.unavailable : null;
   const anchors = ["#journey", "#features", "#day", "#plans", "#faq"];
   const hero = en
@@ -228,17 +271,40 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             <h2 className="text-3xl font-bold sm:text-4xl">{c.plansTitle}</h2>
             <p className="mt-2 max-w-2xl text-[#4d5753]">{c.plansSub}</p>
           </Reveal>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <nav className="flex gap-1 rounded-full bg-[#e4e8e5] p-1" aria-label={c.plansTitle}>
+              {([["month", c.billMonth], ["year", c.billYear]] as const).map(([k, label]) => (
+                <Link key={k} href={k === "year" ? "/?bill=year#plans" : "/#plans"} scroll={false} aria-current={(k === "year") === yearly ? "true" : undefined}
+                  className={`rounded-full px-5 py-2 text-sm font-semibold ${(k === "year") === yearly ? "bg-white text-[#1c2321] shadow-sm" : "text-[#66706c] hover:text-[#1c2321]"}`}>{label}</Link>
+              ))}
+            </nav>
+            <span className="text-sm text-[#66706c]">{c.inCur(en ? CUR[cur].en : CUR[cur].ar)}</span>
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
             {plans.map((p, i) => {
               const top = i === plans.length - 1;
+              const pr = priceOf(p);
               return (
                 <Reveal key={p.code} delay={i * 120} className="h-full">
-                  <div className={`lp-card flex h-full flex-col rounded-3xl p-6 ${top ? "bg-[#0d6b5f] text-white shadow-[0_22px_50px_rgba(13,107,95,0.3)]" : "bg-white shadow-[0_10px_26px_rgba(20,40,35,0.06)]"}`}>
+                  <div className={`lp-card flex h-full flex-col rounded-3xl p-6 ${top ? "bg-[#0d6b5f] text-white shadow-[0_22px_50px_rgba(13,107,95,0.3)]" : "bg-white shadow-[0_10px_26px_rgba(20,40,35,0.06)]"} ${pr.was ? "ring-2 ring-[#e7b9b4]" : ""}`}>
                     <h3 className="text-lg font-bold">{en ? p.name_en ?? p.name_ar : p.name_ar}</h3>
-                    <div className="mt-3 flex items-baseline gap-1.5">
-                      <span className="num text-4xl font-bold">{en ? `OMR ${riyals(p.monthly_price)}` : `${riyals(p.monthly_price)} ر.ع.`}</span>
-                      <span className={`text-sm ${top ? "opacity-80" : "text-[#66706c]"}`}>{c.perMonth}</span>
+                    {pr.was ? (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#e7b9b4] bg-[#fdf3f2] px-2.5 py-1 text-xs font-bold text-[#8c1d18]">
+                          <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                          {p.offer_label || c.offerLabel}{p.offer_ends_on ? ` · ${c.until} ${p.offer_ends_on.slice(8, 10)}/${p.offer_ends_on.slice(5, 7)}` : ""}
+                        </span>
+                        <span className={`text-sm ${top ? "text-white/75" : "text-[#66706c]"}`}>
+                          {c.was} <s className="decoration-[#d04437] decoration-2"><Money value={fmt(pr.was, pr.c)} cur={pr.c} /></s>
+                        </span>
+                      </div>
+                    ) : null}
+                    <div className="mt-3 flex items-baseline gap-2">
+                      <Money value={fmt(pr.now, pr.c)} cur={pr.c} className="text-4xl font-bold" />
+                      <span className={`text-sm ${top ? "opacity-80" : "text-[#66706c]"}`}>{yearly ? c.perYear : c.perMonth}</span>
                     </div>
+                    {pr.was ? <div className={`mt-1 text-sm font-bold ${top ? "text-[#cfe9e3]" : "text-[#157f3b]"}`}>{c.offerOff(`${fmt(pr.was - pr.now, pr.c)}`, yearly)}</div> : null}
+                    {pr.save ? <div className={`mt-1 text-sm font-bold ${top ? "text-[#cfe9e3]" : "text-[#157f3b]"}`}>{c.saveYear(fmt(pr.save, pr.c))}</div> : null}
                     <ul className="mt-5 flex-1 space-y-2 text-sm">
                       {[c.units(p.max_units), c.props(p.max_properties), c.core, ...p.features.filter((f) => f !== "multi_property" && f !== "assistant").map((f) => FEATURE_NAMES[f]?.[en ? 1 : 0] ?? f)].map((line) => (
                         <li key={line} className="flex items-start gap-2"><Check className={`mt-0.5 size-4 shrink-0 ${top ? "" : "text-brand"}`} aria-hidden />{line}</li>

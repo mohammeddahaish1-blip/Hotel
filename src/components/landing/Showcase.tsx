@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CurrencySign } from "@/components/CurrencySign";
 import { Reveal } from "./Reveal";
 
 /** Second half of the public page: the product shown on a phone, the guest's journey and small live samples.
@@ -9,7 +10,7 @@ const i = (n: number) => ({ ["--i" as string]: n });
 const T = {
   ar: {
     board: "لوحة حالة الوحدات في نُزُل على الجوال", dash: "لوحة المالك في نُزُل على الجوال",
-    chips: [["الوحدة 204 جاهزة", "أنهى التنظيف قبل دقيقتين"], ["دفعة مستلمة 120 ر.ع.", "سند قبض رقم 1042"], ["وصول اليوم: 3 نزلاء", ""]],
+    chips: [["الوحدة 204 جاهزة", "أنهى التنظيف قبل دقيقتين"], ["دفعة مستلمة 120 ¤", "سند قبض رقم 1042"], ["وصول اليوم: 3 نزلاء", ""]],
     jKicker: "رحلة النزيل من البداية إلى النهاية", jTitle: "كم دفتراً وبرنامجاً تحتاج لتشغيل فندق واحد؟",
     jSub: "لا ورقة تضيع بين الاستقبال والمحاسب، ولا غرفة تُنسى بعد المغادرة.",
     steps: [["الحجز", "من التقويم أو من Booking وAirbnb، بلا حجز مزدوج."], ["الوصول", "قراءة البطاقة أو الجواز وتسجيل النزيل في دقيقة."], ["الإقامة", "تنظيف، صيانة، وطلبات المحلات على حساب الغرفة."], ["الدفع", "فاتورة بالرسوم والضريبة، وسند قبض مرقّم."], ["المغادرة", "تسوية الحساب، والغرفة تذهب للتنظيف تلقائياً."]],
@@ -31,7 +32,7 @@ const T = {
   },
   en: {
     board: "The Nuzul units board on a phone", dash: "The Nuzul owner dashboard on a phone",
-    chips: [["Unit 204 is ready", "Cleaning finished two minutes ago"], ["Payment received OMR 120", "Receipt no. 1042"], ["Arriving today: 3 guests", ""]],
+    chips: [["Unit 204 is ready", "Cleaning finished two minutes ago"], ["Payment received 120 ¤", "Receipt no. 1042"], ["Arriving today: 3 guests", ""]],
     jKicker: "The guest's journey, start to finish", jTitle: "How many notebooks and apps does one hotel take?",
     jSub: "No paper goes missing between the front desk and the accountant, and no room is forgotten after check-out.",
     steps: [["Booking", "From the calendar or from Booking and Airbnb, with no double bookings."], ["Arrival", "Read the ID or passport and register the guest in a minute."], ["Stay", "Housekeeping, maintenance, and shop orders on the room account."], ["Payment", "An invoice with fees and tax, and a numbered receipt."], ["Departure", "The account is settled and the room goes to housekeeping by itself."]],
@@ -76,6 +77,12 @@ export function GoldLines({ id }: { id: string }) {
   );
 }
 
+/** "120 ¤" → the figure with the Omani rial sign in place of the mark. */
+function withSign(text: string) {
+  const [before, after] = text.split("¤");
+  return after === undefined ? text : <>{before}<CurrencySign cur="OMR" />{after}</>;
+}
+
 export function HeroStage({ en }: { en: boolean }) {
   const t = en ? T.en : T.ar;
   const icons = ["✓", "+", "↘"];
@@ -86,7 +93,7 @@ export function HeroStage({ en }: { en: boolean }) {
       <Phone src="/landing/board.jpg" alt={t.board} />
       {t.chips.map(([a, b], k) => (
         <div key={a} className={`lp2-chip lp2-c${k + 1}`} aria-hidden>
-          <i>{icons[k]}</i><span>{a}{b ? <small>{b}</small> : null}</span>
+          <i>{icons[k]}</i><span>{withSign(a)}{b ? <small>{b}</small> : null}</span>
         </div>
       ))}
     </div>

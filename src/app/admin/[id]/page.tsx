@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Mail, MessageCircle } from "lucide-react";
-import { attention, daysTo, reminderLinks, requireAdmin, STATUSES, STATUS_AR, STATUS_TONE, type AdminRow } from "@/lib/admin";
-import { gregorian, omr, plainOmr } from "@/lib/format";
+import { attention, daysTo, priceWords, reminderLinks, requireAdmin, STATUSES, STATUS_AR, STATUS_TONE, type AdminRow } from "@/lib/admin";
+import { amount, CUR, CURRENCIES, isCurrency, plainAmount, type Currency } from "@/lib/currency";
+import { Money } from "@/components/CurrencySign";
+import { gregorian, omr } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { Badge, Crumb, Field, PageHeader, Section, Stat } from "@/components/ui";
 import { adminRecordPayment, adminResume, adminSetSubscription, adminSuspend, adminVoidPayment } from "@/app/actions/admin";
@@ -12,7 +14,7 @@ type Row = AdminRow;
 type Detail = {
   properties: { id: string; name: string; kind: string; units: number }[];
   staff: { name: string; email: string; role: string; active: boolean }[];
-  payments: { id: string; amount: number; months: number; period_start: string; period_end: string; paid_on: string; method: string | null; reference: string | null; voided: boolean }[];
+  payments: { id: string; amount: number; currency: string; months: number; period_start: string; period_end: string; paid_on: string; method: string | null; reference: string | null; voided: boolean }[];
 };
 const ROLE_AR: Record<string, string> = { owner: "مالك", manager: "مدير", reception: "استقبال", accountant: "محاسب", housekeeping: "تنظيف", maintenance: "صيانة" };
 
@@ -35,14 +37,16 @@ export default async function AdminTenant({ params, searchParams }: PageProps<"/
   const tab = typeof sp.tab === "string" && TABS.some(([k]) => k === sp.tab) ? sp.tab : "sub";
   const why = attention(r);
   const end = r.status === "trial" ? r.trial_ends_at : r.current_period_end;
-  const links = reminderLinks(r, r.price != null ? omr(r.price, "ar") : "", gregorian(end, "ar"));
+  const links = reminderLinks(r, priceWords(r), gregorian(end, "ar"));
+  const cur: Currency = r.currency ?? "OMR";
+  const yearly = r.billing_period === "year";
   const plan = (plans ?? []).find((p) => p.code === r.plan_code) as { max_units: number | null; max_properties: number | null } | undefined;
   const over = (n: number, max: number | null | undefined) => max != null && Number(n) > max;
   const quiet = daysTo(r.last_activity ? r.last_activity.slice(0, 10) : null);
 
   return (
     <>
-      <Crumb href="/admin" label="الشركات" />
+      <Crumb href="/admin/companies" label="الشركات" />
       <PageHeader title={r.name} sub={`${r.owner_name ?? ""} · ${r.owner_email ?? ""} · منذ ${gregorian(r.created_at.slice(0, 10), "ar")}`} />
 
       {/* where the company stands, and the one thing most likely needed next */}
@@ -51,7 +55,7 @@ export default async function AdminTenant({ params, searchParams }: PageProps<"/
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="brand">{r.plan_name ?? "بدون باقة"}</Badge>
             {r.status ? <Badge tone={STATUS_TONE[r.status] ?? "gray"}>{STATUS_AR[r.status]}</Badge> : null}
-            <span className="num font-bold">{r.price != null ? omr(r.price, "ar") : "—"}</span><span className="text-xs text-muted">شهرياً</span>
+            <span className="font-bold">{r.price != null ? <Money value={amount(r.price, cur)} cur={cur} /> : "—"}</span><span className="text-xs text-muted">{yearly ? "سنوياً" : "شهرياً"} · {CUR[cur].country}</span>
           </div>
           <div className="mt-1 text-sm">
             {r.status === "trial" ? "التجربة حتى" : "مدفوع حتى"} <b>{gregorian(end, "ar")}</b>
@@ -102,7 +106,17 @@ export default async function AdminTenant({ params, searchParams }: PageProps<"/
             </Field>
             <Field label="مدفوع حتى"><input type="date" name="period_end" defaultValue={r.current_period_end ?? ""} className="input" /></Field>
             <Field label="التجربة حتى"><input type="date" name="trial_ends" defaultValue={r.trial_ends_at ?? ""} className="input" /></Field>
-            <Field label="سعر خاص شهرياً (اختياري)"><input name="price_override" inputMode="decimal" dir="ltr" defaultValue={r.price_override != null ? plainOmr(r.price_override) : ""} placeholder="سعر الباقة" className="input" /></Field>
+            <Field label="الدفع">
+              <select name="billing" defaultValue={r.billing_period ?? "month"} className="input">
+                <option value="month">شهري</option><option value="year">سنوي</option>
+              </select>
+            </Field>
+            <Field label="العملة">
+              <select name="currency" defaultValue={cur} className="input">
+                {CURRENCIES.map((c) => <option key={c} value={c}>{CUR[c].ar}</option>)}
+              </select>
+            </Field>
+            <Field label={`سعر خاص ${yearly ? "سنوياً" : "شهرياً"} بالعملة المختارة (اختياري)`}><input name="price_override" inputMode="decimal" dir="ltr" defaultValue={plainAmount(r.price_override, cur)} placeholder="سعر الباقة" className="input" /></Field>
             <Field label="ملاحظات"><input name="notes" defaultValue={r.notes ?? ""} maxLength={500} className="input" /></Field>
             <SubmitButton className="btn-primary sm:col-span-2">حفظ الاشتراك</SubmitButton>
           </ActionForm>
@@ -126,8 +140,13 @@ export default async function AdminTenant({ params, searchParams }: PageProps<"/
           <p className="mb-3 text-xs text-muted">الدفعة تمدّد «مدفوع حتى» بعدد الأشهر وتجعل الاشتراك فعّالاً.</p>
           <ActionForm action={adminRecordPayment} resetOnSuccess className="grid gap-3 sm:grid-cols-2">
             <input type="hidden" name="tenant" value={r.id} />
-            <Field label="المبلغ (ر.ع.)"><input name="amount" required inputMode="decimal" dir="ltr" defaultValue={r.price != null ? plainOmr(r.price) : ""} className="input" /></Field>
-            <Field label="عدد الأشهر"><input name="months" type="number" min={1} max={24} defaultValue={1} className="input" /></Field>
+            <Field label="المبلغ"><input name="amount" required inputMode="decimal" dir="ltr" defaultValue={plainAmount(r.price, cur)} className="input" /></Field>
+            <Field label="العملة">
+              <select name="currency" defaultValue={cur} className="input">
+                {CURRENCIES.map((c) => <option key={c} value={c}>{CUR[c].ar}</option>)}
+              </select>
+            </Field>
+            <Field label="عدد الأشهر"><input name="months" type="number" min={1} max={24} defaultValue={yearly ? 12 : 1} className="input" /></Field>
             <Field label="طريقة الدفع">
               <select name="method" className="input">
                 <option value="transfer">تحويل بنكي</option><option value="cash">نقد</option><option value="card">بطاقة</option><option value="cheque">شيك</option>
@@ -142,7 +161,7 @@ export default async function AdminTenant({ params, searchParams }: PageProps<"/
             <ul className="divide-y divide-line text-sm">
               {d.payments.map((p) => (
                 <li key={p.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 py-2 ${p.voided ? "text-muted line-through" : ""}`}>
-                  <span className="num font-semibold">{omr(p.amount, "ar")}</span>
+                  <span className="font-semibold"><Money value={amount(p.amount, isCurrency(p.currency) ? p.currency : "OMR")} cur={isCurrency(p.currency) ? p.currency : "OMR"} /></span>
                   <span className="text-xs text-muted">{gregorian(p.paid_on, "ar")} · {p.months} شهر · {gregorian(p.period_start, "ar")} ← {gregorian(p.period_end, "ar")}{p.reference ? ` · ${p.reference}` : ""}</span>
                   {!p.voided ? (
                     <ActionForm action={adminVoidPayment} className="ms-auto">

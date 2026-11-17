@@ -1,82 +1,85 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { Mail, MessageCircle, Search } from "lucide-react";
-import { attention, daysTo, reminderLinks, requireAdmin, STATUS_AR, STATUS_TONE, type AdminRow } from "@/lib/admin";
-import { gregorian, omr } from "@/lib/format";
+import { Mail, MessageCircle } from "lucide-react";
+import { attention, monthlyBaisa, paying, priceWords, reminderLinks, requireAdmin, todayIso, yearlyBaisa, type AdminRow } from "@/lib/admin";
+import { toBaisaAt, isCurrency, amount, type Rates } from "@/lib/currency";
+import { dateTime, gregorian } from "@/lib/format";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { FilterSelect } from "@/components/FilterSelect";
-import { Badge, Empty, Field, PageHeader } from "@/components/ui";
-import { adminAddProspect, adminApplyProspect, adminDropProspect, adminTrialDrop, adminTrialExtend, adminTrialSent } from "@/app/actions/admin";
-import { dateTime } from "@/lib/format";
+import { Money } from "@/components/CurrencySign";
+import { Badge, PageHeader } from "@/components/ui";
+import { adminTrialDrop, adminTrialExtend, adminTrialSent } from "@/app/actions/admin";
 
 type Trial = { id: string; name: string; company: string | null; phone: string; email: string; token: string; expires_at: string; opened_at: string | null; opens: number; handled_at: string | null; created_at: string };
-type Prospect = { id: string; company: string; email: string; phone: string | null; plan_code: string; trial_days: number; notes: string | null };
-const SORTS: [string, string][] = [["new", "الأحدث"], ["name", "الاسم"], ["end", "الأقرب انتهاءً"], ["price", "الأعلى اشتراكاً"], ["quiet", "الأقل نشاطاً"]];
+type Pay = { amount: number; currency: string; paid_on: string; voided_at: string | null };
 
-/** Every hotel company on Nuzul: who needs the team today first, then the searchable list. */
-export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
+const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+const shift = (m: string, by: number) => {
+  const [y, mo] = m.split("-").map(Number);
+  return new Date(Date.UTC(y, mo - 1 + by, 1)).toISOString().slice(0, 7);
+};
+const R = (baisa: number) => amount(baisa, "OMR");
+
+/** The team's morning: the figures that matter, who needs action, income by month and new trial requests. */
+export default async function AdminOverview() {
   const sb = await requireAdmin();
-  const sp = await searchParams;
-  const filter = typeof sp.s === "string" ? sp.s : "";
-  const q = typeof sp.q === "string" ? sp.q.trim().slice(0, 80) : "";
-  const sort = typeof sp.o === "string" && SORTS.some(([k]) => k === sp.o) ? sp.o : "new";
-  const [{ data, error }, { data: support }, { data: pros }, { data: plans }, h, { data: tr }] = await Promise.all([
+  const thisMonth = todayIso().slice(0, 7);
+  const from = `${shift(thisMonth, -5)}-01`;
+  const [{ data, error }, { data: support }, { data: tr }, { data: pays }, { data: fx }, h] = await Promise.all([
     sb.rpc("admin_overview"),
     sb.rpc("admin_support_list"),
-    sb.from("admin_prospects").select("id, company, email, phone, plan_code, trial_days, notes").is("tenant_id", null).order("created_at", { ascending: false }),
-    sb.from("plans").select("code, name_ar, monthly_price").eq("active", true).order("sort"),
-    headers(),
     sb.from("trial_requests").select("id, name, company, phone, email, token, expires_at, opened_at, opens, handled_at, created_at").order("created_at", { ascending: false }).limit(60),
+    sb.from("subscription_payments").select("amount, currency, paid_on, voided_at").gte("paid_on", from).is("voided_at", null),
+    sb.from("platform_settings").select("sar_per_omr, aed_per_omr").eq("id", 1).maybeSingle(),
+    headers(),
   ]);
   if (error) throw new Error(error.message);
   const all = (data ?? []) as AdminRow[];
-  const prospects = (pros ?? []) as Prospect[];
+  const rates = (fx ?? { sar_per_omr: 9.75, aed_per_omr: 9.55 }) as Rates;
   const trials = (tr ?? []) as Trial[];
   const waiting = trials.filter((x) => !x.handled_at);
   const origin = `https://${h.get("host") ?? "nuzul-hotel.vercel.app"}`;
-  const signup = `https://${h.get("host") ?? "nuzul-hotel.vercel.app"}/login?mode=signup`;
   const end = (r: AdminRow) => (r.status === "trial" ? r.trial_ends_at : r.current_period_end);
-  const needle = q.toLowerCase();
-  const rows = all
-    .filter((r) => !filter || r.status === filter)
-    .filter((r) => !needle || `${r.name} ${r.owner_name ?? ""} ${r.owner_email ?? ""}`.toLowerCase().includes(needle))
-    .sort((a, b) =>
-      sort === "name" ? a.name.localeCompare(b.name, "ar")
-      : sort === "end" ? (end(a) ?? "9999").localeCompare(end(b) ?? "9999")
-      : sort === "price" ? (b.price ?? 0) - (a.price ?? 0)
-      : sort === "quiet" ? (a.last_activity ?? "").localeCompare(b.last_activity ?? "")
-      : b.created_at.localeCompare(a.created_at));
-  const mrr = all.filter((r) => r.status === "active").reduce((x, r) => x + (r.price ?? 0), 0);
-  const count = (s: string) => all.filter((r) => r.status === s).length;
+  const payers = all.filter(paying);
+  const mrr = payers.reduce((x, r) => x + monthlyBaisa(r), 0);
+  const arr = payers.reduce((x, r) => x + yearlyBaisa(r), 0);
+  const yearlyCount = payers.filter((r) => r.billing_period === "year").length;
+  const trialsSoon = all.filter((r) => r.status === "trial" && r.trial_ends_at && r.trial_ends_at <= shiftDay(todayIso(), 7)).length;
   const todo = all.map((r) => ({ r, why: attention(r) })).filter((x) => x.why).sort((a, b) => (a.why!.tone === b.why!.tone ? 0 : a.why!.tone === "danger" ? -1 : 1));
   const openSupport = ((support ?? []) as { status: string }[]).filter((x) => x.status === "open").length;
-  const href = (o: { s?: string; q?: string; o?: string }) => {
-    const u = new URLSearchParams();
-    const v = { s: filter, q, o: sort, ...o };
-    if (v.s) u.set("s", v.s);
-    if (v.q) u.set("q", v.q);
-    if (v.o && v.o !== "new") u.set("o", v.o);
-    const str = u.toString();
-    return str ? `/admin?${str}` : "/admin";
-  };
-  const chip = (s: string, label: string, n: number) => (
-    <Link key={s} href={href({ s })} aria-current={filter === s ? "true" : undefined} className={`btn-sm shrink-0 ${filter === s ? "btn-primary" : "btn-ghost"}`}>{label} <span className="num opacity-70">{n}</span></Link>
-  );
-  const planName = (c: string) => (plans ?? []).find((p) => p.code === c)?.name_ar ?? c;
+  // income actually received, month by month, in baisa
+  const months = Array.from({ length: 6 }, (_, i) => shift(thisMonth, i - 5));
+  const byMonth = new Map(months.map((m) => [m, 0]));
+  for (const p of (pays ?? []) as Pay[]) {
+    const m = p.paid_on.slice(0, 7);
+    if (byMonth.has(m) && isCurrency(p.currency)) byMonth.set(m, byMonth.get(m)! + toBaisaAt(Number(p.amount), p.currency, rates));
+  }
+  const top = Math.max(1, ...byMonth.values());
+  const lastMonth = byMonth.get(shift(thisMonth, -1)) ?? 0;
+
+  const kpis: [string, React.ReactNode, string, string][] = [
+    ["الدخل الشهري المتوقع", <Money key="m" value={R(mrr)} cur="OMR" />, `من ${payers.length} شركة تدفع`, "text-ok"],
+    ["الدخل السنوي المتوقع", <Money key="y" value={R(arr)} cur="OMR" />, "الشهري × 12 والسنوي كما هو", "text-ok"],
+    ["الشركات الفعّالة", <span key="a" className="num">{payers.length}</span>, `${payers.length - yearlyCount} شهري · ${yearlyCount} سنوي`, ""],
+    ["تجارب تنتهي هذا الأسبوع", <span key="t" className="num">{trialsSoon}</span>, "خلال 7 أيام", trialsSoon ? "text-warn" : ""],
+    ["طلبات تجربة جديدة", <span key="r" className="num">{waiting.length}</span>, "بانتظار الرابط", waiting.length ? "text-info" : ""],
+  ];
 
   return (
     <>
-      <PageHeader title="الشركات المشتركة" sub="من يحتاج تصرفاً اليوم أولاً، ثم كل الشركات." />
-      <p className="mb-4 text-sm">
-        الشركات <b className="num">{all.length}</b>
-        <span className="text-muted"> · </span>فعّال <b className="num text-ok">{count("active")}</b>
-        <span className="text-muted"> · </span>تجريبي <b className="num">{count("trial")}</b>
-        <span className="text-muted"> · </span>الدخل الشهري المتوقع <b className="num">{omr(mrr, "ar")}</b>
-        <span className="text-muted"> · </span><span className="num">{all.reduce((x, r) => x + Number(r.units), 0)}</span> وحدة
-      </p>
+      <PageHeader title="نظرة عامة" sub={gregorian(todayIso(), "ar")} />
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        {kpis.map(([label, value, hint, tone], i) => (
+          <div key={label} className={`card p-4 ${i === 4 ? "col-span-2 lg:col-span-1" : ""}`}>
+            <div className="text-xs font-semibold text-muted">{label}</div>
+            <div className={`mt-1 text-2xl font-bold ${tone}`}>{value}</div>
+            <div className="mt-0.5 text-xs text-muted">{hint}</div>
+          </div>
+        ))}
+      </div>
 
-      {todo.length || openSupport ? (
-        <section className="card mb-4">
+      <div className="grid items-start gap-4 lg:grid-cols-[1.25fr_1fr]">
+        {todo.length || openSupport ? (
+        <section className="card">
           <h2 className="h2 mb-2">يحتاج تصرفاً منك <span className="num ms-1 rounded-full bg-warn-soft px-2.5 py-0.5 text-sm text-warn">{todo.length + (openSupport ? 1 : 0)}</span></h2>
           <ul className="divide-y divide-line">
             {openSupport ? (
@@ -86,7 +89,7 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
               </li>
             ) : null}
             {todo.map(({ r, why }) => {
-              const links = reminderLinks(r, r.price != null ? omr(r.price, "ar") : "", gregorian(end(r), "ar"));
+              const links = reminderLinks(r, priceWords(r), gregorian(end(r), "ar"));
               return (
                 <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
                   <span className="min-w-0 flex-1 basis-48">
@@ -101,10 +104,32 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
             })}
           </ul>
         </section>
-      ) : null}
+        ) : (
+          <section className="card"><h2 className="h2">يحتاج تصرفاً منك</h2><p className="mt-2 text-sm text-muted">لا شيء الآن.</p></section>
+        )}
+        <section className="card">
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 className="h2">دخل الاشتراكات المستلم</h2>
+            <Link href="/admin/finance" className="text-sm font-semibold text-brand hover:underline">المالية ›</Link>
+          </div>
+          <p className="mt-1 text-xs text-muted">آخر 6 أشهر، محوّل إلى الريال العُماني بأسعار الصرف المعتمدة. الشهر الماضي: <Money value={R(lastMonth)} cur="OMR" /></p>
+          <div className="mt-4 flex h-44 items-end gap-2" role="img" aria-label="دخل الاشتراكات آخر 6 أشهر">
+            {months.map((m) => {
+              const v = byMonth.get(m)!;
+              return (
+                <div key={m} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
+                  <span className="num text-[11px] font-bold">{v ? R(v) : ""}</span>
+                  <div className={`w-full max-w-12 rounded-t-xl ${m === thisMonth ? "bg-brand" : "bg-brand-soft"}`} style={{ height: `${Math.max(v ? 4 : 0, Math.round((v / top) * 100))}%` }} />
+                  <span className="text-[11px] text-muted">{MONTHS[Number(m.slice(5, 7)) - 1]}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
 
       {trials.length ? (
-        <section className="card mb-4">
+        <section className="card mt-4">
           <details open={waiting.length > 0}>
             <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 [&::-webkit-details-marker]:hidden">
               <h2 className="h2">طلبات تجربة النظام</h2>
@@ -149,109 +174,10 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin">) {
         </section>
       ) : null}
 
-      <section className="card mb-4">
-        <details open={prospects.length > 0}>
-          <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 [&::-webkit-details-marker]:hidden">
-            <span className="btn-primary btn-sm">شركة جديدة</span>
-            <span className="text-sm text-muted">سجّل شركة متوقعة وباقتها، وأرسل لمالكها رابط التسجيل.{prospects.length ? ` بانتظار التسجيل: ${prospects.length}` : ""}</span>
-          </summary>
-          {prospects.length ? (
-            <ul className="mt-3 divide-y divide-line">
-              {prospects.map((p) => {
-                const joined = all.find((r) => (r.owner_email ?? "").toLowerCase().split(",").map((e) => e.trim()).includes(p.email));
-                const invite = `السلام عليكم، هذا رابط التسجيل في نُزُل لـ«${p.company}»:\n${signup}\nسجّلوا بالبريد ${p.email} وسنفعّل لكم باقة ${planName(p.plan_code)}${p.trial_days ? ` مع تجربة ${p.trial_days} يوماً` : ""}.`;
-                return (
-                  <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
-                    <span className="min-w-0 flex-1 basis-48">
-                      <b>{p.company}</b>
-                      <span className="block text-sm text-muted"><span dir="ltr">{p.email}</span> · {planName(p.plan_code)} · تجربة {p.trial_days} يوم</span>
-                    </span>
-                    {joined ? (
-                      <ActionForm action={adminApplyProspect}>
-                        <input type="hidden" name="id" value={p.id} /><input type="hidden" name="tenant" value={joined.id} />
-                        <SubmitButton className="btn-primary btn-sm" confirm={`تطبيق باقة ${planName(p.plan_code)} على «${joined.name}»؟`}>سجّل: طبّق الباقة</SubmitButton>
-                      </ActionForm>
-                    ) : (
-                      <>
-                        <Badge tone="gray">لم يسجّل بعد</Badge>
-                        <a href={`https://wa.me/${(p.phone ?? "").replace(/\D/g, "")}?text=${encodeURIComponent(invite)}`} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-sm inline-flex items-center gap-1.5"><MessageCircle className="size-4 shrink-0" /> أرسل الرابط</a>
-                        <a href={`mailto:${p.email}?subject=${encodeURIComponent("رابط التسجيل في نُزُل")}&body=${encodeURIComponent(invite)}`} className="btn-ghost btn-sm inline-flex items-center gap-1.5"><Mail className="size-4 shrink-0" /> بريد</a>
-                      </>
-                    )}
-                    <ActionForm action={adminDropProspect}>
-                      <input type="hidden" name="id" value={p.id} /><input type="hidden" name="company" value={p.company} />
-                      <SubmitButton className="btn-ghost btn-sm text-danger" confirm={`حذف «${p.company}» من القائمة؟`}>حذف</SubmitButton>
-                    </ActionForm>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
-          <ActionForm action={adminAddProspect} resetOnSuccess className="mt-4 grid gap-3 border-t border-line pt-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="اسم الشركة أو الفندق"><input name="company" required maxLength={120} className="input" /></Field>
-            <Field label="بريد المالك (سيسجّل به)"><input name="email" type="email" required dir="ltr" maxLength={200} className="input" /></Field>
-            <Field label="جوال المالك (اختياري، بمفتاح الدولة)"><input name="phone" dir="ltr" inputMode="tel" maxLength={30} placeholder="9689xxxxxxx" className="input" /></Field>
-            <Field label="الباقة">
-              <select name="plan" required className="input">
-                {(plans ?? []).map((p) => <option key={p.code} value={p.code}>{p.name_ar} — {omr(p.monthly_price, "ar")}</option>)}
-              </select>
-            </Field>
-            <Field label="أيام التجربة"><input name="trial_days" type="number" min={0} max={365} defaultValue={14} className="input" /></Field>
-            <Field label="ملاحظات"><input name="notes" maxLength={500} className="input" /></Field>
-            <p className="text-xs text-muted sm:col-span-2 lg:col-span-3">الحساب وكلمة المرور ينشئهما المالك بنفسه من رابط التسجيل. بعد تسجيله بنفس البريد يظهر هنا زر تطبيق الباقة.</p>
-            <SubmitButton className="btn-primary sm:col-span-2 lg:col-span-3">أضف للقائمة</SubmitButton>
-          </ActionForm>
-        </details>
-      </section>
-
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <form method="get" className="flex min-w-0 flex-1 basis-64 gap-2">
-          {filter ? <input type="hidden" name="s" value={filter} /> : null}
-          {sort !== "new" ? <input type="hidden" name="o" value={sort} /> : null}
-          <input type="search" name="q" defaultValue={q} placeholder="ابحث باسم الشركة أو المالك أو بريده" aria-label="بحث" className="input rounded-full" />
-          <button className="btn-ghost shrink-0" aria-label="بحث"><Search className="size-4" /></button>
-        </form>
-        <form method="get" className="flex items-center gap-2">
-          {filter ? <input type="hidden" name="s" value={filter} /> : null}
-          {q ? <input type="hidden" name="q" value={q} /> : null}
-          <span className="text-sm font-semibold">الترتيب</span>
-          <FilterSelect name="o" label="الترتيب" value={sort} options={SORTS} />
-        </form>
-      </div>
-      <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
-        {chip("", "الكل", all.length)}
-        {Object.keys(STATUS_AR).map((s) => chip(s, STATUS_AR[s], count(s)))}
-      </div>
-      {rows.length === 0 ? <Empty>لا توجد شركات.</Empty> : (
-        <ul className="space-y-2">
-          {rows.map((r) => {
-            const left = daysTo(end(r));
-            return (
-              <li key={r.id}>
-                <Link href={`/admin/${r.id}`} className="card grid gap-x-4 gap-y-2 p-4 transition hover:shadow-md sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_auto_9rem_7rem] lg:items-center">
-                  <div className="min-w-0">
-                    <div className="truncate font-bold">{r.name}</div>
-                    <div className="truncate text-xs text-muted" dir="auto">{r.owner_name ?? "—"} · <span dir="ltr">{r.owner_email ?? ""}</span></div>
-                  </div>
-                  <div className="text-xs text-muted"><span className="num font-semibold text-ink">{r.properties}</span> عقار · <span className="num font-semibold text-ink">{r.units}</span> وحدة · <span className="num font-semibold text-ink">{r.staff}</span> موظف</div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone="brand">{r.plan_name ?? "بدون باقة"}</Badge>
-                    {r.status ? <Badge tone={STATUS_TONE[r.status] ?? "gray"}>{STATUS_AR[r.status] ?? r.status}</Badge> : null}
-                  </div>
-                  <div className="text-xs">
-                    <span className="text-muted">{r.status === "trial" ? "التجربة حتى" : "مدفوع حتى"} </span>
-                    <span className={`font-semibold lg:block ${left !== null && left < 0 ? "text-danger" : left !== null && left <= 7 ? "text-warn" : ""}`}>{gregorian(end(r), "ar")}</span>
-                  </div>
-                  <div className="text-xs">
-                    <span className="text-muted">الاشتراك </span>
-                    <span className="num font-semibold lg:block">{r.price != null ? omr(r.price, "ar") : "—"}</span>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
     </>
   );
+}
+
+function shiftDay(d: string, by: number) {
+  return new Date(Date.parse(d) + by * 86_400_000).toISOString().slice(0, 10);
 }
