@@ -9,23 +9,18 @@ export function CurrencySign({ cur, className = "" }: { cur: Currency; className
   const label = cur === "OMR" ? "ريال عُماني" : cur === "SAR" ? "ريال سعودي" : "درهم إماراتي";
   const cls = `inline-block h-[0.85em] w-[0.85em] shrink-0 align-[-0.06em] ${className}`;
   if (cur === "OMR") {
+    // traced from the official sign: the letter ع over two slanted bars (a wide sign)
     return (
-      <svg viewBox="0 0 100 100" className={cls} role="img" aria-label={label} fill="currentColor">
-        <path d="M74 6c-6-2-13-3-19-2C39 6 30 16 31 28c1 11 11 18 24 18h3l-5 9h12l7-13c2-4-1-8-5-8H54c-7 0-12-3-12-8 0-6 6-11 15-11 5 0 10 1 14 3z" />
-        <path d="M22 60h64l-7 12H15z" />
-        <path d="M8 80h86l-7 12H1z" />
+      <svg viewBox="-10 0 605 360" className={`inline-block h-[0.8em] w-[1.35em] shrink-0 align-[-0.08em] ${className}`} role="img" aria-label={label} fill="currentColor">
+        <path d="M75 178H585L548 238H45ZM30 272H520L490 335H0ZM232 238C226 252 224 262 228 272H420L330 238ZM205 178C196 140 206 98 238 66C262 42 292 28 322 28C348 28 368 40 380 58C372 92 362 126 352 160C344 132 330 112 304 104C278 98 252 106 238 124C226 140 224 160 232 178Z" />
       </svg>
     );
   }
   if (cur === "SAR") {
+    // traced from the official sign
     return (
-      <svg viewBox="0 0 100 100" className={cls} role="img" aria-label={label} fill="currentColor">
-        <path d="M41 4l11-3v66l-11 3z" />
-        <path d="M63 14l11-3v44l-11 3z" />
-        <path d="M18 56l11-3v20l38-8v11L18 87z" />
-        <path d="M82 42l11-3v40c0 9-6 15-15 17l-6 1V86l4-1c4-1 6-3 6-7z" />
-        <path d="M10 49l83-18v11L10 60z" />
-        <path d="M10 68l57-12v11L10 79z" />
+      <svg viewBox="192.5 25.5 210 210" className={cls} role="img" aria-label={label} fill="currentColor">
+        <path d="M334 40L327 42L315 57L316 120L299 128L293 128L289 121L289 29L273 40L272 129L260 136L221 144L215 160L222 163L268 155L271 157L271 182L265 187L209 198L205 210L207 218L270 204L289 179L290 150L293 147L311 144L315 148L318 187L385 174L389 162L387 154L344 164L335 161L335 141L338 138L382 130L390 112L383 109L344 119L335 114ZM389 200L325 213L318 222L317 232L383 220Z" />
       </svg>
     );
   }

@@ -147,7 +147,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </nav>
       </aside>
       <div className="min-w-0 flex-1">
-        <header className="no-print sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur lg:hidden">
+        <header className="no-print sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between px-4 py-2">
             <div className="brand-word text-2xl text-brand">{t.appName}</div>
             <div className="flex shrink-0 items-center gap-2">
@@ -164,7 +164,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </div>
           </div>
         </header>
-        <div className="no-print sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur max-lg:static">
+        <div className="no-print sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur max-lg:relative">
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 lg:px-8">
             <BackButton label={t.back} />
             <GlobalSearch
