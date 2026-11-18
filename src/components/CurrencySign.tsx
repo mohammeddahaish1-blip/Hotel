@@ -11,8 +11,8 @@ export function CurrencySign({ cur, className = "" }: { cur: Currency; className
   if (cur === "OMR") {
     // traced from the official sign: the letter ع over two slanted bars (a wide sign)
     return (
-      <svg viewBox="-10 0 605 360" className={`inline-block h-[0.8em] w-[1.35em] shrink-0 align-[-0.08em] ${className}`} role="img" aria-label={label} fill="currentColor">
-        <path d="M75 178H585L548 238H45ZM30 272H520L490 335H0ZM232 238C226 252 224 262 228 272H420L330 238ZM205 178C196 140 206 98 238 66C262 42 292 28 322 28C348 28 368 40 380 58C372 92 362 126 352 160C344 132 330 112 304 104C278 98 252 106 238 124C226 140 224 160 232 178Z" />
+      <svg viewBox="-4 20 715 379" className={`inline-block h-[0.75em] w-[1.42em] shrink-0 align-[-0.06em] ${className}`} role="img" aria-label={label} fill="currentColor">
+        <path d="M702.3 207.0L314.7 206.7L310.7 205.7L291.0 183.7L281.0 165.7L279.7 159.0L281.0 149.0L284.7 142.7L291.3 136.0L305.0 128.0L322.3 124.7L340.0 125.7L356.0 130.0L376.3 140.0L396.3 154.0L412.3 168.0L436.3 192.7L464.3 88.0L464.3 84.3L444.3 65.7L429.7 54.3L410.0 42.3L391.7 34.3L369.7 28.3L345.0 28.3L325.3 36.0L309.7 48.3L291.3 71.3L275.7 97.7L265.3 121.0L257.3 147.0L253.3 167.7L251.0 204.3L249.7 206.3L119.7 206.7L77.3 278.0L77.7 279.3L276.0 279.7L280.7 283.7L307.0 317.0L306.0 318.0L46.3 318.0L41.3 324.7L3.3 390.7L585.3 391.3L588.7 387.7L628.3 320.0L627.7 318.0L491.3 317.7L469.0 311.3L450.7 304.0L425.7 291.7L407.3 280.7L408.3 279.7L659.7 279.7L702.3 208.7Z" />
       </svg>
     );
   }
