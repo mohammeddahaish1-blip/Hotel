@@ -16,6 +16,7 @@ import { saveContractTemplate } from "@/app/actions/contracts";
 import {
   addRule, addSuggestedRule, addSuggestedRules, deleteRule, resetTemplate, runAutomationNow, saveTemplate, toggleRule, updateRule,
 } from "@/app/actions/messages";
+import { Switch } from "@/components/Switch";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { Badge, EditDetails, Empty, Field, PageHeader, Section } from "@/components/ui";
 
@@ -112,11 +113,7 @@ export default async function AutomationPage({ searchParams }: PageProps<"/setti
                             <span className="font-bold">{whenText(r.trigger, r.offset_days)}</span> <span className="text-muted" aria-hidden>{arrow}</span> {doText(r)}
                             {r.property_id ? null : <span className="ms-2 text-xs text-muted">· {t.auto_all_props}</span>}
                           </p>
-                          <ActionForm action={toggleRule}>
-                            <input type="hidden" name="id" value={r.id} />
-                            <input type="hidden" name="active" value={r.active ? "0" : "1"} />
-                            <SubmitButton className={`switch ${r.active ? "switch-on" : ""}`}><span className="sr-only">{r.active ? t.auto_pause : t.auto_resume}</span></SubmitButton>
-                          </ActionForm>
+                          <Switch action={toggleRule} on={r.active} fields={{ id: r.id }} label={[t.auto_pause, t.auto_resume]} />
                         </div>
                         <div className="mt-2 flex flex-wrap items-start gap-2">
                           <EditDetails label={t.edit} className="flex-1">

@@ -1,4 +1,4 @@
-import { LogOut } from "lucide-react";
+import { LogOut, ShieldCheck } from "lucide-react";
 import { initial } from "@/lib/profile-link";
 import { getCtx, can, hasRole, AREAS } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
@@ -145,10 +145,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </nav>
       </aside>
       <div className="min-w-0 flex-1">
-        <header className="no-print sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur lg:hidden">
+        <header className="no-print sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between px-4 py-2">
             <div className="brand-word text-2xl text-brand">{t.appName}</div>
             <div className="flex shrink-0 items-center gap-2">
+              {plan.isAdmin ? (
+                <Link href="/admin" title="بوابة ملاك النظام" aria-label="بوابة ملاك النظام" className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-[#083f39] px-3 text-sm font-bold text-[#f3d27a] hover:opacity-90">
+                  <ShieldCheck className="size-4 shrink-0" aria-hidden /><span className="max-sm:sr-only">بوابة الملاك</span>
+                </Link>
+              ) : null}
               <LangToggle current={lang} />
               <ThemeToggle />
               <Link href="/profile" title={t.nav_profile} aria-label={`${t.nav_profile}: ${ctx.fullName || ctx.email}`} className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-soft text-base font-bold text-brand">
@@ -157,7 +162,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </div>
           </div>
         </header>
-        <div className="no-print sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur max-lg:static">
+        <div className="no-print sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur max-lg:relative">
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 lg:px-8">
             <BackButton label={t.back} />
             <GlobalSearch
@@ -167,6 +172,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               <span className="hidden items-center gap-2 lg:flex">
                 <LangToggle current={lang} />
                 <ThemeToggle />
+              </span>
+              <span className="hidden lg:contents">{plan.isAdmin ? (
+                <Link href="/admin" title="بوابة ملاك النظام" aria-label="بوابة ملاك النظام" className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-[#083f39] px-3 text-sm font-bold text-[#f3d27a] hover:opacity-90">
+                  <ShieldCheck className="size-4 shrink-0" aria-hidden /><span className="max-sm:sr-only">بوابة الملاك</span>
+                </Link>
+              ) : null}
               </span>
               <AlertsBell alerts={alerts} labels={{ title: t.alerts_title, none: t.alerts_none, all: t.alerts_all }} />
               {/* your name opens your account, where signing out lives */}

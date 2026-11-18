@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { requireAdmin, todayIso, type AdminRow } from "@/lib/admin";
-import { gregorian, omr } from "@/lib/format";
+import { amount, isCurrency, toBaisaAt, type Currency, type Rates } from "@/lib/currency";
+import { Money } from "@/components/CurrencySign";
+import { FinanceTabs } from "../FinanceTabs";
+import { gregorian } from "@/lib/format";
 import { Badge, Empty, PageHeader } from "@/components/ui";
 
-type Pay = { id: string; tenant_id: string; amount: number; months: number; paid_on: string; method: string | null; reference: string | null; voided_at: string | null };
+type Pay = { id: string; tenant_id: string; amount: number; currency: string; months: number; paid_on: string; method: string | null; reference: string | null; voided_at: string | null };
 const METHOD: Record<string, string> = { transfer: "تحويل بنكي", cash: "نقد", card: "بطاقة", cheque: "شيك" };
 const shift = (m: string, by: number) => {
   const [y, mo] = m.split("-").map(Number);
@@ -18,17 +21,21 @@ export default async function AdminPayments({ searchParams }: PageProps<"/admin/
   const sp = await searchParams;
   const thisMonth = todayIso().slice(0, 7);
   const month = typeof sp.m === "string" && /^\d{4}-\d{2}$/.test(sp.m) ? sp.m : thisMonth;
-  const [{ data: all }, { data: pays, error }] = await Promise.all([
+  const [{ data: all }, { data: pays, error }, { data: fx }] = await Promise.all([
     sb.rpc("admin_overview"),
-    sb.from("subscription_payments").select("id, tenant_id, amount, months, paid_on, method, reference, voided_at")
+    sb.from("subscription_payments").select("id, tenant_id, amount, currency, months, paid_on, method, reference, voided_at")
       .gte("paid_on", `${month}-01`).lt("paid_on", `${shift(month, 1)}-01`).order("paid_on", { ascending: false }).order("created_at", { ascending: false }),
+    sb.from("platform_settings").select("sar_per_omr, aed_per_omr").eq("id", 1).maybeSingle(),
   ]);
   if (error) throw new Error(error.message);
   const companies = (all ?? []) as AdminRow[];
   const name = new Map(companies.map((r) => [r.id, r.name]));
   const rows = ((pays ?? []) as Pay[]).filter((p) => name.has(p.tenant_id));
   const live = rows.filter((p) => !p.voided_at);
-  const total = live.reduce((a, p) => a + Number(p.amount), 0);
+  const rates = (fx ?? { sar_per_omr: 9.75, aed_per_omr: 9.55 }) as Rates;
+  const cur = (p: Pay): Currency => (isCurrency(p.currency) ? p.currency : "OMR");
+  // every currency counted in Omani rials at the team's rates
+  const total = live.reduce((a, p) => a + toBaisaAt(Number(p.amount), cur(p), rates), 0);
   const paid = new Set(live.map((p) => p.tenant_id));
   // active companies with nothing recorded this month (only meaningful for the current month)
   const unpaid = month === thisMonth ? companies.filter((r) => (r.status === "active" || r.status === "past_due") && !paid.has(r.id) && (r.current_period_end ?? "") < `${shift(month, 1)}-01`) : [];
@@ -47,9 +54,10 @@ export default async function AdminPayments({ searchParams }: PageProps<"/admin/
           </div>
         }
       />
+      <FinanceTabs on="payments" />
       <section className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-brand p-5 text-brand-ink">
         <div><div className="font-semibold opacity-90">دخل الاشتراكات في {title}</div><div className="text-sm opacity-85">{live.length} دفعة من {paid.size} شركة</div></div>
-        <div className="num text-3xl font-bold">{omr(total, "ar")}</div>
+        <div className="text-3xl font-bold"><Money value={amount(total, "OMR")} cur="OMR" /></div>
       </section>
 
       {unpaid.length ? (
@@ -59,7 +67,7 @@ export default async function AdminPayments({ searchParams }: PageProps<"/admin/
             {unpaid.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center gap-3 py-2.5 text-sm">
                 <span className="min-w-0 flex-1 font-semibold">{r.name}<span className="block text-xs font-normal text-muted">مدفوع حتى {gregorian(r.current_period_end, "ar")}</span></span>
-                <span className="num">{r.price != null ? omr(r.price, "ar") : "—"}</span>
+                <span>{r.price != null ? <Money value={amount(r.price, r.currency ?? "OMR")} cur={r.currency ?? "OMR"} /> : "—"}</span>
                 <Link href={`/admin/${r.id}?tab=pay`} className="btn-primary btn-sm">سجّل دفعة</Link>
               </li>
             ))}
@@ -78,7 +86,7 @@ export default async function AdminPayments({ searchParams }: PageProps<"/admin/
                   <span className="block text-xs text-muted">{gregorian(p.paid_on, "ar")} · {p.months} شهر · {METHOD[p.method ?? ""] ?? p.method ?? "—"}{p.reference ? ` · ${p.reference}` : ""}</span>
                 </span>
                 {p.voided_at ? <Badge tone="danger">ملغاة</Badge> : null}
-                <span className={`num font-bold ${p.voided_at ? "line-through" : ""}`}>{omr(p.amount, "ar")}</span>
+                <span className={`font-bold ${p.voided_at ? "line-through" : ""}`}><Money value={amount(Number(p.amount), cur(p))} cur={cur(p)} /></span>
               </li>
             ))}
           </ul>

@@ -1,6 +1,7 @@
 import "server-only";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "./supabase/server";
+import { amount, CUR, type Currency } from "./currency";
 
 /** System owners' portal guard: signed in and listed in platform_admins, otherwise the page doesn't exist. */
 export async function requireAdmin() {
@@ -26,7 +27,19 @@ export type AdminRow = {
   properties: number; units: number; staff: number; bookings_30d: number; last_activity: string | null;
   plan_code: string | null; plan_name: string | null; status: string | null; trial_ends_at: string | null; current_period_end: string | null;
   notes: string | null; price: number | null; price_override: number | null; last_paid_on: string | null;
+  /** "month" or "year"; price is per that period in the company's currency, price_omr the same in baisa */
+  billing_period: "month" | "year" | null; currency: Currency | null; price_omr: number | null;
 };
+
+/** What a company brings in per month, in baisa (a yearly price spread over twelve months). */
+export const monthlyBaisa = (r: AdminRow) => (r.price_omr == null ? 0 : r.billing_period === "year" ? Math.round(r.price_omr / 12) : r.price_omr);
+/** What a company brings in per year, in baisa. */
+export const yearlyBaisa = (r: AdminRow) => (r.price_omr == null ? 0 : r.billing_period === "year" ? r.price_omr : r.price_omr * 12);
+/** Its price as words for a message ("30 ريال عُماني شهرياً"). */
+export const priceWords = (r: AdminRow) =>
+  r.price == null ? "" : `${amount(r.price, r.currency ?? "OMR")} ${CUR[r.currency ?? "OMR"].ar} ${r.billing_period === "year" ? "سنوياً" : "شهرياً"}`;
+/** Paying companies: the ones whose money counts in the expected income. */
+export const paying = (r: AdminRow) => r.status === "active" || r.status === "past_due";
 
 const DAY = 86_400_000;
 export const todayIso = () => new Date(Date.now() + 4 * 3_600_000).toISOString().slice(0, 10); // Muscat
@@ -51,7 +64,7 @@ export function attention(r: AdminRow): { tone: "danger" | "warn"; text: string 
 
 /** Ready-made reminder for the owner, opened in the team member's own mail or WhatsApp. */
 export function reminderLinks(r: AdminRow, price: string, date: string) {
-  const text = `السلام عليكم${r.owner_name ? ` ${r.owner_name.split("،")[0]}` : ""}،\nنذكّركم بأن اشتراك «${r.name}» في نُزُل ${r.status === "trial" ? "التجريبي ينتهي" : "مدفوع حتى"} ${date}.${r.price != null ? ` قيمة الاشتراك الشهري ${price}.` : ""}\nنسعد بخدمتكم، وشكراً لكم.`;
+  const text = `السلام عليكم${r.owner_name ? ` ${r.owner_name.split("،")[0]}` : ""}،\nنذكّركم بأن اشتراك «${r.name}» في نُزُل ${r.status === "trial" ? "التجريبي ينتهي" : "مدفوع حتى"} ${date}.${r.price != null ? ` قيمة الاشتراك ${price}.` : ""}\nنسعد بخدمتكم، وشكراً لكم.`;
   const mail = (r.owner_email ?? "").split(",")[0].trim();
   return {
     whatsapp: `https://wa.me/?text=${encodeURIComponent(text)}`,
@@ -66,5 +79,5 @@ export async function adminLog(sb: Awaited<ReturnType<typeof createClient>>, act
 export const ACTION_AR: Record<string, string> = {
   subscription: "عدّل الاشتراك", payment: "سجّل دفعة", payment_void: "ألغى دفعة", plan: "حفظ باقة",
   suspend: "أوقف الاشتراك", resume: "أعاد تفعيل الاشتراك", prospect_add: "أضاف شركة متوقعة", prospect_drop: "حذف شركة متوقعة",
-  prospect_apply: "طبّق باقة شركة جديدة", maintenance: "جدول صيانة", trial_sent: "أرسل رابط تجربة", trial_extend: "مدّد رابط تجربة", trial_drop: "حذف طلب تجربة",
+  prospect_apply: "طبّق باقة شركة جديدة", maintenance: "جدول صيانة", prices: "عدّل الأسعار والعروض", expense_add: "أضاف مصروفاً", expense_drop: "حذف مصروفاً", rates: "عدّل أسعار الصرف", trial_sent: "أرسل رابط تجربة", trial_extend: "مدّد رابط تجربة", trial_drop: "حذف طلب تجربة",
 };
