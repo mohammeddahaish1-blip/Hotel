@@ -7,7 +7,7 @@ type Entry = { id: number; actor_email: string | null; action: string; tenant_id
 
 /** What the team itself did in this portal: plans, subscriptions, payments, suspensions. */
 export default async function AdminLog() {
-  const sb = await requireAdmin();
+  const sb = await requireAdmin("log");
   const [{ data: all }, { data, error }] = await Promise.all([
     sb.rpc("admin_overview"),
     sb.from("admin_log").select("id, actor_email, action, tenant_id, detail, at").order("at", { ascending: false }).limit(300),

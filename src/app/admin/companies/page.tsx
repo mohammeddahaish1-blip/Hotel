@@ -15,7 +15,7 @@ const SORTS: [string, string][] = [["new", "الأحدث"], ["name", "الاسم
 
 /** Every hotel company on Nuzul: searchable, sortable, with a new expected company one press away. */
 export default async function AdminCompanies({ searchParams }: PageProps<"/admin/companies">) {
-  const sb = await requireAdmin();
+  const sb = await requireAdmin("companies");
   const sp = await searchParams;
   const filter = typeof sp.s === "string" ? sp.s : "";
   const q = typeof sp.q === "string" ? sp.q.trim().slice(0, 80) : "";

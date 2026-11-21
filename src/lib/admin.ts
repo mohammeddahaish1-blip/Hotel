@@ -1,15 +1,57 @@
 import "server-only";
+import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "./supabase/server";
 import { amount, CUR, type Currency } from "./currency";
 
-/** System owners' portal guard: signed in and listed in platform_admins, otherwise the page doesn't exist. */
-export async function requireAdmin() {
+export const SECTIONS = ["ceo", "companies", "plans", "finance", "marketing", "it", "security", "support", "team", "log"] as const;
+export type Section = (typeof SECTIONS)[number];
+export type PortalMe = {
+  owner: boolean; staff: boolean; active: boolean; ok: boolean; roles: string[]; mfa_needed: boolean;
+  perms: Partial<Record<Section, "view" | "edit">>;
+};
+export const ROLES = ["ceo", "finance", "marketing", "it", "security", "support"] as const;
+export const ROLE_AR: Record<string, string> = { owner: "المالك", ceo: "المدير التنفيذي", finance: "المالية", marketing: "التسويق", it: "التقنية", security: "الأمن السيبراني", support: "الدعم" };
+export const SECTION_AR: Record<Section, string> = {
+  ceo: "لوحة القرار والأهداف", companies: "الشركات والاشتراكات", plans: "الباقات والأسعار والعروض", finance: "المالية والمصروفات",
+  marketing: "التسويق والعملاء", it: "التقنية ووضع الصيانة", security: "الأمن وقفل الحسابات", support: "الدعم والتذاكر", team: "الفريق والصلاحيات", log: "السجل",
+};
+/** Where each section lives; a member opens the first one they may see. */
+export const SECTION_HREF: Record<Section, string> = {
+  ceo: "/admin", companies: "/admin/companies", marketing: "/admin/marketing", finance: "/admin/finance", plans: "/admin/plans",
+  it: "/admin/it", security: "/admin/security", support: "/admin/support", team: "/admin/team", log: "/admin/log",
+};
+
+export function can(me: PortalMe, section: Section, need: "view" | "edit" = "view") {
+  const lv = me.perms[section];
+  return need === "view" ? !!lv : lv === "edit";
+}
+
+/** Who is signed in to the portal and what they may see (once per request). */
+export const portalMe = cache(async () => {
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
-  if (!claims?.claims) redirect("/login");
-  const { data } = await supabase.rpc("my_subscription", { p_tenant: null as unknown as string });
-  if ((data as { is_admin?: boolean } | null)?.is_admin !== true) notFound();
+  if (!claims?.claims) redirect("/login?next=/admin");
+  const { data } = await supabase.rpc("portal_me");
+  return { supabase, me: (data ?? { owner: false, staff: false, active: false, ok: false, roles: [], mfa_needed: false, perms: {} }) as PortalMe };
+});
+
+/**
+ * Owners' portal guard: the owner, or a team member in good standing. A member who still needs two-step
+ * verification goes to set it up; a stopped member or an expired session sees why. Anyone else: the page doesn't exist.
+ * With a section, the member must be allowed to see it.
+ */
+export async function requireAdmin(section?: Section | Section[]) {
+  const { supabase, me } = await portalMe();
+  if (!me.ok) {
+    if (me.staff && me.active && me.mfa_needed) redirect("/mfa?next=/admin");
+    if (me.staff) redirect(`/portal-blocked?why=${me.active ? "expired" : "stopped"}`);
+    notFound();
+  }
+  if (section) {
+    const list = Array.isArray(section) ? section : [section];
+    if (!list.some((x) => can(me, x))) notFound();
+  }
   return supabase;
 }
 
@@ -80,4 +122,7 @@ export const ACTION_AR: Record<string, string> = {
   subscription: "عدّل الاشتراك", payment: "سجّل دفعة", payment_void: "ألغى دفعة", plan: "حفظ باقة",
   suspend: "أوقف الاشتراك", resume: "أعاد تفعيل الاشتراك", prospect_add: "أضاف شركة متوقعة", prospect_drop: "حذف شركة متوقعة",
   prospect_apply: "طبّق باقة شركة جديدة", maintenance: "جدول صيانة", prices: "عدّل الأسعار والعروض", expense_add: "أضاف مصروفاً", expense_drop: "حذف مصروفاً", rates: "عدّل أسعار الصرف", trial_sent: "أرسل رابط تجربة", trial_extend: "مدّد رابط تجربة", trial_drop: "حذف طلب تجربة",
+  staff_invite: "دعا عضواً للفريق", staff_join: "انضم للفريق", staff_roles: "عدّل أدوار عضو", staff_suspend: "أوقف عضواً", staff_resume: "أعاد عضواً",
+  staff_remove: "أزال عضواً", session_end: "أنهى جلسة", security: "عدّل سياسة الأمان", approval_ok: "وافق على طلب", approval_no: "رفض طلباً",
+  approval_ask: "طلب موافقة", decision: "سجّل قراراً", goals: "عدّل الأهداف", lead_stage: "حدّث مرحلة عميل", limits: "عدّل حدود الموافقة",
 };

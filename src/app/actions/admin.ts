@@ -17,6 +17,16 @@ const s = (fd: FormData, k: string) => {
 const date = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 const int = (v: string | null) => (v && /^\d+$/.test(v) ? Number(v) : null);
 
+/** Over the limit for this member: the change waits for the CEO (or the owner) instead of being refused. */
+async function askApproval(sb: Awaited<ReturnType<typeof requireAdmin>>, kind: "discount" | "expense", title: string, detail: string, payload: object): Promise<ActionResult> {
+  const { data: c } = await sb.auth.getClaims();
+  const { error } = await sb.from("platform_approvals").insert({ kind, title, detail, payload, requested_by_email: (c?.claims as { email?: string } | undefined)?.email ?? null });
+  if (error) return { error: "تعذّر إرسال الطلب للموافقة." };
+  await adminLog(sb, "approval_ask", null, title);
+  revalidatePath("/admin", "layout");
+  return { ok: "أكبر من حدّك، فأُرسل للمدير التنفيذي للموافقة. يتطبّق أول ما يوافق." };
+}
+
 async function done(error: { message: string } | null, paths: string[]): Promise<ActionResult> {
   const { t } = await getDict();
   if (error) return { error: errorMessage(t, error) };
@@ -33,12 +43,16 @@ export async function adminSetSubscription(_: ActionResult, fd: FormData): Promi
   const special = s(fd, "price_override");
   const override = special ? parseAmount(special, cur) : null;
   if (special && override == null) return { error: `السعر الخاص: رقم صحيح بالـ${CUR[cur].ar}، حتى ${CUR[cur].decimals} خانات بعد الفاصلة.` };
-  const { error } = await sb.rpc("admin_set_subscription", {
+  const args = {
     p_tenant: tenant, p_plan: s(fd, "plan")!, p_status: s(fd, "status")!,
     p_period_end: date(s(fd, "period_end")) as string, p_trial_ends: date(s(fd, "trial_ends")) as string,
     p_price_override: (override ?? null) as unknown as number,
     p_notes: s(fd, "notes") as string, p_billing: billing, p_currency: cur,
-  });
+  };
+  const { error } = await sb.rpc("admin_set_subscription", args);
+  if (error && /needs_approval/.test(error.message)) {
+    return askApproval(sb, "discount", `سعر خاص ${special} ${CUR[cur].ar} ${billing === "year" ? "سنوياً" : "شهرياً"}`, `${s(fd, "company") ?? "شركة"} · خصم أكبر من الحد المسموح`, args);
+  }
   if (!error) await adminLog(sb, "subscription", tenant, `${s(fd, "plan")} · ${STATUS_AR[s(fd, "status") ?? ""] ?? s(fd, "status")}`);
   return done(error, ["/admin", `/admin/${tenant}`]);
 }
@@ -216,9 +230,12 @@ export async function adminAddExpense(_: ActionResult, fd: FormData): Promise<Ac
   if (!name) return { error: "اكتب اسم المصروف." };
   if (!value) return { error: "المبلغ: رقم أكبر من صفر بالريال العُماني." };
   if (!recurrence || !["month", "year", "once"].includes(recurrence)) return { error: "اختر: شهري أو سنوي أو مرة واحدة." };
-  const { error } = await sb.from("platform_expenses").insert({
-    name, vendor: s(fd, "vendor"), amount: value, recurrence, started_on: date(s(fd, "started_on")) ?? todayIso(), notes: s(fd, "notes"),
-  });
+  const category = ["marketing", "tech", "salaries", "other"].includes(s(fd, "category") ?? "") ? s(fd, "category")! : "other";
+  const row = { name, vendor: s(fd, "vendor"), amount: value, recurrence, started_on: date(s(fd, "started_on")) ?? todayIso(), notes: s(fd, "notes"), category };
+  const { error } = await sb.from("platform_expenses").insert(row);
+  if (error && /needs_approval/.test(error.message)) {
+    return askApproval(sb, "expense", `مصروف ${name}: ${s(fd, "amount")} ر.ع ${recurrence === "year" ? "سنوياً" : recurrence === "month" ? "شهرياً" : "مرة واحدة"}`, s(fd, "vendor") ?? "مصروف أكبر من الحد المسموح", row);
+  }
   if (!error) await adminLog(sb, "expense_add", null, name);
   return done(error, ["/admin/finance"]);
 }

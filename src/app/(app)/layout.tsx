@@ -29,7 +29,14 @@ import { DEMO_EMAIL } from "@/lib/demo";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await getCtx();
   const { t, lang } = await getDict();
-  const plan = await getPlan(ctx);
+  const [plan, { data: ops }] = await Promise.all([
+    getPlan(ctx),
+    ctx.supabase.from("platform_ops").select("maintenance_on, maintenance_msg, maint_from, maint_to").eq("id", 1).maybeSingle(),
+  ]);
+  // the Nuzul team's maintenance notice: shown while switched on and inside its window (if it has one)
+  const nowIso = new Date().toISOString();
+  const maint = ops?.maintenance_on && (!ops.maint_from || ops.maint_from <= nowIso) && (!ops.maint_to || ops.maint_to > nowIso)
+    ? (ops.maintenance_msg as string | null) ?? "نحدّث النظام الآن، قد تلاحظ بطئاً لدقائق." : null;
   const has = (f: Parameters<typeof planHas>[1]) => planHas(plan, f);
   // Merged menu: each group shows only the parts this user may open (permissions stay per section)
   const tab = (area: (typeof AREAS)[number], label?: string) =>
@@ -196,6 +203,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </div>
         </div>
         <main className="mx-auto max-w-6xl p-4 pb-28 md:p-6 md:pb-28 lg:p-8 lg:pb-8">
+          {maint ? (
+            <div role="status" className="mb-4 flex items-start gap-2 rounded-xl border border-warn/40 bg-warn-soft px-4 py-2.5 text-sm font-semibold text-warn">
+              <span aria-hidden>🛠</span><span>{maint}</span>
+            </div>
+          ) : null}
           {ctx.email === DEMO_EMAIL ? (
             <div role="status" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-brand-soft px-4 py-2.5 text-sm font-semibold text-brand">
               <span className="flex-1">{t.demo_banner}</span>

@@ -17,7 +17,7 @@ const shift = (m: string, by: number) => {
 
 /** Subscription income month by month: who paid, how much, and which active companies did not. */
 export default async function AdminPayments({ searchParams }: PageProps<"/admin/payments">) {
-  const sb = await requireAdmin();
+  const sb = await requireAdmin("finance");
   const sp = await searchParams;
   const thisMonth = todayIso().slice(0, 7);
   const month = typeof sp.m === "string" && /^\d{4}-\d{2}$/.test(sp.m) ? sp.m : thisMonth;

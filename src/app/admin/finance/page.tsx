@@ -31,7 +31,7 @@ function costIn(e: Expense, m: string) {
 
 /** The team's money: subscription income (monthly and yearly, every currency in rials), expenses, and the net. */
 export default async function AdminFinance({ searchParams }: PageProps<"/admin/finance">) {
-  const sb = await requireAdmin();
+  const sb = await requireAdmin("finance");
   const sp = await searchParams;
   const view = sp.v === "expenses" ? "expenses" : sp.v === "rates" ? "rates" : "overview";
   const thisMonth = todayIso().slice(0, 7);
@@ -169,6 +169,11 @@ export default async function AdminFinance({ searchParams }: PageProps<"/admin/f
             <ActionForm action={adminAddExpense} resetOnSuccess className="mt-3 grid gap-3">
               <Field label="البند"><input name="name" required maxLength={120} placeholder="استضافة الموقع" className="input" /></Field>
               <Field label="الجهة (اختياري)"><input name="vendor" maxLength={120} placeholder="Vercel" className="input" /></Field>
+              <Field label="التصنيف">
+                <select name="category" defaultValue="other" className="input">
+                  <option value="marketing">تسويق (يدخل في تكلفة جلب الفندق)</option><option value="tech">تقنية واستضافة</option><option value="salaries">رواتب</option><option value="other">غير ذلك</option>
+                </select>
+              </Field>
               <Field label="المبلغ بالريال العُماني"><input name="amount" required inputMode="decimal" dir="ltr" className="input" /></Field>
               <fieldset>
                 <legend className="label">يتكرر</legend>

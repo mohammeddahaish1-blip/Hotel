@@ -45,7 +45,7 @@ function PlanForm({ p }: { p?: Plan }) {
 
 /** Plans and their prices in every country, monthly and yearly, with limited-time offers that show on the public page. */
 export default async function AdminPlans({ searchParams }: PageProps<"/admin/plans">) {
-  const sb = await requireAdmin();
+  const sb = await requireAdmin("plans");
   const sp = await searchParams;
   const cur: Currency = isCurrency(sp.cur) ? sp.cur : "OMR";
   const [{ data }, { data: pr }, { data: ov }] = await Promise.all([

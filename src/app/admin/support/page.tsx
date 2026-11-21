@@ -19,7 +19,7 @@ const when = (d: string | null) => dateTime(d, "Asia/Muscat", "ar");
 
 /** The team's queue: hotels' change requests and scheduled maintenance, with entry only under the hotel's grant. */
 export default async function AdminSupport() {
-  const sb = await requireAdmin();
+  const sb = await requireAdmin("support");
   const { data } = await sb.rpc("admin_support_list");
   const rows = (data ?? []) as Req[];
   const now = new Date().toISOString();

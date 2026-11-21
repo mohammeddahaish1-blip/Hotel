@@ -43,7 +43,9 @@ export function MfaForm({ t }: { t: T }) {
     const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code });
     setPending(false);
     if (error) return setError(error.message);
-    router.replace("/");
+    // back to the page that asked for two-step verification (only a page on this site)
+    const next = new URLSearchParams(window.location.search).get("next");
+    router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
     router.refresh();
   }
 

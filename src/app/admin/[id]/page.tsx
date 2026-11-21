@@ -20,7 +20,7 @@ const ROLE_AR: Record<string, string> = { owner: "مالك", manager: "مدير"
 
 /** One company: change its plan and status, record a monthly payment, see what it uses. */
 export default async function AdminTenant({ params, searchParams }: PageProps<"/admin/[id]">) {
-  const sb = await requireAdmin();
+  const sb = await requireAdmin(["companies", "finance", "support"]);
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const [{ data: all }, { data: detail }, { data: plans }] = await Promise.all([
@@ -94,6 +94,7 @@ export default async function AdminTenant({ params, searchParams }: PageProps<"/
           </div>
           <ActionForm action={adminSetSubscription} className="grid gap-3 sm:grid-cols-2">
             <input type="hidden" name="tenant" value={r.id} />
+            <input type="hidden" name="company" value={r.name} />
             <Field label="الباقة">
               <select name="plan" defaultValue={r.plan_code ?? "basic"} className="input">
                 {(plans ?? []).map((p) => <option key={p.code} value={p.code}>{p.name_ar} — {omr(p.monthly_price, "ar")}</option>)}
