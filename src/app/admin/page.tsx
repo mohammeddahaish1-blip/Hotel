@@ -269,22 +269,7 @@ export default async function AdminOverview() {
         </section>
       </div>
 
-{BOARD}
-                    <ActionForm action={adminTrialExtend}>
-                      <input type="hidden" name="id" value={x.id} /><input type="hidden" name="name" value={x.name} />
-                      <SubmitButton className="btn-ghost btn-sm">مدّد 7 أيام</SubmitButton>
-                    </ActionForm>
-                    <ActionForm action={adminTrialDrop}>
-                      <input type="hidden" name="id" value={x.id} /><input type="hidden" name="name" value={x.name} />
-                      <SubmitButton className="btn-ghost btn-sm text-danger" confirm={`حذف طلب «${x.name}»؟ رابطه سيتوقف.`}>حذف</SubmitButton>
-                    </ActionForm>
-                  </li>
-                );
-              })}
-            </ul>
-          </details>
-        </section>
-      ) : null}
+      {BOARD}
 
     </>
   );
