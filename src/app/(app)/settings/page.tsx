@@ -23,14 +23,14 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   const ctx = await requireArea("settings");
   const { t, lang } = await getDict();
   const db = ctx.supabase;
-  const [plan, { data: subPays }] = await Promise.all([
-    getPlan(ctx),
-    ctx.role === "owner"
-      ? ctx.supabase.from("subscription_payments").select("id, amount, period_start, period_end, paid_on, voided_at").eq("tenant_id", ctx.tenantId).order("paid_on", { ascending: false }).limit(24)
-      : Promise.resolve({ data: [] as { id: string; amount: number; period_start: string; period_end: string; paid_on: string; voided_at: string | null }[] }),
-  ]);
-  const [{ data: prop }, { data: tenant }, { data: types }, { data: floors }, { data: units }, { data: plans }, { data: taxes }, { data: members }, { data: invites }] =
+  // everything this page reads, in one round trip
+  const [plan, { data: subPays }, { data: profiles }, { data: prop }, { data: tenant }, { data: types }, { data: floors }, { data: units }, { data: plans }, { data: taxes }, { data: members }, { data: invites }] =
     await Promise.all([
+      getPlan(ctx),
+      ctx.role === "owner"
+        ? ctx.supabase.from("subscription_payments").select("id, amount, period_start, period_end, paid_on, voided_at").eq("tenant_id", ctx.tenantId).order("paid_on", { ascending: false }).limit(24)
+        : Promise.resolve({ data: [] as { id: string; amount: number; period_start: string; period_end: string; paid_on: string; voided_at: string | null }[] }),
+      db.from("staff_profiles").select("*").eq("tenant_id", ctx.tenantId),
       db.from("properties").select("*").eq("id", ctx.property.id).single(),
       db.from("tenants").select("*").eq("id", ctx.tenantId).single(),
       db.from("unit_types").select("*").eq("property_id", ctx.property.id).order("created_at"),
@@ -44,7 +44,6 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   // shop staff are managed under Shops → Shop staff, not here
   const shopStaffCount = (members ?? []).filter((m) => m.staff_kind === "shop").length;
   const hotelMembers = (members ?? []).filter((m) => m.staff_kind !== "shop");
-  const { data: profiles } = await db.from("staff_profiles").select("*").eq("tenant_id", ctx.tenantId);
   const profile = new Map((profiles ?? []).map((p) => [p.user_id as string, p]));
   const typeName = new Map((types ?? []).map((x) => [x.id, x.name_ar]));
   const floorName = new Map((floors ?? []).map((f) => [f.id, f.name]));

@@ -28,7 +28,15 @@ import { DEMO_EMAIL } from "@/lib/demo";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await getCtx();
   const { t, lang } = await getDict();
-  const plan = await getPlan(ctx);
+  // the plan, the alerts and the support count don't depend on each other: one wait for all three
+  const [plan, alerts, supportWaiting] = await Promise.all([
+    getPlan(ctx),
+    loadAlerts(ctx, t, lang),
+    // the Nuzul team waiting for this hotel's approval (maintenance visit or access)
+    hasRole(ctx, ["manager"]) && !ctx.supportUntil
+      ? ctx.supabase.from("support_requests").select("id", { count: "exact", head: true }).eq("tenant_id", ctx.tenantId).eq("status", "awaiting_hotel").then((r) => r.count ?? 0)
+      : Promise.resolve(0),
+  ]);
   const has = (f: Parameters<typeof planHas>[1]) => planHas(plan, f);
   // Merged menu: each group shows only the parts this user may open (permissions stay per section)
   const tab = (area: (typeof AREAS)[number], label?: string) =>
@@ -105,13 +113,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ORDER = ["dashboard", "reservations", "units", "ops", "finance", "shops", "reports", "feedback", "complaints", "audit", "import", "settings"];
   const rank = (k: string) => (ORDER.indexOf(k) === -1 ? ORDER.length - 1.5 : ORDER.indexOf(k));
   groups.sort((a, b) => rank(a.key) - rank(b.key));
-  const [alerts, supportWaiting] = await Promise.all([
-    loadAlerts(ctx, t, lang),
-    // the Nuzul team waiting for this hotel's approval (maintenance visit or access)
-    hasRole(ctx, ["manager"]) && !ctx.supportUntil
-      ? ctx.supabase.from("support_requests").select("id", { count: "exact", head: true }).eq("tenant_id", ctx.tenantId).eq("status", "awaiting_hotel").then((r) => r.count ?? 0)
-      : Promise.resolve(0),
-  ]);
   const roleLabel = ctx.jobTitle || t[`role_${ctx.role}` as DictKey];
   // subscription notice for the owner and managers: trial ending, unpaid, suspended
   let banner: { tone: "warn" | "danger"; text: string } | null = null;

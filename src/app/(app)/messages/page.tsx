@@ -14,11 +14,12 @@ import { Badge, Empty, PageHeader, Section } from "@/components/ui";
 /** Guest messages waiting to be sent (from automation rules or queued by hand), and notices for the owner/manager. */
 export default async function MessagesPage() {
   const ctx = await requireArea("reservations");
-  await requireFeature(ctx, "messages");
   if (!hasRole(ctx, ["manager", "reception"])) redirect("/reservations");
   const { t, lang } = await getDict();
   const isManager = hasRole(ctx, ["manager"]);
-  const [{ data: pending }, { data: sent }, { data: notices }, templates] = await Promise.all([
+  // the plan check (sends to the upgrade page without "messages") runs with the queries instead of before them
+  const [, { data: pending }, { data: sent }, { data: notices }, templates] = await Promise.all([
+    requireFeature(ctx, "messages"),
     ctx.supabase.from("message_outbox").select("id, template_key, reservation_id, payload, due_at, rule_id").eq("property_id", ctx.property.id)
       .eq("status", "pending").lte("due_at", new Date().toISOString()).order("due_at").limit(100),
     ctx.supabase.from("message_outbox").select("id, template_key, reservation_id, payload, status, sent_at, sent_text").eq("property_id", ctx.property.id)
@@ -32,14 +33,17 @@ export default async function MessagesPage() {
   // Messages whose wording has {pay_link} get a payment link for the current balance
   const needsLink = new Set(templates.filter((x) => `${x.body_ar}${x.body_en}`.includes("{pay_link}")).map((x) => x.key));
   const due = (pending ?? []) as { id: string; template_key: string; reservation_id: string | null; payload: Record<string, unknown> }[];
-  await Promise.all(
+  const addLinks = Promise.all(
     due.filter((m) => needsLink.has(m.template_key) && !m.payload.payment_link_token).map(async (m) => {
       const { data } = await ctx.supabase.rpc("ensure_outbox_payment_link", { p_outbox: m.id });
       if (data) m.payload = { ...m.payload, payment_link_token: data };
     }),
   );
-  const cards = await renderOutbox(ctx, due, templates);
-  const sentInfo = await renderOutbox(ctx, (sent ?? []) as never, templates);
+  // the waiting messages (after their payment links) and the sent ones are prepared side by side
+  const [cards, sentInfo] = await Promise.all([
+    addLinks.then(() => renderOutbox(ctx, due, templates)),
+    renderOutbox(ctx, (sent ?? []) as never, templates),
+  ]);
   const tz = ctx.property.timezone;
 
   return (

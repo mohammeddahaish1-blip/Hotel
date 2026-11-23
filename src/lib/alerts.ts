@@ -40,53 +40,67 @@ type Row = { kind: string; severity: number; ref_id: string; unit: string | null
 
 /** Today's alerts for the current user, translated and linked to where they're handled (once per request). */
 export const loadAlerts = cache(async (ctx: Ctx, t: Dict, lang: "ar" | "en" | "ur" | "bn"): Promise<AlertItem[]> => {
-  const [{ data }, complaints] = await Promise.all([
-    ctx.supabase.rpc("alerts", { p_property: ctx.property.id }),
-    // new staff complaints, for the owner only (managers never see them)
-    ctx.role === "owner"
-      ? ctx.supabase.from("staff_complaints").select("id", { count: "exact", head: true }).eq("tenant_id", ctx.tenantId).eq("status", "new").then((r) => r.count ?? 0)
-      : Promise.resolve(0),
-  ]);
-  const extraAlerts: AlertItem[] = complaints > 0
-    ? [{ key: "staff-complaints", severity: 1, title: t.al_staff_complaint, detail: String(complaints), href: "/complaints", group: "other" }]
-    : [];
   // shops: missing invoice photos and residence cards running out — for the owner, managers and each shop's cashier
   const cashierOf = new Set(ctx.shops.filter((x) => x.access === "manager").map((x) => x.id));
-  if (hasRole(ctx, ["manager"]) || cashierOf.size) {
-    const { data: shopRows } = await ctx.supabase.from("shops")
-      .select("id, name, kind, daily_photos, photos_since, created_at, active").eq("tenant_id", ctx.tenantId);
+  const shopAlerts = async (): Promise<AlertItem[]> => {
+    if (!hasRole(ctx, ["manager"]) && !cashierOf.size) return [];
+    const out: AlertItem[] = [];
+    const [{ data: shopRows }, workers] = await Promise.all([
+      ctx.supabase.from("shops").select("id, name, kind, daily_photos, photos_since, created_at, active").eq("tenant_id", ctx.tenantId),
+      expiringWorkers(ctx),
+    ]);
     const mine = ((shopRows ?? []) as (ShopRow & { name: string })[]).filter((x) => hasRole(ctx, ["manager"]) || cashierOf.has(x.id));
-    const [missing, workers] = await Promise.all([missingPhotoDays(ctx, mine), expiringWorkers(ctx)]);
+    const missing = await missingPhotoDays(ctx, mine);
     for (const x of mine) {
       const days = missing.get(x.id);
-      if (days?.length) extraAlerts.push({
+      if (days?.length) out.push({
         key: `shop-photos-${x.id}`, severity: 1, title: t.al_shop_photos_missing,
         detail: join([x.name, days.map((d) => gregorian(d, lang)).join("، ")]), href: `/shops/${x.id}`, group: "other",
       });
     }
     const names = new Map(mine.map((x) => [x.id, x.name]));
     for (const w of workers) {
-      extraAlerts.push({
+      out.push({
         key: `iqama-${w.id}`, severity: 2, title: t.al_iqama_expiring,
         detail: join([w.full_name, names.get(w.shop_id) ?? null, gregorian(w.iqama_expiry, lang)]), href: `/shops/${w.shop_id}`, group: "docs",
       });
     }
-  }
+    return out;
+  };
   // reception and managers: a unit with an arrival today has just been cleaned, the guest can go up
-  if (can(ctx, "reservations") && hasRole(ctx, ["manager", "reception"])) {
+  const readyAlerts = async (): Promise<AlertItem[]> => {
+    if (!can(ctx, "reservations") || !hasRole(ctx, ["manager", "reception"])) return [];
     const today = todayIn(ctx.property.timezone);
     const { data: cleaned } = await ctx.supabase.from("hk_tasks").select("units(number)")
       .eq("property_id", ctx.property.id).eq("status", "done").gte("finished_at", zonedStart(today, ctx.property.timezone)).limit(200);
     const ready = new Set(((cleaned ?? []) as unknown as { units: { number: string } | null }[]).map((x) => x.units?.number).filter(Boolean));
-    if (ready.size) {
-      const { data: coming } = await ctx.supabase.rpc("today_board_rows", { p_property: ctx.property.id, p_today: today });
-      for (const r of (coming ?? []) as { id: string; stay_from: string; status: string; unit: string | null; guest: string | null }[]) {
-        if (r.stay_from === today && r.status !== "checked_in" && r.unit && ready.has(r.unit)) {
-          extraAlerts.push({ key: `unit-ready-${r.id}`, severity: 3, title: t.al_unit_ready, detail: join([`${t.unit} ${r.unit}`, r.guest]), href: `/reservations/${r.id}`, group: "guests" });
-        }
+    if (!ready.size) return [];
+    const out: AlertItem[] = [];
+    const { data: coming } = await ctx.supabase.rpc("today_board_rows", { p_property: ctx.property.id, p_today: today });
+    for (const r of (coming ?? []) as { id: string; stay_from: string; status: string; unit: string | null; guest: string | null }[]) {
+      if (r.stay_from === today && r.status !== "checked_in" && r.unit && ready.has(r.unit)) {
+        out.push({ key: `unit-ready-${r.id}`, severity: 3, title: t.al_unit_ready, detail: join([`${t.unit} ${r.unit}`, r.guest]), href: `/reservations/${r.id}`, group: "guests" });
       }
     }
-  }
+    return out;
+  };
+  // All four are independent: one wait instead of four in a row (this runs on every page, from the layout)
+  const [{ data }, complaints, shopItems, readyItems] = await Promise.all([
+    ctx.supabase.rpc("alerts", { p_property: ctx.property.id }),
+    // new staff complaints, for the owner only (managers never see them)
+    ctx.role === "owner"
+      ? ctx.supabase.from("staff_complaints").select("id", { count: "exact", head: true }).eq("tenant_id", ctx.tenantId).eq("status", "new").then((r) => r.count ?? 0)
+      : Promise.resolve(0),
+    shopAlerts(),
+    readyAlerts(),
+  ]);
+  const extraAlerts: AlertItem[] = [
+    ...(complaints > 0
+      ? [{ key: "staff-complaints", severity: 1, title: t.al_staff_complaint, detail: String(complaints), href: "/complaints", group: "other" } as AlertItem]
+      : []),
+    ...shopItems,
+    ...readyItems,
+  ];
   return extraAlerts.concat(((data ?? []) as Row[]).filter((r) => !AUDIENCE[r.kind] || hasRole(ctx, AUDIENCE[r.kind])).map((r, i) => {
     const unit = r.unit ? `${t.unit} ${r.unit}` : "";
     const who = r.guest ?? "";

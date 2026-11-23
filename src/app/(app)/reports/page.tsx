@@ -41,17 +41,19 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
   const [from, to] = range[period];
   const toExcl = addDays(to, 1);
   const db = ctx.supabase;
-  const charts = planHas(await getPlan(ctx), "analytics");
-
-  const [{ data: occ }, { data: res }, { data: pays }, { data: exps }, { data: income }] = await Promise.all([
+  // the plan check runs with the queries instead of before them (the daily income is only shown when the plan has charts)
+  const [plan, { data: occ }, { data: res }, { data: pays }, { data: exps }, { data: incomeAll }] = await Promise.all([
+    getPlan(ctx),
     db.rpc("occupancy_report", { p_property: ctx.property.id, p_from: from, p_to: toExcl }),
     db.from("reservations").select("source, room_total, discount_amount, stay").eq("property_id", ctx.property.id)
       .in("status", ["confirmed", "checked_in", "checked_out"]).overlaps("stay", `[${from},${toExcl})`),
     db.from("payments").select("kind, method, amount, folios!inner(property_id)").eq("folios.property_id", ctx.property.id)
       .is("voided_at", null).gte("received_at", `${from}T00:00:00+04:00`).lt("received_at", `${toExcl}T00:00:00+04:00`),
     db.from("expenses").select("category, amount").eq("property_id", ctx.property.id).is("archived_at", null).gte("expense_date", from).lte("expense_date", to),
-    charts ? db.rpc("daily_income", { p_property: ctx.property.id, p_from: from, p_to: to }) : Promise.resolve({ data: null }),
+    db.rpc("daily_income", { p_property: ctx.property.id, p_from: from, p_to: to }),
   ]);
+  const charts = planHas(plan, "analytics");
+  const income = charts ? incomeAll : null;
   const rows = (occ ?? []) as Occ[];
   const sold = rows.reduce((a, r) => a + r.sold, 0);
   const avail = rows.reduce((a, r) => a + r.units, 0);

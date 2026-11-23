@@ -61,13 +61,15 @@ export const getCtx = cache(async (): Promise<Ctx> => {
       .from("properties")
       .select("id, tenant_id, name_ar, name_en, timezone, currency, kind, phone, whatsapp, address, vat_no, license_no")
       .order("created_at");
-  // One round trip for both: they don't depend on each other
-  const shopsP = supabase.from("shop_members").select("shop_id, tenant_id, access").eq("user_id", claims.sub);
-  let [{ data: memberships }, { data: properties }] = await Promise.all([loadMemberships(), loadProperties()]);
+  // One round trip for all three: they don't depend on each other.
+  // (A Supabase query is only sent once awaited, so it has to be in the Promise.all.)
+  const loadShops = () => supabase.from("shop_members").select("shop_id, tenant_id, access").eq("user_id", claims.sub);
+  let [{ data: memberships }, { data: properties }, { data: shopRows }] = await Promise.all([loadMemberships(), loadProperties(), loadShops()]);
   if (!memberships || memberships.length === 0) {
     // First sign-in of invited staff: attach pending invitations for this email
     const { data: attached } = await supabase.rpc("accept_invitations");
-    if (attached) [{ data: memberships }, { data: properties }] = await Promise.all([loadMemberships(), loadProperties()]);
+    // (accepting a shop invitation also adds the shop link, so shops are read again)
+    if (attached) [{ data: memberships }, { data: properties }, { data: shopRows }] = await Promise.all([loadMemberships(), loadProperties(), loadShops()]);
   }
   if (!memberships || memberships.length === 0) redirect("/onboarding");
   if (!properties || properties.length === 0) redirect("/onboarding");
@@ -82,7 +84,6 @@ export const getCtx = cache(async (): Promise<Ctx> => {
     ? [...new Set(permissions.map((a) => AREA_ROLE[a]).filter((r): r is Role => r !== null))]
     : [role];
 
-  const { data: shopRows } = await shopsP;
   const shops = (shopRows ?? [])
     .filter((r) => r.tenant_id === property.tenant_id)
     .map((r) => ({ id: r.shop_id as string, access: r.access as "seller" | "manager" | "renter" }));

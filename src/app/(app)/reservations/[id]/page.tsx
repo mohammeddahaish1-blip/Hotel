@@ -32,17 +32,16 @@ const METHODS = ["cash", "card", "transfer", "link"];
 
 export default async function ReservationPage({ params, searchParams }: PageProps<"/reservations/[id]">) {
   const ctx = await requireArea("reservations");
-  const plan = await getPlan(ctx);
   const { t, lang } = await getDict();
   const { id } = await params;
   const db = ctx.supabase;
 
   const canVoidPay = hasRole(ctx, ["manager", "accountant"]);
-  const canLinks = planHas(plan, "payment_links") && (hasRole(ctx, ["manager", "reception", "accountant"]));
-  const canContracts = planHas(plan, "contracts") && (hasRole(ctx, ["manager", "reception"]));
   const canOperate = hasRole(ctx, ["manager", "reception"]);
-  // Everything that only needs the booking id, in one round trip
-  const [{ data: r }, { data: folio }, { data: cheques }, { data: docs }, { data: units }, { data: contract }] = await Promise.all([
+  const contractRoles = hasRole(ctx, ["manager", "reception"]);
+  // Everything that only needs the booking id (and the plan), in one round trip
+  const [plan, { data: r }, { data: folio }, { data: cheques }, { data: docsAll }, { data: units }, { data: contract }] = await Promise.all([
+    getPlan(ctx),
     db
       .from("reservations")
       .select("*, guests(id, full_name, phone, preferred_language, doc_number, nationality, doc_expiry), units(id, number, unit_types(name_ar))")
@@ -50,12 +49,15 @@ export default async function ReservationPage({ params, searchParams }: PageProp
       .maybeSingle(),
     db.from("folios").select("id, status").eq("reservation_id", id).maybeSingle(),
     db.from("cheques").select("*").eq("reservation_id", id).order("due_date"),
-    canContracts
+    contractRoles
       ? db.from("contract_documents").select("id, token, title, status, created_at, guest_signed_at, guest_sign_name").eq("reservation_id", id).order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
     db.from("units").select("id, number").eq("property_id", ctx.property.id).eq("active", true).order("number"),
     db.from("contracts").select("*, billing_schedules(*)").eq("reservation_id", id).maybeSingle(),
   ]);
+  const canLinks = planHas(plan, "payment_links") && (hasRole(ctx, ["manager", "reception", "accountant"]));
+  const canContracts = planHas(plan, "contracts") && contractRoles;
+  const docs = canContracts ? docsAll : [];
   if (!r) notFound();
   const guest = r.guests as unknown as { id: string; full_name: string; phone: string | null; preferred_language: string; doc_number: string | null; nationality: string | null; doc_expiry: string | null };
   const unit = r.units as unknown as { id: string; number: string; unit_types: { name_ar: string } };

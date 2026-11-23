@@ -91,20 +91,23 @@ export async function renderOutbox(
   templates: Template[],
 ) {
   const resIds = [...new Set(rows.map((r) => r.reservation_id).filter(Boolean))] as string[];
-  const [{ data: resList }, { data: prop }] = await Promise.all([
+  // bookings, the hotel and every booking's guest account in one round trip (not one account per message)
+  const [{ data: resList }, { data: prop }, { data: folioRows }] = await Promise.all([
     resIds.length
       ? ctx.supabase.from("reservations").select("id, code, stay, kind, units(number), guests(full_name, phone, preferred_language)").in("id", resIds)
       : Promise.resolve({ data: [] as Res[] }),
     ctx.supabase.from("properties").select("name_ar, name_en, phone, whatsapp, check_in_time, feedback_token").eq("id", ctx.property.id).single(),
+    resIds.length
+      ? ctx.supabase.from("folios").select("id, reservation_id").in("reservation_id", resIds)
+      : Promise.resolve({ data: [] as { id: string; reservation_id: string }[] }),
   ]);
   const resById = new Map(((resList ?? []) as unknown as Res[]).map((r) => [r.id, r]));
   const balances = new Map<string, number>();
+  // then all the balances at once
   await Promise.all(
-    resIds.map(async (id) => {
-      const { data: f } = await ctx.supabase.from("folios").select("id").eq("reservation_id", id).maybeSingle();
-      if (!f) return;
+    ((folioRows ?? []) as { id: string; reservation_id: string }[]).map(async (f) => {
       const { data: s } = await ctx.supabase.rpc("folio_summary", { p_folio: f.id });
-      balances.set(id, Number((s as { balance?: number } | null)?.balance ?? 0));
+      balances.set(f.reservation_id, Number((s as { balance?: number } | null)?.balance ?? 0));
     }),
   );
   const review = prop?.feedback_token ? await feedbackUrl(prop.feedback_token as string) : null;
