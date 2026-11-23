@@ -104,7 +104,7 @@ function Head({ kicker, title, sub, light = false }: { kicker: string; title: st
   return (
     <Reveal>
       <div className="lp2-kicker" style={light ? { color: "#f0cf7a" } : undefined}>{kicker}</div>
-      <h2 className="text-[1.65rem] font-bold leading-tight sm:text-4xl lg:text-[2.75rem]">{title}</h2>
+      <h2 className="text-balance text-[1.65rem] font-bold leading-tight sm:text-4xl lg:text-[2.75rem]">{title}</h2>
       {sub ? <p className={`mt-3 max-w-2xl text-base sm:text-lg ${light ? "text-[#b9d6d0]" : "text-[#4d5753]"}`}>{sub}</p> : null}
     </Reveal>
   );

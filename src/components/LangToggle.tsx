@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { LANGS } from "@/lib/i18n/dict";
 
 /** Interface language: Arabic, English, Urdu or Bengali (saved in a cookie). */
-export function LangToggle({ current }: { current: string }) {
+export function LangToggle({ current, className = "" }: { current: string; className?: string }) {
   const router = useRouter();
   return (
     <select
       aria-label="Language / اللغة / زبان / ভাষা"
-      className="input w-auto py-1.5 text-sm"
+      className={`input w-auto py-1.5 text-sm ${className}`}
       defaultValue={current}
       onChange={(e) => {
         document.cookie = `lang=${e.target.value}; path=/; max-age=31536000; samesite=lax`;

@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -158,6 +159,9 @@ const FEATURE_NAMES: Record<string, [string, string]> = {
 };
 
 
+// the page is light, so the phone's browser bar is light with it (the app keeps the brand colour)
+export const viewport: Viewport = { themeColor: "#f6f8f6" };
+
 /** Visitors see the product page; signed-in staff go straight to their home page. */
 export default async function Home({ searchParams }: PageProps<"/">) {
   const supabase = await createClient();
@@ -208,8 +212,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             {hero.nav.map((label, i) => <a key={label} href={anchors[i]} className="rounded-full px-3 py-2 hover:bg-white hover:text-brand">{label}</a>)}
           </nav>
           <div className="ms-auto flex items-center gap-2">
-            <LangToggle current={lang} />
-            <Link href="/login" className="btn-ghost btn-sm">{c.login}</Link>
+            <LangToggle current={lang} className="min-h-11" />
+            <Link href="/login" className="btn-ghost btn-sm tap">{c.login}</Link>
             <a href="#trial" className="btn-primary btn-sm hidden sm:inline-flex">{c.demo}</a>
           </div>
         </div>
@@ -223,7 +227,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </div>
           <div className="relative mx-auto grid max-w-6xl items-center gap-6 px-4 pb-10 pt-8 sm:gap-14 sm:pb-20 sm:pt-12 lg:grid-cols-2 lg:px-8 lg:pb-28 lg:pt-20">
             <div>
-              <h1 className="lp-rise text-[2rem] font-bold leading-[1.3] sm:text-5xl sm:leading-[1.25] lg:text-6xl lg:leading-[1.2]" style={{ ["--d" as string]: "120ms" }}>{hero.title}</h1>
+              <h1 className="lp-rise text-balance text-[2rem] font-bold leading-[1.3] sm:text-5xl sm:leading-[1.25] lg:text-6xl lg:leading-[1.2]" style={{ ["--d" as string]: "120ms" }}>{hero.title}</h1>
               <p className="lp-rise mt-4 max-w-xl text-base leading-relaxed text-[#4d5753] sm:mt-5 sm:text-lg" style={{ ["--d" as string]: "240ms" }}>{c.sub}</p>
               {notice ? <p role="alert" className="mt-5 rounded-2xl bg-[#fdf1d6] px-4 py-3 text-sm font-semibold text-[#7a4f00]">{notice}</p> : null}
               {/* phones: two full-width buttons, one under the other */}
@@ -268,14 +272,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
         <section className="mx-auto max-w-6xl scroll-mt-20 px-4 py-10 sm:py-16 lg:px-8" id="plans">
           <Reveal>
-            <h2 className="text-3xl font-bold sm:text-4xl">{c.plansTitle}</h2>
+            <h2 className="text-balance text-3xl font-bold sm:text-4xl">{c.plansTitle}</h2>
             <p className="mt-2 max-w-2xl text-[#4d5753]">{c.plansSub}</p>
           </Reveal>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <nav className="flex gap-1 rounded-full bg-[#e4e8e5] p-1" aria-label={c.plansTitle}>
               {([["month", c.billMonth], ["year", c.billYear]] as const).map(([k, label]) => (
                 <Link key={k} href={k === "year" ? "/?bill=year#plans" : "/#plans"} scroll={false} aria-current={(k === "year") === yearly ? "true" : undefined}
-                  className={`rounded-full px-5 py-2 text-sm font-semibold ${(k === "year") === yearly ? "bg-white text-[#1c2321] shadow-sm" : "text-[#66706c] hover:text-[#1c2321]"}`}>{label}</Link>
+                  className={`tap rounded-full px-5 py-2 text-sm font-semibold ${(k === "year") === yearly ? "bg-white text-[#1c2321] shadow-sm" : "text-[#66706c] hover:text-[#1c2321]"}`}>{label}</Link>
               ))}
             </nav>
             <span className="text-sm text-[#66706c]">{c.inCur(en ? CUR[cur].en : CUR[cur].ar)}</span>
@@ -323,7 +327,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             <div className="relative mx-auto grid max-w-6xl gap-8 overflow-hidden rounded-[1.75rem] bg-white p-5 shadow-[0_22px_60px_rgba(20,40,35,0.1)] sm:rounded-[2.5rem] sm:p-10 lg:grid-cols-[1fr_1.1fr] lg:gap-12">
               <div className="pointer-events-none absolute -top-20 end-[-6rem] size-72 rounded-full bg-[#bfe3da] opacity-50 blur-3xl" aria-hidden />
               <div className="relative">
-                <h2 className="text-2xl font-bold sm:text-4xl">{c.trialTitle}</h2>
+                <h2 className="text-balance text-2xl font-bold sm:text-4xl">{c.trialTitle}</h2>
                 <p className="mt-3 leading-relaxed text-[#4d5753]">{c.trialSub}</p>
                 <ul className="mt-6 space-y-3">
                   {c.trialPoints.map((x) => <li key={x} className="flex items-center gap-3 font-semibold"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-soft text-brand"><Check className="size-4" aria-hidden /></span>{x}</li>)}
@@ -335,13 +339,13 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </section>
 
         <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-12 sm:pb-16 lg:px-8">
-          <Reveal><h2 className="text-3xl font-bold">{c.faqTitle}</h2></Reveal>
+          <Reveal><h2 className="text-balance text-3xl font-bold">{c.faqTitle}</h2></Reveal>
           <div className="mt-6 space-y-3">
             {c.faq.map(([q, a], i) => (
               <Reveal key={q} delay={i * 80}>
-                <details className="group rounded-3xl bg-white px-6 py-4 shadow-[0_10px_26px_rgba(20,40,35,0.06)]">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold [&::-webkit-details-marker]:hidden">{q}<ArrowDown className="size-4 shrink-0 text-[#66706c] transition-transform group-open:rotate-180" aria-hidden /></summary>
-                  <p className="mt-2 text-sm leading-relaxed text-[#4d5753]">{a}</p>
+                <details className="group rounded-3xl bg-white px-6 shadow-[0_10px_26px_rgba(20,40,35,0.06)]">
+                  <summary className="flex min-h-14 cursor-pointer list-none items-center py-4 justify-between gap-3 font-semibold [&::-webkit-details-marker]:hidden">{q}<ArrowDown className="size-4 shrink-0 text-[#66706c] transition-transform group-open:rotate-180" aria-hidden /></summary>
+                  <p className="-mt-2 pb-4 text-sm leading-relaxed text-[#4d5753]">{a}</p>
                 </details>
               </Reveal>
             ))}
@@ -352,7 +356,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <footer className="border-t border-black/5 bg-white pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-[#66706c] lg:px-8">
           <span><span className="brand-word text-xl text-brand">نُزُل</span> · {c.footer}</span>
-          <Link href="/login" className="hover:text-brand">{c.login}</Link>
+          <Link href="/login" className="tap hover:text-brand">{c.login}</Link>
         </div>
       </footer>
     </div>

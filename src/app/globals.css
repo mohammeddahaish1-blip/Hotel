@@ -294,7 +294,11 @@ a.card:active, a.rounded-xl:active { transform: scale(0.985); }
 html[dir="ltr"] .lp-marquee { animation-name: lp-marquee-ltr; }
 @keyframes lp-marquee-ltr { to { transform: translateX(-50%); } }
 .lp-card { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s; }
-.lp-card:hover { transform: translateY(-6px); box-shadow: 0 22px 44px rgba(20, 40, 35, 0.12); }
+/* lift on a mouse only: on a phone a tap would leave the card stuck in the air */
+@media (hover: hover) { .lp-card:hover { transform: translateY(-6px); box-shadow: 0 22px 44px rgba(20, 40, 35, 0.12); } }
+/* a small link or button that still takes a finger: the touch area grows to 44px tall, the look does not change */
+.tap { position: relative; }
+.tap::after { content: ""; position: absolute; inset-inline: 0; top: 50%; height: max(100%, 44px); transform: translateY(-50%); }
 .lp-done { animation: lp-pop 0.5s cubic-bezier(0.2, 1.3, 0.4, 1); }
 @media (prefers-reduced-motion: reduce) {
   .lp-reveal { opacity: 1; transform: none; transition: none; }
@@ -391,6 +395,7 @@ html[dir="ltr"] .lp-marquee { animation-name: lp-marquee-ltr; }
   .lp-in .lp2-jr::after, .lp-in .lp2-st > b, .lp-in .lp2-ev, .lp-in .lp2-bub, .lp-in .lp2-bars > i, .lp-in .lp2-yes::before { animation: none; }
   .lp2-lines path { stroke-dashoffset: 0; } .lp2-jr::after { width: 80%; } .lp2-ev, .lp2-bub, .lp2-step { opacity: 1; } .lp2-bars > i, .lp2-yes::before { transform: none; }
   .lp2-cycle small > span:nth-child(3) { opacity: 1; }
+  .lp2-lines circle { display: none; } /* SVG <animateMotion> ignores CSS animation rules */
 }
 
 /* product page on phones: a smaller phone, lighter chips, tighter stage */
