@@ -9,5 +9,6 @@
 | vercel-react-best-practices | github.com/vercel-labs/agent-skills | 5a37a63 | MIT |
 | vercel-composition-patterns | github.com/vercel-labs/agent-skills | 5a37a63 | MIT |
 | web-design-guidelines | github.com/vercel-labs/agent-skills | 5a37a63 | MIT |
+| find-skills | github.com/vercel-labs/skills | 57217cf | MIT |
 
 To update one, copy its folder again from the same repository and update the commit here. The Vercel skills are also recorded in `skills-lock.json`; `npx skills update` refreshes them.
