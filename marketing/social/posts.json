@@ -1,0 +1,234 @@
+{
+  "brand": {
+    "tagline": [
+      "نظام إدارة الفنادق",
+      "والشقق الفندقية"
+    ],
+    "tag": "صُنع في عُمان",
+    "offer": [
+      "الشهر الأول مجاناً",
+      "بدون بطاقة دفع"
+    ],
+    "url": "nuzul-hotel.vercel.app",
+    "cta": "اطلب تجربة النظام"
+  },
+  "posts": [
+    {
+      "id": "01-lahza",
+      "image": "01-lahza.png",
+      "title": [
+        "اعرف ما يجري في فندقك",
+        "لحظة بلحظة"
+      ],
+      "sub": "الحجوزات والاستقبال والفواتير والتنظيف، كلها في جوالك.",
+      "chips": [
+        {
+          "icon": "✓",
+          "tone": "ok",
+          "title": "الوحدة 204 جاهزة",
+          "note": "أنهى التنظيف قبل دقيقتين"
+        },
+        {
+          "icon": "↘",
+          "tone": "warn",
+          "title": "وصول اليوم: 3 نزلاء"
+        }
+      ],
+      "cut": 448
+    },
+    {
+      "id": "02-wusool",
+      "image": "02-wusool.png",
+      "title": [
+        "سجّل النزيل",
+        "في دقيقة واحدة"
+      ],
+      "sub": "اقرأ البطاقة المدنية أو الجواز، والبيانات تُكتب وحدها.",
+      "chips": [
+        {
+          "icon": "✓",
+          "tone": "ok",
+          "title": "تمت قراءة الجواز",
+          "note": "الاسم والرقم والجنسية"
+        },
+        {
+          "icon": "→",
+          "tone": "info",
+          "title": "تسليم مفتاح الغرفة 112"
+        }
+      ],
+      "prompt": "A friendly young Omani woman receptionist in an elegant dark headscarf and abaya behind a warm wooden hotel reception desk, holding a passport next to a smartphone to scan it, a guest's hand passing the passport. Brass desk lamp, small plant, Omani arch details in the background.",
+      "cut": 379
+    },
+    {
+      "id": "03-tantheef",
+      "image": "03-tantheef.png",
+      "title": [
+        "العامل ينظّف ويصوّر",
+        "والاستقبال يعرف فوراً"
+      ],
+      "size": 76,
+      "sub": "حالة الغرفة تتغير لحظياً، مع وقت البدء والانتهاء والصورة.",
+      "chips": [
+        {
+          "icon": "◉",
+          "tone": "info",
+          "title": "صورة الغرفة 305",
+          "note": "بعد التنظيف"
+        },
+        {
+          "icon": "✓",
+          "tone": "ok",
+          "title": "الغرفة 305 متاحة للحجز"
+        }
+      ],
+      "prompt": "A housekeeper in a neat teal uniform taking a photo with a smartphone of a freshly made hotel bed with crisp white linen, folded towels and a small tray of dates on the bed. Bright, clean boutique hotel room with wooden headboard and Omani lattice details.",
+      "cut": 336
+    },
+    {
+      "id": "04-fawateer",
+      "image": "04-fawateer.png",
+      "title": [
+        "الرسوم والضريبة",
+        "تُحسب وحدها"
+      ],
+      "sub": "رسم السياحة والبلدية وضريبة القيمة المضافة، وسند قبض مرقّم.",
+      "chips": [
+        {
+          "icon": "٪",
+          "tone": "info",
+          "title": "رسم السياحة 4%",
+          "note": "رسم البلدية 5% · الضريبة 5%"
+        },
+        {
+          "icon": "✓",
+          "tone": "ok",
+          "title": "سند قبض رقم 1042"
+        }
+      ],
+      "prompt": "Close-up of a hotel reception counter: a printed receipt coming out of a small receipt printer, a tablet showing a blurred invoice screen, a pen and a brass bell. A receptionist's hands in a white dishdasha sleeve in soft focus. Warm wood surface.",
+      "cut": 300
+    },
+    {
+      "id": "05-qanawat",
+      "image": "05-qanawat.png",
+      "title": [
+        "Booking وAirbnb",
+        "بلا حجز مزدوج"
+      ],
+      "sub": "حجوزات القنوات تدخل تقويمك تلقائياً، وكل غرفة في مكانها.",
+      "chips": [
+        {
+          "icon": "+",
+          "tone": "info",
+          "title": "حجز جديد من Booking",
+          "note": "الوحدة 201 · ليلتان"
+        },
+        {
+          "icon": "✓",
+          "tone": "ok",
+          "title": "التقويم محدّث"
+        }
+      ],
+      "chipSide": "start",
+      "prompt": "A laptop on a wooden desk in a calm hotel back office showing a colourful room-booking calendar grid (blurred, no readable text), a smartphone beside it, a cup of Omani coffee in a small finjan and a dallah. Window light, plants.",
+      "cut": 448
+    },
+    {
+      "id": "06-sundooq",
+      "image": "06-sundooq.png",
+      "title": [
+        "إقفال الصندوق",
+        "في ثلاث خطوات"
+      ],
+      "sub": "تعدّ النقد، يقارنه النظام بالمفروض، وتقفل ورديتك.",
+      "chips": [
+        {
+          "icon": "1",
+          "tone": "info",
+          "title": "عدّ النقد",
+          "note": "2 · المقارنة   3 · الإقفال"
+        },
+        {
+          "icon": "✓",
+          "tone": "ok",
+          "title": "الصندوق مطابق"
+        }
+      ],
+      "prompt": "Evening at a hotel reception: an Omani receptionist in a white dishdasha and kuma cap counting banknotes beside an open cash drawer, a smartphone on the counter. Warm lamp light, calm night atmosphere, lantern glow.",
+      "cut": 373
+    },
+    {
+      "id": "07-siyana",
+      "image": "07-siyana.png",
+      "title": [
+        "عطل في الوحدة؟",
+        "لا تُحجز حتى تُصلح"
+      ],
+      "sub": "بلاغ الصيانة يوقف الحجز تلقائياً، ويرجعها متاحة بعد الإصلاح.",
+      "chips": [
+        {
+          "icon": "!",
+          "tone": "bad",
+          "title": "الوحدة 203: صيانة",
+          "note": "المكيّف لا يبرّد"
+        },
+        {
+          "icon": "✓",
+          "tone": "ok",
+          "title": "تم الإصلاح"
+        }
+      ],
+      "prompt": "A maintenance technician in a teal work uniform on a small step ladder fixing a wall air conditioner in a serviced apartment living room, a toolbox on the floor, a smartphone in his shirt pocket. Bright, clean, modern Omani apartment.",
+      "cut": 341
+    },
+    {
+      "id": "08-uqood",
+      "image": "08-uqood.png",
+      "title": [
+        "عقود الشقق وشيكاتها",
+        "في مكان واحد"
+      ],
+      "size": 78,
+      "sub": "جدول الدفعات والشيكات المؤجلة، وتنبيه قبل انتهاء العقد.",
+      "chips": [
+        {
+          "icon": "!",
+          "tone": "warn",
+          "title": "شيك مستحق 1 ديسمبر"
+        },
+        {
+          "icon": "!",
+          "tone": "warn",
+          "title": "العقد ينتهي بعد 30 يوماً"
+        }
+      ],
+      "prompt": "A tidy serviced apartment living room with a coffee table holding a signed rental contract, a set of apartment keys with a leather tag, a cheque book and a smartphone. Soft afternoon light, modern sofa, Omani decor accents.",
+      "cut": 390
+    },
+    {
+      "id": "09-malik",
+      "image": "09-malik.png",
+      "title": [
+        "فندقك في جيبك",
+        "أينما كنت"
+      ],
+      "sub": "المالك يرى الإشغال والدخل والتنبيهات، والموظفون يرون عملهم فقط.",
+      "chips": [
+        {
+          "icon": "↗",
+          "tone": "ok",
+          "title": "الإشغال الآن 78%",
+          "note": "18 من 23 وحدة"
+        },
+        {
+          "icon": "✓",
+          "tone": "ok",
+          "title": "كل تعديل مسجّل باسم صاحبه"
+        }
+      ],
+      "prompt": "A confident middle-aged Omani hotel owner in a white dishdasha, embroidered kuma and a light bisht, relaxing in a traditional majlis with cushions, smiling while looking at his smartphone. Evening lantern light, dates and coffee on a low brass tray.",
+      "cut": 389
+    }
+  ]
+}

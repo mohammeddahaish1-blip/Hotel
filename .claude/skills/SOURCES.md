@@ -12,3 +12,6 @@
 | find-skills | github.com/vercel-labs/skills | 57217cf | MIT |
 
 To update one, copy its folder again from the same repository and update the commit here. The Vercel skills are also recorded in `skills-lock.json`; `npx skills update` refreshes them.
+
+## Written for this project
+- `nuzul-social-post`: social media posts for Nuzul (Figma photo + HTML headline, `marketing/social/`).
