@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { CircleCheck } from "lucide-react";
 import Link from "next/link";
 import { hasRole, type Ctx } from "@/lib/auth";
@@ -14,15 +15,15 @@ const KIND_DOT: Record<Item["kind"], string> = {
   arrival: "bg-ok", departure: "bg-info", rent: "bg-warn", cheque: "bg-violet", contract_end: "bg-danger",
 };
 
-/** "Good morning, …": what needs attention today (with amounts) and what is coming in the next 7 days. */
-export async function TodayBoard({ ctx, t, lang }: { ctx: Ctx; t: Dict; lang: Lang }) {
+/** The board's reads, once per request. The dashboard starts them before its own reads finish
+ *  (otherwise they would only begin when the board is rendered, after the page's data). */
+export const loadTodayBoard = cache((ctx: Ctx) => {
   const db = ctx.supabase;
   const pid = ctx.property.id;
   const today = todayIn(ctx.property.timezone);
   const in7 = addDays(today, 7);
-  const in30 = addDays(today, 30);
   const money = hasRole(ctx, ["manager", "reception", "accountant"]);
-  const [{ data: resRows }, { data: cheques }, { data: rents }, { data: corr }] = await Promise.all([
+  return Promise.all([
     // only reservations starting within 7 days or ending within 30 (today_board_rows), not every open one
     db.rpc("today_board_rows", { p_property: pid, p_today: today }),
     money
@@ -35,6 +36,15 @@ export async function TodayBoard({ ctx, t, lang }: { ctx: Ctx; t: Dict; lang: La
       : Promise.resolve({ data: [] }),
     hasRole(ctx, ["manager"]) ? db.from("correction_requests").select("id").eq("property_id", pid).eq("status", "pending") : Promise.resolve({ data: [] }),
   ]);
+});
+
+/** "Good morning, …": what needs attention today (with amounts) and what is coming in the next 7 days. */
+export async function TodayBoard({ ctx, t, lang }: { ctx: Ctx; t: Dict; lang: Lang }) {
+  const today = todayIn(ctx.property.timezone);
+  const in7 = addDays(today, 7);
+  const in30 = addDays(today, 30);
+  const money = hasRole(ctx, ["manager", "reception", "accountant"]);
+  const [{ data: resRows }, { data: cheques }, { data: rents }, { data: corr }] = await loadTodayBoard(ctx);
   const res = ((resRows ?? []) as Row[]).map((r) => ({
     id: r.id, code: r.code, kind: r.kind, status: r.status, from: r.stay_from, to: r.stay_to,
     units: r.unit ? { number: r.unit } : null,

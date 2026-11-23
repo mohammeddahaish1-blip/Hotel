@@ -9,7 +9,7 @@ import { AmountInput, ReceiptInput, RemindAll } from "@/components/FinanceInputs
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { BarList } from "@/components/charts";
 import { Badge, Empty, Field, PageHeader, Section, Stat } from "@/components/ui";
-import { Salaries } from "./Salaries";
+import { loadSalaries, Salaries } from "./Salaries";
 import { CloseShift } from "./CloseShift";
 import { FinanceTabs, defaultFinanceView, type FinanceView } from "./FinanceTabs";
 import { loadAlerts } from "@/lib/alerts";
@@ -67,7 +67,11 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
   const monthLabel = new Intl.DateTimeFormat(intlLocale(lang), { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${from}T00:00:00Z`));
 
   const none = Promise.resolve({ data: null });
-  const [{ data: myShift }, { data: shifts }, { data: expenses }, { data: prevExpenses }, { data: aging }, { data: income }, { data: prevIncome }, { data: payments }, { data: staff }] =
+  // the salaries section (expenses view, owner and managers) reads its own data: start it with the first round
+  if (v === "expenses" && hasRole(ctx, ["manager"])) void loadSalaries(ctx, month);
+  // first round: everything that needs only the page's filters
+  const [{ data: myShift }, { data: shifts }, { data: expenses }, { data: prevExpenses }, { data: aging }, { data: income }, { data: prevIncome }, { data: payments }, { data: staff },
+    { data: unitList }, { data: myExpenses }, { data: depPays }, moneyAlerts] =
     await Promise.all([
       db.from("cash_shifts").select("*").eq("property_id", ctx.property.id).eq("opened_by", ctx.userId).is("closed_at", null).maybeSingle(),
       seesMoney
@@ -90,17 +94,24 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
             .order("received_at", { ascending: false })
         : none,
       db.from("memberships").select("user_id, full_name").eq("tenant_id", ctx.tenantId),
+      db.from("units").select("id, number, owner_id").eq("property_id", ctx.property.id).eq("active", true).order("number"),
+      !seesMoney
+        ? db.from("expenses").select("id, amount, description, category, created_at").eq("property_id", ctx.property.id).eq("created_by", ctx.userId).is("archived_at", null).gte("created_at", zonedStart(today, tz)).order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
+      // deposits still held: deposits taken minus returned or applied, per guest account
+      seesMoney
+        ? db.from("payments")
+            .select("folio_id, kind, amount, folios!inner(property_id, reservation_id, reservations(code, status, units(number), guests(full_name)))")
+            .eq("folios.property_id", ctx.property.id).is("voided_at", null).in("kind", ["deposit", "deposit_refund", "deposit_applied"])
+        : Promise.resolve({ data: [] }),
+      // today's money alerts for "needs your action" (the layout reads the same alerts: shared within the request)
+      seesMoney ? loadAlerts(ctx, t, lang) : Promise.resolve([]),
     ]);
   const staffName = new Map((staff ?? []).map((m) => [m.user_id, m.full_name]));
-  const [{ data: unitList }, { data: myExpenses }] = await Promise.all([
-    db.from("units").select("id, number, owner_id").eq("property_id", ctx.property.id).eq("active", true).order("number"),
-    !seesMoney
-      ? db.from("expenses").select("id, amount, description, category, created_at").eq("property_id", ctx.property.id).eq("created_by", ctx.userId).is("archived_at", null).gte("created_at", zonedStart(today, tz)).order("created_at", { ascending: false })
-      : Promise.resolve({ data: [] }),
-  ]);
   const unitNumber = new Map((unitList ?? []).map((u) => [u.id as string, u.number as string]));
-  const { data: bd } = myShift ? await db.rpc("shift_breakdown", { p_shift: myShift.id }) : { data: null };
-  const breakdown = ((bd ?? []) as Breakdown[])[0];
+  // second round, started here and awaited once below: what needs the first round's rows
+  // (a Supabase query is sent when .then is called, so each one is started with .then)
+  const bdP = myShift ? db.rpc("shift_breakdown", { p_shift: myShift.id }).then((r) => r) : Promise.resolve({ data: null });
 
   // ---- summary
   const sum = (rows: { amount: number }[] | null) => (rows ?? []).reduce((a, r) => a + Number(r.amount), 0);
@@ -116,12 +127,6 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
   const net = collected - expTotal;
   const prevNet = prevCollected - prevExpTotal;
   const agingRows = (aging ?? []) as Aging[];
-  // deposits still held: deposits taken minus returned or applied, per guest account
-  const { data: depPays } = seesMoney
-    ? await db.from("payments")
-        .select("folio_id, kind, amount, folios!inner(property_id, reservation_id, reservations(code, status, units(number), guests(full_name)))")
-        .eq("folios.property_id", ctx.property.id).is("voided_at", null).in("kind", ["deposit", "deposit_refund", "deposit_applied"])
-    : { data: [] };
   type DepRow = { folio_id: string; kind: string; amount: number; folios: { reservation_id: string | null; reservations: { code: string; status: string; units: { number: string } | null; guests: { full_name: string } | null } | null } | null };
   const depBy = new Map<string, { folio: string; held: number; reservation: string | null; code: string | null; status: string | null; unit: string | null; guest: string | null }>();
   for (const p of (depPays ?? []) as unknown as DepRow[]) {
@@ -144,16 +149,14 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
   const byCat = CATEGORIES.map((c) => ({ c, v: allExpenses.filter((e) => e.category === c).reduce((a, e) => a + e.amount, 0) }))
     .filter((x) => x.v > 0)
     .sort((a, b) => b.v - a.v);
-  const receipts = new Map<string, string>();
   const withReceipt = shownExpenses.filter((e) => e.attachment_path);
-  if (withReceipt.length) {
-    const { data: urls } = await db.storage.from("expense-receipts").createSignedUrls(withReceipt.map((e) => e.attachment_path!), 600);
-    (urls ?? []).forEach((u, i) => u.signedUrl && receipts.set(withReceipt[i].id, u.signedUrl));
-  }
+  const receiptsP = withReceipt.length
+    ? db.storage.from("expense-receipts").createSignedUrls(withReceipt.map((e) => e.attachment_path!), 600)
+    : Promise.resolve({ data: [] as { signedUrl: string | null }[] });
 
   // ---- payments
   const payRows = (payments ?? []) as unknown as PaymentRow[];
-  const proofUrls = await signedUrls(ctx, "payment-proofs", payRows.map((p) => p.proof_path));
+  const proofUrlsP = signedUrls(ctx, "payment-proofs", payRows.map((p) => p.proof_path));
   const shownPayRows = noProofOnly ? payRows.filter((p) => !p.proof_path) : payRows;
   const withoutProof = payRows.filter((p) => !p.proof_path).length;
   const signed = (p: PaymentRow) => (p.kind === "refund" || p.kind === "deposit_refund" ? -p.amount : p.amount);
@@ -164,12 +167,16 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
   // ---- shifts
   const shiftRows = (shifts ?? []).slice(0, shiftLimit);
   const shiftIds = shiftRows.map((s) => s.id);
-  const [{ data: shiftPays }, { data: shiftExps }] = shiftIds.length
-    ? await Promise.all([
+  const shiftsP = shiftIds.length
+    ? Promise.all([
         db.from("payments").select("id, amount, kind, received_at, cash_shift_id, folios(reservations(code))").in("cash_shift_id", shiftIds).is("voided_at", null),
         db.from("expenses").select("id, amount, description, expense_date, cash_shift_id").in("cash_shift_id", shiftIds).is("archived_at", null),
       ])
-    : [{ data: [] }, { data: [] }];
+    : Promise.resolve([{ data: [] }, { data: [] }] as const);
+  const [{ data: bd }, { data: urls }, proofUrls, [{ data: shiftPays }, { data: shiftExps }]] = await Promise.all([bdP, receiptsP, proofUrlsP, shiftsP]);
+  const breakdown = ((bd ?? []) as Breakdown[])[0];
+  const receipts = new Map<string, string>();
+  (urls ?? []).forEach((u, i) => u.signedUrl && receipts.set(withReceipt[i].id, u.signedUrl));
 
   const qs = (extra: Record<string, string>) => {
     const q = new URLSearchParams({ ...(v !== first ? { v } : {}), ...(month !== thisMonth ? { month } : {}), ...(cat ? { cat } : {}), ...extra });
@@ -188,7 +195,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/finance"
 
   // ---- what the overview lists under "needs your action": today's money alerts, in plain words, each with one way out
   const todo = seesMoney
-    ? (await loadAlerts(ctx, t, lang))
+    ? moneyAlerts
         .filter((a) => a.href.startsWith("/finance") || a.key.startsWith("rent_due-"))
         .map((a) => ({
           ...a,

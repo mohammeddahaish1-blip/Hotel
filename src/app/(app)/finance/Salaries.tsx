@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { Check, Lock } from "lucide-react";
 import Link from "next/link";
 import type { Ctx } from "@/lib/auth";
@@ -9,14 +10,20 @@ import { Badge, Section } from "@/components/ui";
 
 type Payment = { id: string; user_id: string; amount: number; method: string; paid_at: string };
 
+/** The salaries reads, once per request: the finance page starts them with its own reads
+ *  (otherwise they would only begin when this section is rendered, after the page's data). */
+export const loadSalaries = cache((ctx: Ctx, month: string) =>
+  Promise.all([
+    ctx.supabase.from("memberships").select("user_id, full_name, job_title, role, active").eq("tenant_id", ctx.tenantId).eq("staff_kind", "hotel").is("support_until", null).order("created_at"),
+    ctx.supabase.from("staff_profiles").select("user_id, salary").eq("tenant_id", ctx.tenantId),
+    ctx.supabase.from("salary_payments").select("id, user_id, amount, method, paid_at").eq("tenant_id", ctx.tenantId).eq("month", `${month}-01`),
+  ]),
+);
+
 /** Monthly salaries: who is due what, pay with one click (books an expense), undo a mistake. Owner/manager only. */
 export async function Salaries({ ctx, month, monthLabel, t, lang }: { ctx: Ctx; month: string; monthLabel: string; t: Dict; lang: Lang }) {
   const monthStart = `${month}-01`;
-  const [{ data: members }, { data: profiles }, { data: payments, error }] = await Promise.all([
-    ctx.supabase.from("memberships").select("user_id, full_name, job_title, role, active").eq("tenant_id", ctx.tenantId).eq("staff_kind", "hotel").is("support_until", null).order("created_at"),
-    ctx.supabase.from("staff_profiles").select("user_id, salary").eq("tenant_id", ctx.tenantId),
-    ctx.supabase.from("salary_payments").select("id, user_id, amount, method, paid_at").eq("tenant_id", ctx.tenantId).eq("month", monthStart),
-  ]);
+  const [{ data: members }, { data: profiles }, { data: payments, error }] = await loadSalaries(ctx, month);
   if (error) return null; // feature not installed in this database yet
   const salary = new Map((profiles ?? []).map((p) => [p.user_id as string, p.salary as number | null]));
   const paid = new Map(((payments ?? []) as Payment[]).map((p) => [p.user_id, p]));

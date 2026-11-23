@@ -6,10 +6,10 @@ import { Suspense } from "react";
 import { can, hasRole, requireArea } from "@/lib/auth";
 import { getDict } from "@/lib/i18n/server";
 import type { DictKey } from "@/lib/i18n/dict";
-import { addDays, omr, pct, gregorian, hijri } from "@/lib/format";
+import { addDays, omr, pct, gregorian, hijri, todayIn } from "@/lib/format";
 import { Badge, Empty, PageHeader, Section, Skeleton, RES_STATUS_TONE, RES_STATUS_EMOJI } from "@/components/ui";
 import { loadAlerts } from "@/lib/alerts";
-import { TodayBoard } from "./TodayBoard";
+import { loadTodayBoard, TodayBoard } from "./TodayBoard";
 
 type Dash = {
   date: string;
@@ -33,19 +33,22 @@ export default async function DashboardPage() {
   const { t, lang } = await getDict();
   // the finance page shows payments, deposits and expenses to owner, managers and accountants
   const money = can(ctx, "finance") && hasRole(ctx, ["manager", "accountant"]);
-  const [{ data, error }, alerts, { data: days }] = await Promise.all([
+  // the "today" board below reads its own data: start it now, alongside the page's reads
+  void loadTodayBoard(ctx);
+  const [{ data, error }, alerts, { data: days }, { data: spent }] = await Promise.all([
     ctx.supabase.rpc("owner_dashboard", { p_property: ctx.property.id }),
     loadAlerts(ctx, t, lang),
     // income per day for the last week, drawn as a small line under "income today"
     money ? ctx.supabase.rpc("income_last_days", { p_property: ctx.property.id, p_days: 7 }) : Promise.resolve({ data: null }),
+    // what was spent today (by the expense's own date), for the same people who can open the expenses list.
+    // "today" in the hotel's time zone, as the dashboard figures use it
+    money
+      ? ctx.supabase.from("expenses").select("amount").eq("property_id", ctx.property.id).eq("expense_date", todayIn(ctx.property.timezone))
+      : Promise.resolve({ data: null }),
   ]);
   const week = ((days ?? []) as { day: string; amount: number }[]).map((x) => Number(x.amount));
   if (error) throw new Error(error.message);
   const d = data as Dash;
-  // what was spent today (by the expense's own date), for the same people who can open the expenses list
-  const { data: spent } = money
-    ? await ctx.supabase.from("expenses").select("amount").eq("property_id", ctx.property.id).eq("expense_date", d.date)
-    : { data: null };
   const expensesToday = ((spent ?? []) as { amount: number }[]).reduce((sum, x) => sum + Number(x.amount), 0);
 
   const tomorrow = addDays(d.date, 1);
