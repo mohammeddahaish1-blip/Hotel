@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -23,6 +24,7 @@ type PriceRow = { plan_code: string; currency: Currency; monthly: number; yearly
 const COPY = {
   ar: {
     login: "تسجيل الدخول",
+    skip: "انتقل إلى المحتوى",
     title: "أدِر فندقك وشققك الفندقية من مكان واحد",
     sub: "الحجوزات والاستقبال، التنظيف والصيانة، الفواتير والرسوم الحكومية، والتقارير — من الكمبيوتر أو الآيباد أو الجوال.",
     badge: "نظام عربي صُنع في عُمان",
@@ -42,7 +44,7 @@ const COPY = {
     trialTitle: "اطلب تجربة النظام",
     trialSub: "اكتب بياناتك ونرسل لك رابطاً خاصاً على واتساب أو بريدك. الرابط يفتح فندقاً تجريبياً كاملاً لمدة 7 أيام، بدون تسجيل ولا بطاقة دفع.",
     trialPoints: ["فندق تجريبي ببيانات وهمية", "تجرّب كل الأقسام بنفسك", "بدون أي التزام"],
-    form: { name: "الاسم", company: "اسم الفندق أو الشركة (اختياري)", phone: "رقم الجوال", email: "البريد الإلكتروني", send: "أرسل الطلب", sending: "جارٍ الإرسال…", doneTitle: "وصلنا طلبك", doneBody: "سنرسل لك رابط التجربة على واتساب أو بريدك في أقرب وقت.", errInput: "تأكد من الاسم ورقم الجوال والبريد الإلكتروني.", errBusy: "الطلبات كثيرة الآن، حاول بعد قليل.", errFailed: "تعذّر إرسال الطلب، حاول مرة أخرى.", privacy: "نستخدم رقمك وبريدك لإرسال رابط التجربة والتواصل معك بخصوصه فقط." },
+    form: { name: "الاسم", company: "اسم الفندق أو الشركة (اختياري)", phone: "رقم الجوال", email: "البريد الإلكتروني", send: "أرسل الطلب", sending: "جارٍ الإرسال…", doneTitle: "وصلنا طلبك", doneBody: "سنرسل لك رابط التجربة على واتساب أو بريدك في أقرب وقت.", errInput: "تأكد من الاسم ورقم الجوال والبريد الإلكتروني.", errBusy: "الطلبات كثيرة الآن، حاول بعد قليل.", errFailed: "تعذّر إرسال الطلب، حاول مرة أخرى.", privacy: "نستخدم رقمك وبريدك لإرسال رابط التجربة والتواصل معك بخصوصه فقط.", errName: "اكتب اسمك، حرفان على الأقل.", errPhone: "اكتب رقم جوال صحيحاً، مثل 9xxxxxxx أو مع رمز الدولة.", errEmail: "اكتب بريداً إلكترونياً صحيحاً، مثل name@example.com" },
     expired: "رابط التجربة انتهت مدته أو غير صحيح. اطلب رابطاً جديداً من هنا.",
     trial: "ابدأ شهرك المجاني",
     trialNote: "الشهر الأول مجاناً على الباقة الشاملة، بدون بطاقة دفع",
@@ -86,6 +88,7 @@ const COPY = {
   },
   en: {
     login: "Sign in",
+    skip: "Skip to content",
     title: "Run your hotel and serviced apartments from one place",
     sub: "Bookings and front desk, housekeeping and maintenance, invoices and government fees, and reports — on a computer, iPad or phone.",
     badge: "Arabic-first, made in Oman",
@@ -105,7 +108,7 @@ const COPY = {
     trialTitle: "Request a trial",
     trialSub: "Leave your details and we send a personal link by WhatsApp or e-mail. It opens a complete sample hotel for 7 days, with no sign-up and no card.",
     trialPoints: ["A sample hotel with made-up data", "Try every section yourself", "No commitment"],
-    form: { name: "Name", company: "Hotel or company (optional)", phone: "Mobile number", email: "E-mail", send: "Send request", sending: "Sending…", doneTitle: "We have your request", doneBody: "We will send your trial link by WhatsApp or e-mail shortly.", errInput: "Please check the name, mobile number and e-mail.", errBusy: "Too many requests right now, please try again shortly.", errFailed: "The request could not be sent, please try again.", privacy: "We use your number and e-mail only to send the trial link and to contact you about it." },
+    form: { name: "Name", company: "Hotel or company (optional)", phone: "Mobile number", email: "E-mail", send: "Send request", sending: "Sending…", doneTitle: "We have your request", doneBody: "We will send your trial link by WhatsApp or e-mail shortly.", errInput: "Please check the name, mobile number and e-mail.", errBusy: "Too many requests right now, please try again shortly.", errFailed: "The request could not be sent, please try again.", privacy: "We use your number and e-mail only to send the trial link and to contact you about it.", errName: "Write your name, at least 2 letters.", errPhone: "Write a valid mobile number, like 9xxxxxxx or with the country code.", errEmail: "Write a valid e-mail, like name@example.com" },
     expired: "This trial link has expired or is not valid. Request a new one here.",
     trial: "Start your free month",
     trialNote: "First month free on the full plan, no card needed",
@@ -158,6 +161,9 @@ const FEATURE_NAMES: Record<string, [string, string]> = {
 };
 
 
+// the page is light, so the phone's browser bar is light with it (the app keeps the brand colour)
+export const viewport: Viewport = { themeColor: "#f6f8f6" };
+
 /** Visitors see the product page; signed-in staff go straight to their home page. */
 export default async function Home({ searchParams }: PageProps<"/">) {
   const supabase = await createClient();
@@ -192,6 +198,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     return { c, list, now: offer != null && offer < list ? offer : list, was: offer != null && offer < list ? list : null, save: yearly && r && twelve > r.yearly ? twelve - r.yearly : 0 };
   };
   const fmt = (minor: number, c: Currency) => amount(minor, c, "en-US");
+  // "2026-12-15" → "15 December" / "15 ديسمبر" (Western digits, like the prices)
+  const endDate = (d: string) => new Intl.DateTimeFormat(en ? "en-GB" : "ar-OM-u-nu-latn", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${d}T00:00:00Z`));
   const notice = sp.trial === "expired" ? c.expired : sp.trial === "unavailable" ? c.unavailable : null;
   const anchors = ["#journey", "#features", "#day", "#plans", "#faq"];
   const hero = en
@@ -201,6 +209,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   return (
     <div className="lp-root min-h-screen overflow-x-clip bg-[#f6f8f6] text-[#1c2321]">
       <noscript><style>{".lp-reveal{opacity:1;transform:none}"}</style></noscript>
+      <a href="#main" className="sr-only z-50 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:start-3 focus:top-3">{c.skip}</a>
       <header className="sticky top-0 z-30 border-b border-black/5 bg-[#f6f8f6]/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 lg:px-8">
           <span className="brand-word text-3xl text-brand sm:text-4xl">نُزُل</span>
@@ -208,14 +217,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             {hero.nav.map((label, i) => <a key={label} href={anchors[i]} className="rounded-full px-3 py-2 hover:bg-white hover:text-brand">{label}</a>)}
           </nav>
           <div className="ms-auto flex items-center gap-2">
-            <LangToggle current={lang} />
-            <Link href="/login" className="btn-ghost btn-sm">{c.login}</Link>
+            <LangToggle current={lang} className="min-h-11" />
+            <Link href="/login" className="btn-ghost btn-sm tap">{c.login}</Link>
             <a href="#trial" className="btn-primary btn-sm hidden sm:inline-flex">{c.demo}</a>
           </div>
         </div>
       </header>
 
-      <main>
+      <main id="main" tabIndex={-1} className="outline-none">
         <section className="relative">
           <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
             <div className="lp-blob absolute -top-24 start-[-10%] size-[28rem] rounded-full bg-[#bfe3da] opacity-60 blur-3xl" />
@@ -223,7 +232,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </div>
           <div className="relative mx-auto grid max-w-6xl items-center gap-6 px-4 pb-10 pt-8 sm:gap-14 sm:pb-20 sm:pt-12 lg:grid-cols-2 lg:px-8 lg:pb-28 lg:pt-20">
             <div>
-              <h1 className="lp-rise text-[2rem] font-bold leading-[1.3] sm:text-5xl sm:leading-[1.25] lg:text-6xl lg:leading-[1.2]" style={{ ["--d" as string]: "120ms" }}>{hero.title}</h1>
+              <h1 className="lp-rise text-balance text-[2rem] font-bold leading-[1.3] sm:text-5xl sm:leading-[1.25] lg:text-6xl lg:leading-[1.2]" style={{ ["--d" as string]: "120ms" }}>{hero.title}</h1>
               <p className="lp-rise mt-4 max-w-xl text-base leading-relaxed text-[#4d5753] sm:mt-5 sm:text-lg" style={{ ["--d" as string]: "240ms" }}>{c.sub}</p>
               {notice ? <p role="alert" className="mt-5 rounded-2xl bg-[#fdf1d6] px-4 py-3 text-sm font-semibold text-[#7a4f00]">{notice}</p> : null}
               {/* phones: two full-width buttons, one under the other */}
@@ -268,14 +277,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
         <section className="mx-auto max-w-6xl scroll-mt-20 px-4 py-10 sm:py-16 lg:px-8" id="plans">
           <Reveal>
-            <h2 className="text-3xl font-bold sm:text-4xl">{c.plansTitle}</h2>
+            <h2 className="text-balance text-3xl font-bold sm:text-4xl">{c.plansTitle}</h2>
             <p className="mt-2 max-w-2xl text-[#4d5753]">{c.plansSub}</p>
           </Reveal>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <nav className="flex gap-1 rounded-full bg-[#e4e8e5] p-1" aria-label={c.plansTitle}>
               {([["month", c.billMonth], ["year", c.billYear]] as const).map(([k, label]) => (
                 <Link key={k} href={k === "year" ? "/?bill=year#plans" : "/#plans"} scroll={false} aria-current={(k === "year") === yearly ? "true" : undefined}
-                  className={`rounded-full px-5 py-2 text-sm font-semibold ${(k === "year") === yearly ? "bg-white text-[#1c2321] shadow-sm" : "text-[#66706c] hover:text-[#1c2321]"}`}>{label}</Link>
+                  className={`tap rounded-full px-5 py-2 text-sm font-semibold ${(k === "year") === yearly ? "bg-white text-[#1c2321] shadow-sm" : "text-[#66706c] hover:text-[#1c2321]"}`}>{label}</Link>
               ))}
             </nav>
             <span className="text-sm text-[#66706c]">{c.inCur(en ? CUR[cur].en : CUR[cur].ar)}</span>
@@ -292,7 +301,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#e7b9b4] bg-[#fdf3f2] px-2.5 py-1 text-xs font-bold text-[#8c1d18]">
                           <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-                          {p.offer_label || c.offerLabel}{p.offer_ends_on ? ` · ${c.until} ${p.offer_ends_on.slice(8, 10)}/${p.offer_ends_on.slice(5, 7)}` : ""}
+                          {p.offer_label || c.offerLabel}{p.offer_ends_on ? ` · ${c.until} ${endDate(p.offer_ends_on)}` : ""}
                         </span>
                         <span className={`text-sm ${top ? "text-white/75" : "text-[#66706c]"}`}>
                           {c.was} <s className="decoration-[#d04437] decoration-2"><Money value={fmt(pr.was, pr.c)} cur={pr.c} /></s>
@@ -323,7 +332,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             <div className="relative mx-auto grid max-w-6xl gap-8 overflow-hidden rounded-[1.75rem] bg-white p-5 shadow-[0_22px_60px_rgba(20,40,35,0.1)] sm:rounded-[2.5rem] sm:p-10 lg:grid-cols-[1fr_1.1fr] lg:gap-12">
               <div className="pointer-events-none absolute -top-20 end-[-6rem] size-72 rounded-full bg-[#bfe3da] opacity-50 blur-3xl" aria-hidden />
               <div className="relative">
-                <h2 className="text-2xl font-bold sm:text-4xl">{c.trialTitle}</h2>
+                <h2 className="text-balance text-2xl font-bold sm:text-4xl">{c.trialTitle}</h2>
                 <p className="mt-3 leading-relaxed text-[#4d5753]">{c.trialSub}</p>
                 <ul className="mt-6 space-y-3">
                   {c.trialPoints.map((x) => <li key={x} className="flex items-center gap-3 font-semibold"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-soft text-brand"><Check className="size-4" aria-hidden /></span>{x}</li>)}
@@ -335,13 +344,13 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </section>
 
         <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-12 sm:pb-16 lg:px-8">
-          <Reveal><h2 className="text-3xl font-bold">{c.faqTitle}</h2></Reveal>
+          <Reveal><h2 className="text-balance text-3xl font-bold">{c.faqTitle}</h2></Reveal>
           <div className="mt-6 space-y-3">
             {c.faq.map(([q, a], i) => (
               <Reveal key={q} delay={i * 80}>
-                <details className="group rounded-3xl bg-white px-6 py-4 shadow-[0_10px_26px_rgba(20,40,35,0.06)]">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold [&::-webkit-details-marker]:hidden">{q}<ArrowDown className="size-4 shrink-0 text-[#66706c] transition-transform group-open:rotate-180" aria-hidden /></summary>
-                  <p className="mt-2 text-sm leading-relaxed text-[#4d5753]">{a}</p>
+                <details className="group rounded-3xl bg-white px-6 shadow-[0_10px_26px_rgba(20,40,35,0.06)]">
+                  <summary className="flex min-h-14 cursor-pointer list-none items-center py-4 justify-between gap-3 font-semibold [&::-webkit-details-marker]:hidden">{q}<ArrowDown className="size-4 shrink-0 text-[#66706c] transition-transform group-open:rotate-180" aria-hidden /></summary>
+                  <p className="-mt-2 pb-4 text-sm leading-relaxed text-[#4d5753]">{a}</p>
                 </details>
               </Reveal>
             ))}
@@ -352,7 +361,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <footer className="border-t border-black/5 bg-white pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-[#66706c] lg:px-8">
           <span><span className="brand-word text-xl text-brand">نُزُل</span> · {c.footer}</span>
-          <Link href="/login" className="hover:text-brand">{c.login}</Link>
+          <Link href="/login" className="tap hover:text-brand">{c.login}</Link>
         </div>
       </footer>
     </div>
