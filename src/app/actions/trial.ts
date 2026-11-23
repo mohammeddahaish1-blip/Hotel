@@ -2,7 +2,9 @@
 
 import { createClient } from "@/lib/supabase/server";
 
-export type TrialState = { ok?: boolean; error?: "input" | "busy" | "failed" } | null;
+export type TrialField = "name" | "phone" | "email";
+/** On an error the typed values come back, because React empties the form once the action has run. */
+export type TrialState = { ok?: boolean; error?: "input" | "busy" | "failed"; field?: TrialField; values?: Record<string, string> } | null;
 
 /** The public "request a trial" form: stores the request for the Nuzul team, who send the personal link. */
 export async function requestTrial(_: TrialState, fd: FormData): Promise<TrialState> {
@@ -12,9 +14,11 @@ export async function requestTrial(_: TrialState, fd: FormData): Promise<TrialSt
   let phone = v("phone").replace(/[^\d]/g, "");
   if (phone.length === 8) phone = `968${phone}`; // an Omani number written without the country code
   const email = v("email").toLowerCase();
-  if (v("name").length < 2 || !/^\d{7,15}$/.test(phone) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "input" };
+  const values = { name: v("name"), company: v("company"), phone: v("phone"), email: v("email") };
+  const field: TrialField | null = v("name").length < 2 ? "name" : !/^\d{7,15}$/.test(phone) ? "phone" : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? "email" : null;
+  if (field) return { error: "input", field, values };
   const supabase = await createClient();
   const { error } = await supabase.rpc("request_trial", { p_name: v("name"), p_phone: phone, p_email: email, p_company: v("company") });
   if (!error) return { ok: true };
-  return { error: error.message.includes("RATE_LIMIT") ? "busy" : error.message.includes("INVALID_INPUT") ? "input" : "failed" };
+  return { error: error.message.includes("RATE_LIMIT") ? "busy" : error.message.includes("INVALID_INPUT") ? "input" : "failed", values };
 }

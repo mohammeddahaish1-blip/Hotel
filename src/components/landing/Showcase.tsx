@@ -55,11 +55,11 @@ const T = {
 };
 
 /** A phone showing a real screen of the system. */
-export function Phone({ src, alt, roll = false, tilt = -5, className = "" }: { src: string; alt: string; roll?: boolean; tilt?: number; className?: string }) {
+export function Phone({ src, alt, roll = false, tilt = -5, className = "", first = false }: { src: string; alt: string; roll?: boolean; tilt?: number; className?: string; first?: boolean }) {
   return (
     <div className={`lp2-phone ${className}`} style={{ ["--tilt" as string]: `${tilt}deg` }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <div className="lp2-screen"><div className={roll ? "lp2-roll" : ""}><img src={src} alt={alt} width={390} height={800} /></div></div>
+      <div className="lp2-screen"><div className={roll ? "lp2-roll" : ""}><img src={src} alt={alt} width={390} height={800} {...(first ? { fetchPriority: "high" as const } : { loading: "lazy" as const })} /></div></div>
     </div>
   );
 }
@@ -90,7 +90,7 @@ export function HeroStage({ en }: { en: boolean }) {
     <div className="lp2-stage">
       <div className="lp2-glow" aria-hidden />
       <GoldLines id="hl" />
-      <Phone src="/landing/board.jpg" alt={t.board} />
+      <Phone src="/landing/board.jpg" alt={t.board} first />
       {t.chips.map(([a, b], k) => (
         <div key={a} className={`lp2-chip lp2-c${k + 1}`} aria-hidden>
           <i>{icons[k]}</i><span>{withSign(a)}{b ? <small>{b}</small> : null}</span>
@@ -242,7 +242,7 @@ export function Replaces({ en }: { en: boolean }) {
           {t.rep.map(([job, old], k) => (
             <div key={job} className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-0.5 border-t border-[#e4e0d6] px-6 py-4 sm:grid-cols-[1fr_1.3fr_8rem]">
               <b>{job}</b>
-              <s className="col-start-1 text-[#66706c] decoration-[#b42318] decoration-2 sm:col-start-2">{old}</s>
+              <s className="col-start-1 text-[#66706c] decoration-[#b42318]/70 decoration-1 sm:col-start-2 sm:decoration-[#b42318] sm:decoration-2"><span className="sr-only">{t.rHead[1]}: </span>{old}</s>
               <span className="lp2-yes col-start-2 row-span-2 row-start-1 justify-self-end sm:col-start-3 sm:row-span-1" style={i(k)}>{t.yes}</span>
             </div>
           ))}
